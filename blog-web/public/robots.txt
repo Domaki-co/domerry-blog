@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /user/
+Disallow: /chat
+Disallow: /notifications
+Disallow: /login
+Disallow: /editor
+
+Sitemap: https://blog.doma.cool/sitemap.xml

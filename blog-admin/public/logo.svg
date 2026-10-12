@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Domerry logo">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e2c70"/>
+      <stop offset="1" stop-color="#52248e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <path fill="#fff" fill-rule="evenodd" d="M130 120h84a136 136 0 0 1 0 272h-84a20 20 0 0 1-20-20V140a20 20 0 0 1 20-20zM214 192a64 64 0 0 1 0 128z"/>
+</svg>

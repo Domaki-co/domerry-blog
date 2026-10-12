@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon"  href="%VITE_APP_LOGO%" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="keywords" content="%VITE_APP_KEYWORDS%" />
+    <meta
+      name="description"
+      content="%VITE_APP_DESCRIPTION%"
+    />
+    <title>%VITE_APP_TITLE%</title>
+    <script src="/static/js/index.js"></script>
+
+
+    <script>
+      var _hmt = _hmt || [];
+      (function() {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?725f624fdb6a307fa04e422db6d078fd";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+      </script>
+
+  </head>
+  <body>
+    <!-- SEO：原始 HTML 中始终存在的 h1（SPA 渲染不覆盖），视觉隐藏但爬虫和读屏器可见 -->
+    <h1 class="seo-only">%VITE_APP_TITLE%</h1>
+    <style>
+      .seo-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+    </style>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

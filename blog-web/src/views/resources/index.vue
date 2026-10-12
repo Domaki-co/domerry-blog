@@ -1,0 +1,832 @@
+<template>
+  <div class="music-page">
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+
+    <section class="music-hero">
+      <div class="logo">
+        <div class="logo-mark brush">听</div>
+        <div class="logo-text">
+          <div class="top"><h1>墨澜</h1><small>KAZAM · 水墨听音 · 星缘新风</small></div>
+          <p>一曲清音 · 水墨成诗 · 行云流水 · 流如溪涧</p>
+        </div>
+      </div>
+      <div class="hero-right"><span>● 星缘改版</span><span class="sep">|</span><span>古风 · 水墨 · 极简线条 · 音符律动</span></div>
+    </section>
+
+    <div class="wrap">
+      <div class="left">
+        <div class="panel">
+          <div class="s-head">
+            <div class="s-title"><div class="line"></div><span>尋 · SEARCH</span><div class="line" style="background:linear-gradient(to left,transparent, rgba(26,26,26,0.15))"></div></div>
+            <div class="search-box">
+              <span class="i">🔍</span>
+              <input v-model.trim="keyword" placeholder="搜歌名 / 歌手 / 专辑…" autocomplete="off" inputmode="search" enterkeyhint="search" @keydown.enter="handleSearch" />
+              <button type="button" class="go" aria-label="搜索" @click="handleSearch($event)">▶</button>
+            </div>
+            <div class="playlist-row">
+              <div class="input-wrap"><span>≡</span><input v-model.trim="playlistInput" placeholder="粘贴网易歌单链接或ID" autocomplete="off" @keydown.enter="fetchPlaylist" /></div>
+              <button @click="fetchPlaylist">引入</button>
+            </div>
+          </div>
+          <div class="tabs" role="tablist">
+            <button :class="{on:activeTab==='search'}" role="tab" @click="activeTab='search'">搜索 {{ searchResults.length }}</button>
+            <button :class="{on:activeTab==='queue'}" role="tab" @click="activeTab='queue'">队列 {{ queue.length }}</button>
+          </div>
+          <div ref="list" class="list">
+            <div v-if="listLoading" class="empty"><div class="spinner"></div><div class="sm">{{ activeTab==='search' ? '墨正研开…' : '正引入歌单…' }}</div></div>
+            <div v-else-if="visibleSongs.length===0" class="empty"><div class="big brush">无声处听惊雷</div><div class="sm">试试搜「周杰伦 / 陈奕迅 / 许嵩」<br/>或粘贴歌单链接自动识别</div></div>
+            <div v-for="(song,index) in visibleSongs" v-else :key="`${song.id}-${index}`" class="song" :class="{on:isCurrent(song)}" role="button" tabindex="0" :aria-label="song.name" @click="playFromList(index)" @keydown.enter.prevent="playFromList(index)" @keydown.space.prevent="playFromList(index)">
+              <div class="song-cover">
+                <img v-if="song.cover" :src="song.cover" loading="lazy" alt="" />
+                <div v-else class="cover-placeholder">♪</div>
+                <div v-if="isCurrent(song)&&isPlaying" class="song-active"><span></span><span></span><span></span></div>
+              </div>
+              <div class="song-meta"><div class="t">{{ song.name }}</div><div class="a">{{ song.artist }} · {{ song.album || '未知' }}</div></div>
+              <button v-if="activeTab==='search'" type="button" class="song-act" :class="{added:inQueue(song)}" :title="inQueue(song)?'已在队列':'加入队列'" :aria-label="inQueue(song)?'已在队列':'加入队列'" @click.stop="addToQueue(song)" @keydown.enter.stop @keydown.space.stop>{{ inQueue(song)?'✓':'＋' }}</button>
+              <button v-else type="button" class="song-act del" title="从队列移除" aria-label="从队列移除" @click.stop="removeFromQueue(index)" @keydown.enter.stop @keydown.space.stop>✕</button>
+              <div class="play-dot"><div class="icon-play"></div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="center">
+        <div class="panel center-card">
+          <div class="c-inner">
+            <div class="disk-wrap">
+              <div class="ring"></div><div class="ring2"></div>
+              <div ref="disk" class="disk" :class="{rolling:isPlaying}">
+                <div class="disk-inner"><div class="disk-cover">
+                  <img v-if="currentSong&&currentSong.cover" :src="currentSong.cover" alt="" />
+                  <div v-else class="cover-placeholder large">♪</div>
+                  <div class="grain"></div><div class="spindle"></div>
+                </div></div>
+                <div class="seal brush">澜</div>
+              </div>
+            </div>
+            <div class="meta-center">
+              <h2>{{ currentSong ? currentSong.name : '未在播放' }}</h2>
+              <div class="sub">{{ currentSong ? `${currentSong.artist} — ${currentSong.album || '单曲'}` : '寻一首心动，染半纸流云' }}</div>
+              <div class="divider"><div class="l"></div><span>· 水墨听音 ·</span><div class="l"></div></div>
+            </div>
+            <div class="quality-row">
+              <label for="quality-select">音质</label>
+              <select id="quality-select" v-model="selectedQuality" title="选择播放和下载音质" @change="reloadCurrentSong">
+                <option value="standard">标准（128 kbps MP3）</option>
+                <option value="higher">较高（192 kbps MP3）</option>
+                <option value="exhigh">极高（320 kbps MP3）</option>
+                <option value="lossless">无损（FLAC）</option>
+                <option value="hires">Hi-Res（高清高解析度）</option>
+                <option value="jymaster" selected>母带（Master）</option>
+                <option value="sky">天空音效（Sky）</option>
+                <option value="jyeffect">动态音效（Effect）</option>
+              </select>
+            </div>
+            <div class="quality-status">{{ qualityStatus }}</div>
+            <div class="progress-zone">
+              <div class="canvas-wrap" aria-label="进度条" @pointerdown="startSeek" @pointermove="moveSeek" @pointerup="endSeek">
+                <canvas ref="wave"></canvas>
+                <div class="track"></div><div class="fill" :style="{width:progressPercent+'%'}"></div>
+                <div class="thumb" :style="{left:progressPercent+'%'}"><div class="thumb-box"><i></i></div></div>
+              </div>
+              <div class="time-row"><span>{{ formatTime(currentTime) }}</span><span>{{ formatTime(audioDuration) }}</span></div>
+            </div>
+            <div class="ctrls">
+              <div class="ctrl-left">
+                <button class="btn" :title="playModeTitle" :aria-label="playModeTitle" @click="switchPlayMode">{{ playModeIcon }}</button>
+                <div class="vol"><span>🔊</span><input v-model.number="volume" type="range" min="0" max="1" step="0.01" aria-label="音量" /></div>
+              </div>
+              <div class="ctrl-mid">
+                <button class="btn" aria-label="上一首" @click="playPrevious">⏮</button>
+                <button class="btn btn-big" :aria-label="isPlaying?'暂停':'播放'" @click="togglePlay"><span style="margin-left:2px">{{ isPlaying?'⏸':'▶' }}</span></button>
+                <button class="btn" aria-label="下一首" @click="playNext">⏭</button>
+              </div>
+              <div class="ctrl-right">
+                <button class="btn" title="下载音频" aria-label="下载音频" @click="downloadAudio">⬇</button>
+                <button class="btn" title="下载歌词" aria-label="下载歌词" @click="downloadLyric">♬</button>
+              </div>
+            </div>
+            <div v-if="isLoadingSong" class="note"><i></i><span>正在取音·连缀古今…</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="lyric-card panel">
+          <div class="l-head">
+            <div class="ll"><div class="dot">♪</div><div><div class="title">詞 · LYRIC</div><div class="sub">句句如墨 · 行行成画</div></div></div>
+            <div class="seal-mini">印</div>
+          </div>
+          <div ref="lyricBody" class="l-body" tabindex="0" @wheel="handleLyricWheel" @scroll="handleLyricScroll">
+            <div v-if="lyricLines.length===0" class="l-empty">
+              <div class="brush empty-title">静待一曲</div>
+              <p>水墨未干，音未起时，留白最是撩人。<br/>播放后，歌词如卷轴展开。<br/>歌词只会在词卷内滚动。</p>
+              <div class="empty-line"></div><p class="empty-foot">星缘新风 · F-DROID</p>
+            </div>
+            <div v-else class="l-list">
+              <div v-for="(line,index) in lyricLines" :key="`${line.time}-${index}`" :data-index="index" class="l-line" :class="{on:index===activeLyric}" tabindex="0" @click="seekLyric(line.time)" @keydown.enter.prevent="seekLyric(line.time)">
+                <div class="d"></div><div class="t">{{ line.text }}</div><div v-if="line.trans" class="tr">{{ line.trans }}</div>
+              </div>
+              <div class="lyric-end">— 曲终 · 墨未尽 —</div>
+            </div>
+          </div>
+          <div class="l-foot"><span>水墨·留白·呼吸</span><span class="live-dot-wrap"><span class="live-dot"></span>只在詞卷内滚动</span></div>
+        </div>
+
+        <div class="now">
+          <div class="now-head"><span>此刻 · NOW</span><span class="badge">{{ currentSong?'PLAYING':'IDLE' }}</span></div>
+          <div v-if="currentSong" class="now-body">
+            <div class="now-cover"><img :src="currentSong.cover" alt="" @error="$event.target.style.display='none'" /></div>
+            <div class="now-info"><div class="n">{{ currentSong.name }}</div><div class="ar">{{ currentSong.artist }}</div><div class="al">{{ currentSong.album || '单曲' }}</div></div>
+          </div>
+          <div v-else class="now-body idle-body">尚未点曲，墨池静待一笔。<br/>从左侧搜索开始，或粘贴歌单，化作你的私藏卷轴。</div>
+          <div class="tags"><div>古法·纸</div><div>水墨·音</div><div class="hl">律动·生</div></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="foot-line"><div class="l"></div><span class="brush">墨澜 KAZAM — 星缘新风 — f-droid佬钜献</span><div class="l"></div></div>
+      <p>STELLA WIND — F-DROID SPECIAL EDITION — INK &amp; LINE &amp; NOTE RHYTHM — FLOW LIKE STREAM</p>
+    </footer>
+    <audio ref="audio" crossorigin="anonymous" preload="metadata" playsinline></audio>
+  </div>
+</template>
+
+<script>
+import { getLyricApi, getMusicApi, getPlaylistApi, searchSongsApi } from '@/api/music'
+
+const QUALITY_NAMES = {
+  standard: '标准 128kbps', higher: '较高 192kbps', exhigh: '极高 320kbps',
+  lossless: '无损 FLAC', hires: 'Hi-Res 高清高解析度', jymaster: '母带 Master',
+  sky: '天空音效 Sky', jyeffect: '动态音效 Effect'
+}
+
+function extractArtists(track) {
+  const artists = track.ar || track.artists || track.artist || ''
+  if (Array.isArray(artists)) return artists.map(artist => typeof artist === 'object' ? artist.name : String(artist)).join(' / ')
+  return String(artists || '')
+}
+
+function extractAlbum(track) {
+  const album = track.al || track.album || ''
+  if (typeof album === 'object' && album !== null) return album.name || ''
+  return String(album || '')
+}
+
+function extractCover(track) {
+  if (track.al && typeof track.al === 'object' && track.al.picUrl) return track.al.picUrl
+  if (track.picUrl) return track.picUrl
+  if (track.album && typeof track.album === 'object' && track.album.picUrl) return track.album.picUrl
+  return ''
+}
+
+function normalizeSong(song) {
+  return {
+    id: song.id,
+    name: song.name || '未知',
+    artist: extractArtists(song),
+    album: extractAlbum(song),
+    cover: (extractCover(song) || '').replace('http://', 'https://'),
+    duration: song.duration || song.dt || 0
+  }
+}
+
+export default {
+  name: 'ResourcesView',
+  data() {
+    return {
+      keyword: '许嵩', playlistInput: '', searchResults: [], queue: [], currentIndex: -1,
+      searchAbortController: null,
+      activeTab: 'search', listLoading: false, isLoadingSong: false, isPlaying: false,
+      currentTime: 0, audioDuration: 0, volume: 0.85, selectedQuality: 'jymaster',
+      qualityStatus: '', currentAudioUrl: '', lyricRaw: { lrc: '', tlrc: '' },
+      lyricLines: [], activeLyric: 0, playMode: 'loop', isSeeking: false,
+      lyricProgrammatic: false, userScrollingLyric: false, lyricPauseTimer: null,
+      waveAnimationId: 0, waveTime: 0, waveRunning: true, songLoadToken: 0
+    }
+  },
+  computed: {
+    visibleSongs() { return this.activeTab === 'search' ? this.searchResults : this.queue },
+    currentSong() { return this.currentIndex >= 0 ? this.queue[this.currentIndex] : null },
+    progressPercent() { return this.audioDuration ? Math.min(100, (this.currentTime / this.audioDuration) * 100) : 0 },
+    playModeIcon() { return { loop: '↻', shuffle: '⇄', one: '①' }[this.playMode] },
+    playModeTitle() { return { loop: '循环模式', shuffle: '随机播放', one: '单曲循环' }[this.playMode] },
+    audio() { return this.$refs.audio }
+  },
+  watch: {
+    volume(value) { if (this.audio) this.audio.volume = value }
+  },
+  mounted() {
+    this.audio.volume = this.volume
+    this.bindAudioEvents()
+    this.startWaveAnimation()
+    document.addEventListener('visibilitychange', this.handleVisibilityChange)
+    window.addEventListener('resize', this.resizeWave)
+    this.handleSearch('许嵩')
+  },
+  beforeDestroy() {
+    this.stopWaveAnimation()
+    document.removeEventListener('visibilitychange', this.handleVisibilityChange)
+    window.removeEventListener('resize', this.resizeWave)
+    clearTimeout(this.lyricPauseTimer)
+    this.songLoadToken += 1
+    if (this.audio) { this.audio.pause(); this.audio.removeAttribute('src') }
+  },
+  methods: {
+    isCurrent(song) { return Boolean(this.currentSong && String(this.currentSong.id) === String(song.id)) },
+    formatTime(time) {
+      if (!time || Number.isNaN(time)) return '0:00'
+      const minutes = Math.floor(time / 60)
+      const seconds = Math.floor(time % 60)
+      return `${minutes}:${String(seconds).padStart(2, '0')}`
+    },
+    parseLRC(lrc, translatedLyric = '') {
+      const map = new Map(); const translatedMap = new Map()
+      const pattern = /\[(\d+):(\d+)(?:\.(\d+))?\](.*)/
+      const addLines = (text, target) => {
+        text.split('\n').forEach(line => {
+          const match = line.match(pattern)
+          if (!match) return
+          const minute = parseInt(match[1], 10); const second = parseInt(match[2], 10)
+          const millisecond = match[3] ? parseInt(match[3].padEnd(3, '0').slice(0, 3), 10) : 0
+          const time = Math.floor((minute * 60 + second + millisecond / 1000) * 100) / 100
+          const content = match[4].trim()
+          if (content) target.set(time, content)
+        })
+      }
+      addLines(lrc, map)
+      if (translatedLyric) addLines(translatedLyric, translatedMap)
+      const lines = []
+      map.forEach((text, time) => {
+        let translation = translatedMap.get(time)
+        if (!translation) {
+          for (const [translatedTime, translatedText] of translatedMap) {
+            if (Math.abs(translatedTime - time) < 0.6) { translation = translatedText; break }
+          }
+        }
+        lines.push({ time, text, trans: translation })
+      })
+      if (lines.length === 0 && lrc.trim()) {
+        lrc.split('\n').filter(line => line.trim()).slice(0, 120).forEach((line, index) => {
+          lines.push({ time: index * 3, text: line.trim(), trans: '' })
+        })
+      }
+      return lines.sort((a, b) => a.time - b.time)
+    },
+    async handleSearch(keyword, event) {
+      if (event && typeof event.preventDefault === 'function') event.preventDefault()
+      const value = (typeof keyword === 'string' ? keyword : this.keyword || '').trim()
+      if (!value) return
+      if (this.searchAbortController) this.searchAbortController.abort()
+      this.searchAbortController = new AbortController()
+      this.keyword = value; this.activeTab = 'search'; this.listLoading = true
+      try {
+        const body = await searchSongsApi(value, this.searchAbortController.signal)
+        let tracks = body.data
+        if (tracks && typeof tracks === 'object' && !Array.isArray(tracks)) tracks = tracks.songs || []
+        this.searchResults = (tracks || []).map(normalizeSong)
+      } catch (error) {
+        if (error?.name === 'AbortError') return
+        this.searchResults = []
+      } finally {
+        this.listLoading = false
+        this.$nextTick(() => { if (this.$refs.list) this.$refs.list.scrollTop = 0 })
+      }
+    },
+    async fetchPlaylist() {
+      const input = this.playlistInput.trim()
+      if (!input) return
+      const match = input.match(/(?:playlist\?id=|id=)(\d+)/) || input.match(/(\d{5,})/)
+      const playlistId = match ? match[1] : input
+      this.activeTab = 'search'; this.listLoading = true
+      try {
+        const body = await getPlaylistApi(playlistId)
+        let tracks = []
+        if (body?.data) {
+          if (Array.isArray(body.data)) tracks = body.data
+          else if (body.data.tracks) tracks = body.data.tracks
+        }
+        if (tracks.length === 0 && body.tracks) tracks = body.tracks
+        const songs = tracks.map(normalizeSong)
+        if (songs.length > 0) {
+          this.queue = [...songs, ...this.queue]
+          this.searchResults = songs
+          this.playlistInput = ''
+        }
+      } catch (error) {} finally { this.listLoading = false }
+    },
+    playFromList(index) {
+      if (this.activeTab === 'search') {
+        const song = this.searchResults[index]
+        if (!song) return
+        const existingIndex = this.queue.findIndex(item => String(item.id) === String(song.id))
+        if (existingIndex >= 0) this.currentIndex = existingIndex
+        else { this.queue = [song, ...this.queue]; this.currentIndex = 0 }
+        this.loadSong(song)
+      } else { this.playAt(index) }
+    },
+    playAt(index) {
+      if (index < 0 || index >= this.queue.length) return
+      this.currentIndex = index
+      this.loadSong(this.queue[index])
+    },
+    inQueue(song) { return this.queue.some(item => String(item.id) === String(song.id)) },
+    addToQueue(song) {
+      if (!song || this.inQueue(song)) return
+      this.queue = [...this.queue, song]
+    },
+    removeFromQueue(index) {
+      const removed = this.queue[index]
+      if (!removed) return
+      const wasCurrent = index === this.currentIndex
+      this.queue.splice(index, 1)
+      if (!this.queue.length) { this.currentIndex = -1; this.stopPlayback(); return }
+      if (index < this.currentIndex) { this.currentIndex -= 1 }
+      else if (wasCurrent) { this.playAt(Math.min(index, this.queue.length - 1)) }
+    },
+    stopPlayback() {
+      this.audio.pause()
+      this.audio.removeAttribute('src')
+      this.isPlaying = false
+      this.currentTime = 0; this.audioDuration = 0
+      this.currentAudioUrl = ''; this.qualityStatus = ''
+      this.lyricRaw = { lrc: '', tlrc: '' }
+      this.lyricLines = []; this.activeLyric = 0
+    },
+    async loadSong(song) {
+      const token = ++this.songLoadToken
+      this.isLoadingSong = true; this.lyricLines = []; this.activeLyric = 0; this.qualityStatus = ''
+      try {
+        const [musicBody, lyricBody] = await Promise.all([
+          getMusicApi(song.id, this.selectedQuality).catch(() => null),
+          getLyricApi(song.id).catch(() => null)
+        ])
+        if (token !== this.songLoadToken) return
+        let musicUrl = ''; let actualQuality = ''
+        if (musicBody?.code === 200) {
+          let data = musicBody.data
+          if (Array.isArray(data)) data = data[0]
+          musicUrl = data?.url || ''
+          actualQuality = data?.level || ''
+        }
+        this.currentAudioUrl = musicUrl
+        this.qualityStatus = actualQuality ? (QUALITY_NAMES[actualQuality] || actualQuality) : ''
+        if (musicUrl) {
+          this.audio.src = musicUrl
+          await this.audio.play().catch(() => {})
+        }
+        let lyric = ''; let translatedLyric = ''
+        if (lyricBody) {
+          const data = lyricBody.code === 200 ? lyricBody.data : lyricBody
+          lyric = data?.lrc || data?.lyric || ''
+          translatedLyric = data?.tlyric || data?.tlrc || ''
+          if (typeof lyric !== 'string') lyric = ''
+          if (typeof translatedLyric !== 'string') translatedLyric = ''
+        }
+        this.lyricRaw = { lrc: lyric, tlrc: translatedLyric }
+        this.lyricLines = this.parseLRC(lyric, translatedLyric)
+        this.activeLyric = 0
+        this.$nextTick(() => this.scrollLyricTo(0, false))
+      } catch (error) {
+        console.warn(error)
+      } finally {
+        if (token === this.songLoadToken) this.isLoadingSong = false
+      }
+    },
+    reloadCurrentSong() { if (this.currentSong) this.loadSong(this.currentSong) },
+    togglePlay() {
+      if (!this.currentSong) return
+      if (!this.audio.src) { this.loadSong(this.currentSong); return }
+      if (this.audio.paused) this.audio.play().catch(() => {})
+      else this.audio.pause()
+    },
+    playPrevious() { if (this.queue.length) this.playAt((this.currentIndex - 1 + this.queue.length) % this.queue.length) },
+    playNext() { if (this.queue.length) this.playAt((this.currentIndex + 1) % this.queue.length) },
+    switchPlayMode() { this.playMode = { loop: 'shuffle', shuffle: 'one', one: 'loop' }[this.playMode] },
+    bindAudioEvents() {
+      this.audio.addEventListener('timeupdate', () => {
+        this.currentTime = this.audio.currentTime || 0
+        this.audioDuration = this.audio.duration || this.audioDuration
+        if (!this.lyricLines.length) return
+        let index = 0
+        this.lyricLines.forEach((line, lineIndex) => { if (this.currentTime >= line.time) index = lineIndex })
+        if (index !== this.activeLyric) {
+          this.activeLyric = index
+          if (!this.userScrollingLyric) this.$nextTick(() => this.scrollLyricTo(index, true))
+        }
+      })
+      this.audio.addEventListener('loadedmetadata', () => { this.audioDuration = this.audio.duration })
+      this.audio.addEventListener('play', () => { this.isPlaying = true })
+      this.audio.addEventListener('pause', () => { this.isPlaying = false })
+      this.audio.addEventListener('ended', () => {
+        if (this.playMode === 'one') { this.audio.currentTime = 0; this.audio.play() }
+        else if (this.playMode === 'shuffle') this.playAt(Math.floor(Math.random() * this.queue.length))
+        else this.playNext()
+      })
+    },
+    seekTo(clientX) {
+      if (!this.audioDuration) return
+      const rect = this.$el.querySelector('.canvas-wrap').getBoundingClientRect()
+      const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      this.audio.currentTime = percent * this.audioDuration
+      this.currentTime = this.audio.currentTime
+    },
+    startSeek(event) { this.isSeeking = true; event.currentTarget.setPointerCapture(event.pointerId); this.seekTo(event.clientX) },
+    moveSeek(event) { if (this.isSeeking) this.seekTo(event.clientX) },
+    endSeek() { this.isSeeking = false },
+    seekLyric(time) { if (this.audio.duration) this.audio.currentTime = time },
+    handleLyricWheel(event) {
+      const container = this.$refs.lyricBody
+      const atTop = container.scrollTop <= 0
+      const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 1
+      if ((atTop && event.deltaY < 0) || (atBottom && event.deltaY > 0)) event.preventDefault()
+      event.stopPropagation()
+    },
+    handleLyricScroll() {
+      if (this.lyricProgrammatic) return
+      this.userScrollingLyric = true
+      clearTimeout(this.lyricPauseTimer)
+      this.lyricPauseTimer = setTimeout(() => { this.userScrollingLyric = false }, 3500)
+    },
+    scrollLyricTo(index, smooth) {
+      const container = this.$refs.lyricBody
+      const target = this.$el.querySelector(`.l-line[data-index="${index}"]`)
+      if (!container || !target) return
+      const desired = target.offsetTop - container.clientHeight / 2 + target.offsetHeight / 2
+      const max = container.scrollHeight - container.clientHeight
+      this.lyricProgrammatic = true
+      container.scrollTo({ top: Math.max(0, Math.min(desired, max)), behavior: smooth ? 'smooth' : 'auto' })
+      setTimeout(() => { this.lyricProgrammatic = false }, smooth ? 600 : 50)
+    },
+    async downloadAudio() {
+      if (!this.currentAudioUrl || !this.currentSong) return
+      try {
+        const response = await fetch(this.currentAudioUrl)
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        const extension = (this.currentAudioUrl.match(/\.([a-z0-9]+)(?:\?|$)/i) || [])[1] || ['standard', 'higher', 'exhigh'].includes(this.selectedQuality) ? 'mp3' : 'flac'
+        link.href = url; link.download = `${this.currentSong.artist}-${this.currentSong.name}.${extension}`; link.click()
+        setTimeout(() => URL.revokeObjectURL(url), 2000)
+      } catch (error) { window.open(this.currentAudioUrl, '_blank') }
+    },
+    downloadLyric() {
+      if (!this.currentSong) return
+      const text = `${this.lyricRaw.lrc}\n\n[翻译]\n${this.lyricRaw.tlrc}`
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url; link.download = `${this.currentSong.name || 'lyric'}.lrc`; link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1500)
+    },
+    startWaveAnimation() { this.waveRunning = true; this.drawWave() },
+    stopWaveAnimation() { this.waveRunning = false; cancelAnimationFrame(this.waveAnimationId) },
+    handleVisibilityChange() {
+      this.waveRunning = document.visibilityState === 'visible'
+      if (this.waveRunning) this.drawWave()
+    },
+    resizeWave() { this.$nextTick(this.drawWave) },
+    drawWave() {
+      const canvas = this.$refs.wave
+      if (!canvas) return
+      const context = canvas.getContext('2d')
+      const pixelRatio = Math.min(window.devicePixelRatio || 1, 1.6)
+      const rect = canvas.getBoundingClientRect()
+      canvas.width = rect.width * pixelRatio; canvas.height = rect.height * pixelRatio
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+      this.waveTime += 0.015
+      const width = rect.width; const height = rect.height
+      context.clearRect(0, 0, width, height)
+      context.beginPath(); context.moveTo(0, height / 2)
+      for (let x = 0; x < width; x += 2) {
+        const amplitude = this.isPlaying ? (width < 400 ? 18 : 28) + Math.sin(this.waveTime * 2) * 6 : 4
+        const y = height / 2 + Math.sin(x * 0.016 + this.waveTime * (this.isPlaying ? 2.6 : 0.25)) * amplitude + Math.sin(x * 0.008 - this.waveTime) * (this.isPlaying ? 10 : 1.2)
+        context.lineTo(x, y)
+      }
+      context.strokeStyle = this.isPlaying ? 'rgba(26,26,26,0.22)' : 'rgba(26,26,26,0.08)'; context.lineWidth = 1.6; context.stroke()
+      context.beginPath(); context.moveTo(0, height / 2 + 10)
+      for (let x = 0; x < width; x += 2) {
+        const amplitude = this.isPlaying ? (width < 400 ? 10 : 16) : 2
+        const y = height / 2 + 10 + Math.sin(x * 0.013 + this.waveTime * (this.isPlaying ? 2.2 : 0.2) + 1) * amplitude
+        context.lineTo(x, y)
+      }
+      context.strokeStyle = 'rgba(192,53,43,0.16)'; context.lineWidth = 1.1; context.stroke()
+      if (this.waveRunning) this.waveAnimationId = requestAnimationFrame(this.drawWave)
+    }
+  }
+}
+</script>
+
+<style>
+.music-page{--paper:#fdf8ef;--ink:#1a1a1a;--verm:#c0352b;--muted:#8a8a7a;--line:rgba(26,26,26,0.08);--card:rgba(255,255,255,0.78);--card-solid:#fffdf6;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px);}
+/* === 极端兼容 Reset === */
+.music-page *,.music-page *::before,.music-page *::after{box-sizing:border-box;min-width:0;word-wrap:break-word;overflow-wrap:break-word}
+.music-page{width:100%;max-width:100%;overflow-x:clip;-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:auto;scrollbar-gutter:stable}
+.music-page{margin:0;width:100%;max-width:100vw;overflow-x:clip;overflow-y:auto;position:relative;background:var(--paper);color:var(--ink);font-family:"Noto Serif SC",serif;-webkit-tap-highlight-color:transparent;touch-action:manipulation;min-height:100dvh}
+.music-page img,.music-page video,.music-page canvas,.music-page svg{max-width:100%;display:block}
+.music-page button,.music-page input{font:inherit;max-width:100%}
+.music-page button{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+.music-page a{color:inherit}
+.music-page .brush{font-family:"Ma Shan Zheng",cursive}
+.music-page ::selection{background:rgba(192,53,43,0.18)}
+
+/* paper grain & blobs - fixed but clipped */
+.music-page::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:0.032;z-index:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.blob{position:fixed;border-radius:50%;filter:blur(64px);pointer-events:none;z-index:0;will-change:transform}
+.b1{width:min(520px,120vw);height:min(520px,120vw);top:-120px;right:-100px;background:radial-gradient(circle, rgba(26,26,26,0.06), transparent 70%)}
+.b2{width:min(640px,130vw);height:min(640px,130vw);bottom:-160px;left:-120px;background:radial-gradient(circle, rgba(122,143,126,0.12), transparent 70%)}
+.b3{width:min(320px,90vw);height:min(320px,90vw);top:40%;left:30%;background:radial-gradient(circle, rgba(212,184,150,0.22), transparent 70%)}
+
+/* === Header : 完全防溢出 === */
+.music-hero{position:sticky;top:0;z-index:20;background:rgba(253,248,239,0.92);border-bottom:1px solid var(--line);width:100%;max-width:100vw;overflow:hidden}
+@supports((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .music-hero{backdrop-filter:blur(12px) saturate(1.1);-webkit-backdrop-filter:blur(12px) saturate(1.1)}
+}
+.h-inner{max-width:1440px;margin:0 auto;width:100%;padding:10px clamp(12px,3vw,24px);padding-top:calc(10px + var(--safe-t));display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:64px}
+.logo{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
+.logo-mark{width:38px;height:38px;flex-shrink:0;background:var(--verm);color:#fff;display:grid;place-items:center;font-size:20px;box-shadow:2px 2px 0 var(--ink);transform:rotate(-2deg);border-radius:2px}
+.logo-text{min-width:0;flex:1}
+.logo-text .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+.logo-text h1{font-size:clamp(18px,4.2vw,22px);letter-spacing:0.18em;line-height:1;margin:0;white-space:nowrap}
+.logo-text small{font-size:clamp(9px,2.2vw,11px);letter-spacing:0.22em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.logo-text p{font-size:clamp(9px,2vw,11px);letter-spacing:0.12em;color:#8a8a7a;margin:2px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.h-right{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:0.18em;color:#6b6b6b;flex-shrink:0;white-space:nowrap}
+.h-right .sep{opacity:.2}
+@media(max-width:900px){.h-right{display:none}}
+@media(max-width:600px){.h-inner{padding:8px 12px;padding-top:calc(8px + var(--safe-t))}.logo-text p{display:none}}
+
+/* === Layout: mobile-first, 无横向溢出 === */
+.wrap{position:relative;z-index:1;max-width:1440px;margin:0 auto;width:100%;max-width:100%;padding:clamp(10px,2.5vw,24px);display:grid;gap:clamp(14px,2.5vw,22px);grid-template-columns:1fr;align-items:start;box-sizing:border-box;overflow:clip}
+.wrap > *{min-width:0;max-width:100%}
+
+/* mobile order : center first = 播放优先 */
+.left{order:2;min-width:0}
+.center{order:1;min-width:0}
+.right{order:3;min-width:0}
+
+@media(min-width:760px){
+  .wrap{grid-template-columns:minmax(0,360px) minmax(0,1fr)}
+  .right{grid-column:1 / -1}
+}
+@media(min-width:1180px){
+  .wrap{grid-template-columns:minmax(0,360px) minmax(0,1fr) minmax(0,380px)}
+  .right{grid-column:auto}
+  .left{order:1}.center{order:2}.right{order:3}
+}
+/* ultra-wide car / projection */
+@media(min-width:1600px){
+  .wrap{max-width:1680px;gap:28px}
+}
+/* fallback if no grid */
+@supports not (display:grid){
+  .wrap{display:flex;flex-direction:column}
+}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 8px 32px rgba(0,0,0,0.04);width:100%;max-width:100%;overflow:clip;min-width:0}
+@supports((backdrop-filter:blur(1px))){
+  .panel{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+}
+@media(max-width:600px){.panel{border-radius:14px}}
+
+/* === Left: Search === */
+.s-head{padding:16px clamp(14px,3vw,20px) 10px}
+.s-title{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.s-title .line{flex:1;height:1px;background:linear-gradient(to right,transparent, rgba(26,26,26,0.15))}
+.s-title span{font-size:11px;letter-spacing:0.25em;color:var(--muted);white-space:nowrap}
+.search-box{position:relative;width:100%}
+.search-box input{width:100%;height:44px;padding:0 44px 0 40px;border-radius:999px;border:1px solid rgba(26,26,26,0.12);background:var(--paper);outline:none;font-size:14px;letter-spacing:0.04em;transition:.2s}
+.search-box input:focus{border-color:rgba(26,26,26,0.28);background:#fff;box-shadow:0 0 0 3px rgba(26,26,26,0.06)}
+.search-box .i{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:0.6;pointer-events:none}
+.search-box .go{position:absolute;right:5px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;border:0;cursor:pointer;display:grid;place-items:center;font-size:12px;line-height:1}
+
+.playlist-row{margin-top:10px;display:flex;gap:8px;width:100%;min-width:0}
+.playlist-row .input-wrap{flex:1;min-width:0;position:relative}
+.playlist-row .input-wrap span{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;opacity:.55;pointer-events:none}
+.playlist-row input{width:100%;height:36px;padding:0 12px 0 30px;border-radius:999px;border:1px dashed rgba(26,26,26,0.18);background:transparent;font-size:12px;outline:none;min-width:0}
+.playlist-row input:focus{border-style:solid;border-color:rgba(26,26,26,0.28);background:rgba(255,255,255,0.6)}
+.playlist-row button{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#f3ebe0;font-size:12px;letter-spacing:0.12em;cursor:pointer;flex-shrink:0;white-space:nowrap}
+
+.tabs{margin:0 clamp(12px,3vw,18px);display:flex;gap:4px;background:rgba(26,26,26,0.05);padding:4px;border-radius:999px;width:auto;max-width:calc(100% - 24px);box-sizing:border-box}
+.tabs button{flex:1;min-width:0;height:30px;border-radius:999px;border:0;font-size:11px;letter-spacing:0.12em;cursor:pointer;background:transparent;color:#6b6b6b;transition:.2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs button.on{background:var(--ink);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.15)}
+
+.list{max-height:42vh;overflow-y:auto;overflow-x:hidden;padding:10px 8px 14px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+@media(min-width:760px){.list{max-height:48vh}}
+@media(min-width:1180px){.list{max-height:420px}}
+.list::-webkit-scrollbar{width:4px;height:4px} .list::-webkit-scrollbar-thumb{background:rgba(26,26,26,0.12);border-radius:999px}
+.empty{padding:40px 12px;text-align:center}
+.empty .big{font-size:clamp(18px,5vw,24px);opacity:0.22;line-height:1.3}
+.empty .sm{font-size:11px;letter-spacing:0.15em;opacity:0.45;margin-top:10px;line-height:1.6}
+
+.song{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:12px;cursor:pointer;border:1px solid transparent;transition:.18s;width:100%;max-width:100%;min-width:0;overflow:hidden}
+.song:hover{background:#fff;border-color:rgba(26,26,26,0.08)}
+.song.on{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:0 6px 18px rgba(0,0,0,0.14)}
+.song-cover{width:44px;height:44px;flex-shrink:0;border-radius:9px;overflow:hidden;background:#f0e8d8;position:relative}
+.song-cover img{width:100%;height:100%;object-fit:cover}
+.song-meta{flex:1;min-width:0;overflow:hidden}
+.song-meta .t{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:0.03em;line-height:1.25;max-width:100%}
+.song-meta .a{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;letter-spacing:0.03em;opacity:0.75;max-width:100%}
+.song.on .a{color:rgba(255,255,255,0.62)}
+.play-dot{width:26px;height:26px;flex-shrink:0;border-radius:50%;border:1px solid rgba(26,26,26,0.12);display:grid;place-items:center}
+.song.on .play-dot{border-color:rgba(255,255,255,0.22)}
+.song-act{width:26px;height:26px;flex-shrink:0;border-radius:50%;border:1px solid rgba(26,26,26,0.12);background:transparent;color:var(--ink);font-size:12px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;transition:.18s}
+.song-act:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+.song-act.added{opacity:.4;cursor:default}
+.song-act.added:hover{background:transparent;color:var(--ink);border-color:rgba(26,26,26,0.12)}
+.song.on .song-act{border-color:rgba(255,255,255,0.22);color:#fff}
+.song.on .song-act:hover,.song.on .song-act.added:hover{background:#fff;color:var(--ink);border-color:#fff}
+.song.on .song-act.added{opacity:.55}
+.icon-play{width:0;height:0;border-left:7px solid currentColor;border-top:5px solid transparent;border-bottom:5px solid transparent;margin-left:2px}
+
+/* poetic card */
+.poetic{padding:16px 16px;background:linear-gradient(135deg, rgba(255,255,255,0.82), rgba(246,237,224,0.78))}
+
+/* === Center player === */
+.center-card{border-radius:clamp(16px,3vw,28px);padding-bottom:10px;position:relative;overflow:clip}
+.center-card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent, rgba(26,26,26,0.14), transparent);pointer-events:none}
+.c-inner{padding:clamp(16px,4vw,28px) clamp(14px,3.5vw,28px) 18px}
+.disk-wrap{position:relative;aspect-ratio:1;width:min(78vw, 360px);max-width:100%;margin:0 auto;overflow:visible}
+@media(min-width:600px){.disk-wrap{width:min(68vw, 420px)}}
+.ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(26,26,26,0.07);pointer-events:none}
+.ring2{position:absolute;inset:-6%;border-radius:50%;border:1px dashed rgba(26,26,26,0.09);pointer-events:none}
+@media(max-width:600px){.ring2{inset:-4%}}
+.disk{position:absolute;inset:0;border-radius:50%;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.16), inset 0 0 0 1px rgba(0,0,0,0.1);background:#f0e8d8;will-change:transform}
+.disk-inner{position:absolute;inset:8%;border-radius:50%;background:var(--paper);padding:10%}
+.disk-cover{width:100%;height:100%;border-radius:50%;overflow:hidden;position:relative;background:rgba(26,26,26,0.05)}
+.disk-cover img{width:100%;height:100%;object-fit:cover}
+.disk-cover .grain{position:absolute;inset:0;opacity:0.045;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none}
+.spindle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:14%;aspect-ratio:1;border-radius:50%;background:var(--ink);border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:grid;place-items:center}
+.spindle::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--verm);display:block}
+.seal{position:absolute;bottom:11%;right:11%;width:18%;aspect-ratio:1;background:var(--verm);color:#fff;display:grid;place-items:center;font-size:clamp(14px,3.5vw,18px);transform:rotate(3deg);box-shadow:2px 2px 0 var(--ink);mix-blend:multiply;pointer-events:none;border-radius:2px}
+@keyframes rot{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.disk.rolling{animation:rot 18s linear infinite}
+@media(prefers-reduced-motion:reduce){.disk.rolling{animation:none}}
+
+.meta-center{text-align:center;margin-top:clamp(18px,4vw,28px);min-width:0;overflow:hidden}
+.meta-center h2{font-size:clamp(18px,5vw,26px);font-weight:700;letter-spacing:0.1em;line-height:1.25;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:0 4px}
+.meta-center .sub{margin-top:8px;font-size:clamp(11px,2.8vw,13px);letter-spacing:0.14em;color:#6b6b6b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:0 8px}
+.divider{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px}
+.divider .l{width:32px;height:1px;background:rgba(26,26,26,0.15);flex-shrink:0}
+.divider span{font-size:10px;letter-spacing:0.28em;color:#a8a8a0;white-space:nowrap}
+.quality-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font-size:11px;color:#6b6b6b}
+.quality-row select{max-width:240px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,0.72);color:var(--ink);font-size:11px;outline:none}
+.quality-status{text-align:center;margin-top:7px;font-size:10px;letter-spacing:.08em;color:var(--muted);min-height:1em}
+
+/* progress */
+.progress-zone{margin-top:clamp(18px,4vw,28px);width:100%;min-width:0}
+.canvas-wrap{position:relative;height:44px;cursor:pointer;width:100%;overflow:clip;border-radius:8px;touch-action:none}
+.canvas-wrap canvas{position:absolute;inset:0;width:100%;height:100%}
+.track{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:1px;background:rgba(26,26,26,0.12);pointer-events:none}
+.fill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:2px;background:var(--ink);pointer-events:none;max-width:100%}
+.thumb{position:absolute;top:50%;transform:translate(-50%,-50%);transition:left .12s linear;pointer-events:none}
+@media(prefers-reduced-motion:no-preference){.thumb{transition:left .12s linear}}
+.thumb-box{width:26px;height:26px;border-radius:50%;background:#fff;border:1px solid rgba(26,26,26,0.15);box-shadow:0 2px 10px rgba(0,0,0,0.14);display:grid;place-items:center}
+.thumb-box i{width:7px;height:7px;border-radius:50%;background:var(--verm);display:block}
+.time-row{display:flex;justify-content:space-between;font-size:11px;letter-spacing:0.14em;color:var(--muted);margin-top:6px;padding:0 2px}
+
+/* controls: 完全防溢出+大触靶 */
+.ctrls{margin-top:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;width:100%;min-width:0}
+.ctrl-left,.ctrl-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ctrl-mid{display:flex;align-items:center;gap:12px;flex:1;justify-content:center;min-width:0}
+.btn{width:42px;height:42px;flex-shrink:0;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,0.7);cursor:pointer;display:grid;place-items:center;transition:.18s;font-size:14px;line-height:1}
+@media(max-width:600px){.btn{width:44px;height:44px}}
+.btn,.btn:hover,.btn:focus,.btn:active{color:var(--ink)}
+.btn:hover{border-color:rgba(26,26,26,0.22);background:#fff}
+.btn:active{transform:scale(0.96)}
+.btn-big{width:64px;height:64px;background:var(--ink);color:#fff;border:0;box-shadow:0 8px 24px rgba(0,0,0,0.24);font-size:22px}
+.btn-big:hover,.btn-big:focus,.btn-big:active{background:var(--ink);color:#fff}
+@media(max-width:600px){.btn-big{width:62px;height:62px}}
+.vol{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:0 10px;height:40px;background:rgba(255,255,255,0.6)}
+.vol input{width:64px;accent-color:var(--ink)}
+@media(max-width:760px){.vol{display:none}}
+.note{margin-top:14px;text-align:center;font-size:11px;letter-spacing:0.18em;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.note i{width:12px;height:12px;border:1.5px solid rgba(26,26,26,0.2);border-top-color:var(--ink);border-radius:50%;display:inline-block;animation:spin .7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* === Right lyric: 关键修复 === */
+.lyric-card{background:#181818;color:var(--paper);border-radius:clamp(16px,3vw,24px);overflow:clip;position:relative;box-shadow:0 16px 48px rgba(0,0,0,0.18);display:flex;flex-direction:column;width:100%;max-width:100%;min-width:0}
+.lyric-card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent, rgba(255,255,255,0.18), transparent);pointer-events:none;z-index:2}
+.l-head{padding:16px clamp(14px,3vw,20px) 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:relative;z-index:2;background:linear-gradient(to bottom, rgba(24,24,24,1), rgba(24,24,24,0.92) 60%, transparent)}
+.l-head .ll{display:flex;align-items:center;gap:10px;min-width:0}
+.l-head .dot{width:28px;height:28px;flex-shrink:0;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center;font-size:12px}
+.l-head .title{font-size:12px;letter-spacing:0.22em;white-space:nowrap}
+.l-head .sub{font-size:10px;opacity:0.6;letter-spacing:0.14em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.l-body{
+  height:clamp(320px, 55vh, 520px);
+  max-height:60dvh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  padding:8px clamp(10px,2.5vw,16px);
+  overscroll-behavior:contain; /* 关键：阻止冒泡到 body */
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,0.15) transparent;
+  position:relative;
+  isolation:isolate; /* 创建独立滚动容器 */
+}
+@media(min-width:1180px){.l-body{height:520px;max-height:520px}}
+.l-body::-webkit-scrollbar{width:4px}
+.l-body::-webkit-scrollbar-track{background:transparent}
+.l-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.14);border-radius:999px}
+.l-empty{height:100%;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0.55;text-align:center;padding:24px 12px}
+.l-list{padding:20px 0 28px;width:100%;min-width:0}
+.l-line{position:relative;padding:12px 12px 12px 22px;border-radius:12px;border:1px solid transparent;transition:.22s;margin-bottom:6px;cursor:pointer;width:100%;max-width:100%;min-width:0;overflow:hidden}
+.l-line:hover{background:rgba(255,255,255,0.04)}
+.l-line.on{background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.12)}
+.l-line .d{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--verm);box-shadow:0 0 8px var(--verm);display:none}
+.l-line.on .d{display:block}
+.l-line .t{font-size:clamp(13px,2.8vw,14px);line-height:1.65;letter-spacing:0.03em;color:rgba(255,255,255,0.56);white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word}
+.l-line.on .t{font-size:clamp(14px,3vw,15px);font-weight:600;color:#fff}
+.l-line .tr{font-size:11px;margin-top:4px;line-height:1.6;color:rgba(255,255,255,0.32);white-space:pre-wrap;word-break:break-word}
+.l-line.on .tr{color:rgba(255,255,255,0.52)}
+.l-foot{padding:12px 20px calc(12px + var(--safe-b));background:linear-gradient(to top, rgba(0,0,0,0.28), transparent);display:flex;justify-content:space-between;font-size:10px;letter-spacing:0.18em;opacity:0.5;flex-shrink:0;gap:10px;flex-wrap:wrap}
+
+/* now card */
+.now{border-radius:18px;padding:16px clamp(14px,3vw,18px);background:var(--card);border:1px solid var(--line);width:100%;max-width:100%;min-width:0;overflow:clip}
+.now-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.now-head span{font-size:11px;letter-spacing:0.22em;color:var(--muted);white-space:nowrap}
+.badge{font-size:10px;padding:3px 9px;border-radius:999px;background:var(--ink);color:#fff;letter-spacing:0.14em;flex-shrink:0}
+.now-body{display:flex;gap:14px;min-width:0;overflow:hidden}
+.now-cover{width:60px;height:60px;flex-shrink:0;border-radius:12px;overflow:hidden;background:#f0e8d8}
+.now-cover img{width:100%;height:100%;object-fit:cover}
+.now-info{min-width:0;flex:1;overflow:hidden}
+.now-info .n{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-info .ar{font-size:12px;color:#6b6b6b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-info .al{font-size:10px;color:#a8a8a0;margin-top:4px;letter-spacing:0.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tags{margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:10px;letter-spacing:0.12em}
+.tags div{border:1px solid var(--line);border-radius:999px;padding:8px 2px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tags .hl{border-color:rgba(192,53,43,0.18);background:rgba(192,53,43,0.06);color:var(--verm)}
+
+/* footer */
+.music-page footer{position:relative;z-index:1;max-width:1440px;margin:0 auto;width:100%;padding:18px clamp(12px,3vw,24px) calc(28px + var(--safe-b));text-align:center;overflow:clip}
+.music-page footer .foot-line{display:flex;align-items:center;justify-content:center;gap:12px;opacity:0.32;flex-wrap:wrap}
+.music-page footer .foot-line .l{width:40px;height:1px;background:var(--ink);flex-shrink:0}
+.music-page footer .foot-line span{font-size:clamp(12px,3vw,14px);letter-spacing:0.05em;white-space:nowrap}
+.music-page footer p{margin-top:10px;font-size:10px;letter-spacing:0.18em;opacity:0.22;line-height:1.6;word-break:break-all}
+
+/* util */
+.hidden{display:none !important}
+
+/* extremely small devices: Nokia 240px, Galaxy Fold, etc */
+@media(max-width:340px){
+  .h-inner{padding:8px 10px}
+  .logo-mark{width:32px;height:32px;font-size:16px}
+  .disk-wrap{width:84vw}
+  .ctrls{justify-content:center}
+  .ctrl-left{order:2}.ctrl-mid{order:1;width:100%}.ctrl-right{order:3}
+  .tags{grid-template-columns:1fr 1fr}
+  .playlist-row{flex-direction:column}
+  .playlist-row button{width:100%}
+}
+
+/* car display short height */
+@media(max-height:600px) and (min-width:800px){
+.l-body{height:52vh;max-height:52vh}
+  .disk-wrap{width:min(42vh, 360px)}
+  .meta-center{margin-top:12px}
+}
+
+/* reduce motion */
+@media(prefers-reduced-motion:reduce){
+  .music-page *,.music-page *::before,.music-page *::after{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+}
+
+/* focus visible */
+/* === Vue 页面适配 === */
+.music-page{min-height:100%;position:relative;background:var(--paper);color:var(--ink);font-family:"Noto Serif SC",serif}
+.music-page::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:0.032;z-index:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.music-hero{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;max-width:1440px;margin:0 auto;padding:10px clamp(12px,3vw,24px);min-height:64px;background:rgba(253,248,239,0.92);border-bottom:1px solid var(--line)}
+.hero-right{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:0.18em;color:#6b6b6b;flex-shrink:0;white-space:nowrap}
+.hero-right .sep{opacity:.2}
+.cover-placeholder{display:grid;place-items:center;width:100%;height:100%;opacity:.3}
+.cover-placeholder.large{font-size:36px}
+.poetic-quote{display:flex;gap:10px}
+.quote-mark{opacity:.28;flex-shrink:0}
+.poetic-quote p{font-size:13px;line-height:1.9;letter-spacing:0.04em;color:#5a5a5a}
+.poetic-tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.poetic-tags span{font-size:10px;letter-spacing:0.15em;padding:4px 10px;border-radius:999px;border:1px solid var(--line)}
+.poetic-tags .solid{background:var(--ink);color:#fff}
+.spinner{width:22px;height:22px;border:2px solid rgba(0,0,0,0.1);border-top-color:#000;border-radius:50%;margin:0 auto;animation:spin 1s linear infinite}
+.song-active{position:absolute;inset:0;background:rgba(0,0,0,0.28);display:grid;place-items:center}
+.song-active span{width:2px;height:10px;background:#fff;margin:0 1px;animation:bars .6s infinite}
+.song-active span:nth-child(2){animation-delay:.2s}
+.song-active span:nth-child(3){animation-delay:.4s}
+.l-head > div:last-child{width:26px;height:26px;border-radius:50%;border:1px solid rgba(255,255,255,0.14);display:grid;place-items:center;font-size:10px;opacity:.55;flex-shrink:0}
+.ll{display:flex;gap:10px;min-width:0}
+.ll > div:last-child{min-width:0}
+.empty-title{font-size:clamp(22px,6vw,28px);letter-spacing:0.15em}
+.empty-title + p{font-size:11px;margin-top:12px;letter-spacing:0.18em;opacity:.6;line-height:1.8;max-width:18em}
+.empty-line{margin-top:22px;width:72px;height:1px;background:rgba(255,255,255,0.12)}
+.empty-line + p{margin-top:12px;font-size:10px;letter-spacing:0.28em;opacity:.35}
+.lyric-end{text-align:center;padding:22px 0 8px;opacity:.26;font-size:10px;letter-spacing:.34em}
+.idle-body{font-size:12px;line-height:1.8;color:#8a8a7a;min-width:0}
+.live-dot-wrap{display:flex;align-items:center;gap:6px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--verm);display:inline-block;animation:dot 1.6s infinite}
+@keyframes bars{0%,100%{transform:scaleY(0.55)}50%{transform:scaleY(1.35)}}
+@keyframes dot{0%,100%{opacity:.3}50%{opacity:1}}
+@media(max-width:900px){.hero-right{display:none}}
+@media(max-width:600px){.music-hero{padding:8px 12px}.logo-text p{display:none}}
+@media(max-width:340px){.music-hero{padding:8px 10px}.logo-mark{width:32px;height:32px;font-size:16px}}
+</style>
