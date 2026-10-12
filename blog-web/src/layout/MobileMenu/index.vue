@@ -1,6 +1,6 @@
 <template>
   <el-drawer 
-    :visible.sync="visible" 
+    v-model="visible" 
     direction="ltr" 
     :with-header="false"
     size="50%"
@@ -18,7 +18,7 @@
             :to="route.path"
             class="menu-item"
             :class="{ active: $route.path === route.path }"
-            @click.native="closeMenu"
+            @click="closeMenu"
           >
             <i v-if="route.meta?.icon" :class="route.meta.icon"></i>
             <span>{{ getMenuTitle(route) }}</span>

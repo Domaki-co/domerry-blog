@@ -39,7 +39,7 @@ export default {
       hoveredIndex: null,
     };
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;

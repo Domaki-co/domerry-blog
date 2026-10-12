@@ -32,20 +32,26 @@
 }
 
 //下拉选择器
+// EP 的选项状态类名变了：element-ui 是 .hover / .selected，
+// Element Plus 是 .is-hovering / .is-selected（theme-chalk/src/option.scss）
 .el-select-dropdown{
     border-color: var(--border-color)!important;
-    .el-select-dropdown__item.hover, .el-select-dropdown__item:hover{
+    .el-select-dropdown__item.is-hovering, .el-select-dropdown__item:hover{
         background: var(--hover-bg)!important;
     }
 }
 
-.el-select-dropdown.is-multiple .el-select-dropdown__item.selected{
+.el-select-dropdown.is-multiple .el-select-dropdown__item.is-selected{
     background: var(--hover-bg)!important;
 }
 
-
-.el-popper[x-placement^=bottom] .popper__arrow::after{
-    border-bottom-color: var(--card-bg)!important;
+//浮层箭头
+// element-ui 用的是 popper.js v1：类名 .popper__arrow、位置属性 x-placement、箭头主体 ::after；
+// Element Plus 换成 @popperjs/core v2：类名 .el-popper__arrow、位置属性 data-popper-placement、
+// 箭头主体 ::before（theme-chalk/src/popper.scss）。旧选择器在 EP 下完全匹配不到。
+.el-popper .el-popper__arrow::before{
+    background: var(--card-bg)!important;
+    border-color: var(--border-color)!important;
 }
 
 //分割线
@@ -171,7 +177,9 @@
     }
 
     @media screen and (max-width: 768px) {
-        .el-pager li:not(.active) {
+        // 当前页码的类名在 EP 里是 .is-active（pager 组件用 ns.is('active')），
+        // 原来写 .active 会导致移动端把当前页也一起隐藏
+        .el-pager li:not(.is-active) {
             display: none !important;
         }
         .btn-prev,

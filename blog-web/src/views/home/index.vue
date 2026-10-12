@@ -18,9 +18,10 @@
               :key="category.id"
               :name="String(category.id)"
             >
-              <template slot="label">
+              <template #label">
                 <span class="label-info">
-                  <i :class="category.icon"></i>
+                  <!-- category.icon 存的是已全局注册的 Element Plus 图标组件名 -->
+                  <el-icon><component :is="category.icon" /></el-icon>
                   {{ category.name }}
                 </span>
               </template>
@@ -84,7 +85,7 @@ export default {
         {
           id: "all",
           name: "全部",
-          icon: "el-icon-menu",
+          icon: "Menu",
         },
       ],
     };
@@ -162,12 +163,12 @@ export default {
     getAllCategories() {
       getAllCategoriesApi().then((res) => {
         const icons = [
-          "el-icon-document",
-          "el-icon-collection",
-          "el-icon-reading",
-          "el-icon-coffee-cup",
-          "el-icon-notebook-2",
-          "el-icon-edit",
+          "Document",
+          "Collection",
+          "Reading",
+          "CoffeeCup",
+          "Notebook",
+          "Edit",
         ];
         const categoriesWithIcons = res.data.map((category) => ({
           ...category,

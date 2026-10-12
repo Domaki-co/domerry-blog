@@ -226,7 +226,7 @@ export default {
     window.addEventListener('resize', this.resizeWave)
     this.handleSearch('许嵩')
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.stopWaveAnimation()
     document.removeEventListener('visibilitychange', this.handleVisibilityChange)
     window.removeEventListener('resize', this.resizeWave)

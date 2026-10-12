@@ -58,7 +58,7 @@ export default {
     this.calculateRunningTime()
     this.timer = setInterval(this.calculateRunningTime, 1000)
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.timer) {
       clearInterval(this.timer)
     }

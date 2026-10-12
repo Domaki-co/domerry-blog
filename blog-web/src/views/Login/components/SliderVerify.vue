@@ -71,15 +71,14 @@
           >
             <!-- 按钮图标 -->
             <div class="slider-button-icon">
-              <i
+              <el-icon
                 style="
                   font-size: 30px;
                   position: absolute;
                   top: -10px;
                   left: -10px;
                 "
-                class="el-icon-arrow-right"
-              ></i>
+              ><ArrowRight /></el-icon>
             </div>
           </div>
         </div>

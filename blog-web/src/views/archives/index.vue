@@ -86,7 +86,8 @@ export default {
       await this.fetchPosts({ append: true })
     },
     toggleYear(year) {
-      this.$set(this.collapsedYears, year, !this.collapsedYears[year])
+      // Vue 3 的 Proxy 能追踪新增/修改的属性，不再需要 Vue 2 的 set API
+      this.collapsedYears[year] = !this.collapsedYears[year]
     },
     startTransition(element) {
       element.style.height = 'auto'
@@ -107,7 +108,7 @@ export default {
     const res = await getArchivesApi()
     this.archives = res.data
     this.archives.forEach(item => {
-      this.$set(this.collapsedYears, item.year, false)
+      this.collapsedYears[item.year] = false
     })
   }
 }

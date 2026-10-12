@@ -62,7 +62,7 @@ export default {
     this.isDarkMode = initTheme()
     window.addEventListener('scroll', this.handleScroll)
   },
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll)
   }
 }

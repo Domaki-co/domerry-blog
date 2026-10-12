@@ -10,7 +10,7 @@
           placement="top"
         >
           <button class="back-btn" @click="backToHome">
-            <i class="el-icon-back"></i>
+            <el-icon><Back /></el-icon>
           </button>
         </el-tooltip>
         <el-tooltip
@@ -22,7 +22,7 @@
           <button class="switch-form-btn" @click="handleSwitchForm">
             <i
               :class="
-                currentForm === 'login' ? 'el-icon-user' : 'fas fa-qrcode'
+                currentForm === 'login' ? 'fas fa-user' : 'fas fa-qrcode'
               "
             ></i>
           </button>
@@ -79,20 +79,20 @@
           <el-form :model="loginForm" :rules="rules" ref="ruleFrom">
             <el-form-item class="form-item" prop="username">
               <el-input
-                prefix-icon="el-icon-user-solid"
+                prefix-icon="UserFilled"
                 v-model="loginForm.username"
                 placeholder="请输入用户名"
-                @keyup.enter.native="handleLogin"
+                @keyup.enter="handleLogin"
                 size="large"
               />
             </el-form-item>
 
             <el-form-item class="form-item" prop="password">
               <el-input
-                prefix-icon="el-icon-lock"
+                prefix-icon="Lock"
                 v-model="loginForm.password"
                 placeholder="请输入密码"
-                @keyup.enter.native="handleLogin"
+                @keyup.enter="handleLogin"
                 show-password
                 size="large"
               />
@@ -130,7 +130,7 @@
           <el-form :model="registerForm" :rules="rules" ref="registerForm">
             <el-form-item lable="昵称" prop="nickname">
               <el-input
-                prefix-icon="el-icon-user-solid"
+                prefix-icon="UserFilled"
                 v-model="registerForm.nickname"
                 placeholder="请输入昵称"
               />
@@ -138,7 +138,7 @@
 
             <el-form-item class="form-item" prop="email">
               <el-input
-                prefix-icon="el-icon-message"
+                prefix-icon="Message"
                 v-model="registerForm.email"
                 placeholder="请输入邮箱"
               />
@@ -146,11 +146,11 @@
 
             <el-form-item class="form-item" prop="code">
               <el-input
-                prefix-icon="el-icon-key"
+                prefix-icon="Key"
                 v-model="registerForm.code"
                 placeholder="请输入验证码"
               >
-                <template slot="append">
+                <template #append">
                   <el-button @click="sendRegisterCode" :disabled="codeSending">
                     {{ codeButtonText }}
                   </el-button>
@@ -160,7 +160,7 @@
 
             <el-form-item class="form-item" prop="password">
               <el-input
-                prefix-icon="el-icon-lock"
+                prefix-icon="Lock"
                 v-model="registerForm.password"
                 placeholder="请输入密码"
                 show-password
@@ -192,7 +192,7 @@
           <el-form :model="forgotForm" :rules="rules" ref="forgotForm">
             <el-form-item class="form-item" prop="email">
               <el-input
-                prefix-icon="el-icon-message"
+                prefix-icon="Message"
                 v-model="forgotForm.email"
                 placeholder="请输入注册邮箱"
               />
@@ -200,11 +200,11 @@
 
             <el-form-item class="form-item" prop="code">
               <el-input
-                prefix-icon="el-icon-key"
+                prefix-icon="Key"
                 v-model="forgotForm.code"
                 placeholder="请输入验证码"
               >
-                <template slot="append">
+                <template #append">
                   <el-button
                     @click="sendVerificationCode"
                     :disabled="codeSending"
@@ -217,7 +217,7 @@
 
             <el-form-item class="form-item" prop="password">
               <el-input
-                prefix-icon="el-icon-lock"
+                prefix-icon="Lock"
                 v-model="forgotForm.password"
                 placeholder="请输入新密码"
                 show-password
@@ -246,7 +246,7 @@
     <el-dialog
       title="请拖动滑块完成拼图"
       width="360px"
-      :visible.sync="isShowSliderVerify"
+      v-model="isShowSliderVerify"
       :close-on-click-modal="false"
       @close="refresh"
       append-to-body
@@ -643,7 +643,7 @@ export default {
       this.$router.push("/");
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     enableScroll();
     this.clearTimer();
   },

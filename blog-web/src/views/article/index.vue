@@ -296,21 +296,21 @@
     </div>
     <mj-image-preview ref="imagePreview" />
     <payment-dialog
-      :visible.sync="showPaymentDialog"
+      v-model="showPaymentDialog"
       :title="article.title"
       :price="1"
       :article-id="$route.params.id"
       @payment-success="handlePaymentSuccess"
     />
     <membership-dialog
-      :visible.sync="showMembershipDialog"
+      v-model="showMembershipDialog"
       @payment-success="handleMembershipSuccess"
     />
     <el-dialog
       title="打开外部链接"
-      :visible.sync="externalLinkDialogVisible"
+      v-model="externalLinkDialogVisible"
       width="520px"
-      custom-class="external-link-dialog"
+      class="external-link-dialog"
       :close-on-click-modal="false"
       :before-close="cancelExternalLink"
     >
@@ -319,13 +319,15 @@
         <p>您将前往以下网站：</p>
         <div class="external-link-url" :title="externalLinkUrl">{{ externalLinkUrl }}</div>
       </div>
-      <div slot="footer" class="dialog-footer">
+      <template #footer>
+        <div class="dialog-footer">
         <el-button type="primary" @click="confirmExternalLink">
           <i class="fas fa-external-link-alt"></i>
           继续访问
         </el-button>
         <el-button @click="cancelExternalLink">取消</el-button>
       </div>
+      </template>
     </el-dialog>
   </div>
 </template>
@@ -1045,7 +1047,7 @@ export default {
       this.initImagePreview()
     })
   },
-  beforeDestroy() {
+  beforeUnmount() {
     window.removeEventListener('scroll', this.updateActiveHeading)
     window.removeEventListener('resize', this.updateActionBarPosition)
     this.$el.removeEventListener('click', this.handleExternalLinkClick)

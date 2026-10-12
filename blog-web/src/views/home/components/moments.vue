@@ -34,7 +34,7 @@ export default {
   mounted() {
     this.startRotation()
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.timer) {
       clearInterval(this.timer)
     }

@@ -1,5 +1,4 @@
-import Vue from 'vue'
-import VueRouter from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/views/home/index.vue'
 import Layout from '@/layout/index.vue'
 import NotFound from '@/views/404/404.vue'
@@ -11,8 +10,6 @@ import Messages from '@/views/messages/index.vue'
 import About from '@/views/about/index.vue'
 import Photos from '@/views/photos/index.vue'
 import store from '@/store';
-
-Vue.use(VueRouter)
 
 const routes = [
 
@@ -188,7 +185,7 @@ const routes = [
               }, {
                 path: '/login',
                 name: 'Login',
-                component: () => import('@/views/login/index.vue'),
+                component: () => import('@/views/Login/index.vue'),
                 meta: {
                   title: '登录',
                   hidden: true,
@@ -217,30 +214,32 @@ const routes = [
     }
 ]
 
-const router = new VueRouter({
-  mode: 'history',
-  base: '/',
+const router = createRouter({
+  history: createWebHistory('/'),
   routes,
   scrollBehavior(to, from, savedPosition) {
-    return { x: 0, y: 0 }
+    return { left: 0, top: 0 }
   }
 })
 
 
 // 解决重复点击导航时，控制台出现报错
-const VueRouterPush = VueRouter.prototype.push
-VueRouter.prototype.push = function push (to) {
-  return VueRouterPush.call(this, to).catch(err => err)
+// vue-router 4 的实例方法直接挂在 router 上（原型链上是空对象，没有可打补丁的
+// VueRouter.prototype.push），所以改成在实例上包装一次，统一吞掉 push 的 rejection。
+// 注：v4 里"重复导航"已经改成 resolve 出 NavigationFailure 而不是 reject，
+// 这里主要是兜住守卫里抛出的错误，行为与 Vue 2 版保持一致。
+const routerPush = router.push
+router.push = function push(to) {
+  return routerPush.call(this, to).catch(err => err)
 }
 
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   if (to.meta.title) {
     document.title = to.meta.title
   }
   //关闭搜索框
   store.commit('SET_SEARCH_VISIBLE', false)
-  next()
 })
 
 export default router

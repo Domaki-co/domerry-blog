@@ -1,12 +1,11 @@
 <template>
   <el-dialog
-    :visible="dialogVisible"
-    @update:visible="updateVisible"
+    v-model="dialogVisible"
     title="开通会员"
     width="800px"
     top="5vh"
     :close-on-click-modal="false"
-    custom-class="membership-dialog"
+    class="membership-dialog"
     @close="handleClose"
   >
     <div class="membership-content">
@@ -125,7 +124,8 @@
       </div>
     </div>
 
-    <div slot="footer" class="dialog-footer">
+    <template #footer>
+      <div class="dialog-footer">
       <template v-if="!showQRCode">
         <el-button @click="handleClose">取消</el-button>
         <el-button 
@@ -144,6 +144,7 @@
         </el-button>
       </template>
     </div>
+    </template>
   </el-dialog>
 </template>
 
@@ -153,14 +154,13 @@ import { createMemberOrder, checkOrderStatus } from '@/api/member'
 export default {
   name: 'MembershipDialog',
   props: {
-    visible: {
+    modelValue: {
       type: Boolean,
       default: false
     }
   },
   data() {
     return {
-      dialogVisible: this.visible,
       membershipPlans: [
         {
           id: 1,
@@ -201,13 +201,17 @@ export default {
     }
   },
   computed: {
+    // Vue 3 的 props 是只读的：内层 el-dialog 用 v-model 关闭时必须回传事件，不能直接写 prop
+    dialogVisible: {
+      get() {
+        return this.modelValue
+      },
+      set(val) {
+        this.$emit('update:modelValue', val)
+      }
+    },
     selectedPlanInfo() {
       return this.membershipPlans.find(plan => plan.id === this.selectedPlan)
-    }
-  },
-  watch: {
-    visible(val) {
-      this.dialogVisible = val
     }
   },
   methods: {
@@ -276,13 +280,10 @@ export default {
       this.qrCodeUrl = ''
       this.orderNo = ''
       this.selectedPlan = null
-      this.$emit('update:visible', false)
-    },
-    updateVisible(value) {
-      this.$emit('update:visible', value)
+      this.$emit('update:modelValue', false)
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     clearInterval(this.checkTimer)
   }
 }

@@ -119,7 +119,7 @@
       // 监听滚动以更新激活的分类
       window.addEventListener('scroll', this.handleScroll)
     },
-    beforeDestroy() {
+    beforeUnmount() {
       window.removeEventListener('scroll', this.handleScroll)
     }
   }

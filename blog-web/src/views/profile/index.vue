@@ -9,7 +9,7 @@
             aria-label="更换头像">
             <el-avatar :size="100" :src="userInfo.avatar" alt="用户头像"></el-avatar>
             <div class="upload-overlay" inert>
-              <i class="el-icon-camera"></i>
+              <el-icon><Camera /></el-icon>
             </div>
           </div>
         </div>
@@ -25,7 +25,7 @@
             size="small"
             :loading="signInLoading"
           >
-            <i class="el-icon-check"></i>
+            <el-icon><Check /></el-icon>
             {{ signInStatus ? '今日已签到' : '立即签到' }}
           </el-button>
           <div class="sign-in-stats">
@@ -83,15 +83,15 @@
           </el-form-item>
           <el-form-item label="性别">
             <el-radio-group v-model="profileForm.sex">
-              <el-radio :label="1">男</el-radio>
-              <el-radio :label="2">女</el-radio>
-              <el-radio :label="0">保密</el-radio>
+              <el-radio :value="1">男</el-radio>
+              <el-radio :value="2">女</el-radio>
+              <el-radio :value="0">保密</el-radio>
             </el-radio-group>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="submitProfile" :loading="loading" icon="el-icon-edit"
+            <el-button type="primary" @click="submitProfile" :loading="loading" icon="Edit"
               size="small">保存修改</el-button>
-            <el-button size="small" @click="resetProfile" icon="el-icon-refresh">重置</el-button>
+            <el-button size="small" @click="resetProfile" icon="Refresh">重置</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -121,7 +121,7 @@
                   {{ account.isBound ? '已绑定' : '未绑定' }}
                 </el-tag>
                 <el-button :type="account.isBound ? 'danger' : 'primary'" size="small"
-                  :icon="account.isBound ? 'el-icon-close' : 'el-icon-link'"
+                  :icon="account.isBound ? 'Close' : 'Link'"
                   @click="account.isBound ? unbindAccount(account.type) : bindAccount(account.type)">
                   {{ account.isBound ? '解除绑定' : '立即绑定' }}
                 </el-button>
@@ -137,12 +137,12 @@
         <h2 class="section-title">我的文章</h2>
         <div class="action-bar">
           <div>
-            <el-input v-model="params.title" size="mini" placeholder="输入文字标题搜索文章..." prefix-icon="el-icon-search"
+            <el-input v-model="params.title" size="small" placeholder="输入文字标题搜索文章..." prefix-icon="Search"
               style="width: 300px;margin-right: 10px"></el-input>
-            <el-button type="primary" size="mini" icon="el-icon-search" @click="handleSearch">搜索</el-button>
+            <el-button type="primary" size="small" icon="Search" @click="handleSearch">搜索</el-button>
           </div>
 
-          <el-button type="primary" icon="el-icon-edit" size="mini" @click="$router.push('/editor')">写文章</el-button>
+          <el-button type="primary" icon="Edit" size="small" @click="$router.push('/editor')">写文章</el-button>
         </div>
 
         <div v-loading="loading" v-if="posts.length">
@@ -152,20 +152,20 @@
               <p class="post-excerpt">{{ post.summary }}</p>
               <div class="post-meta">
                 <el-tag size="small" :type="statusInfo(post.status).type">{{ statusInfo(post.status).label }}</el-tag>
-                <el-tag size="small"><i class="el-icon-date"></i>{{ post.createTime }}</el-tag>
-                <el-tag size="small" type="info"><i class="el-icon-view"></i>{{ post.quantity }} 阅读</el-tag>
-                <el-tag size="small" type="success"><i class="el-icon-chat-line-square"></i>{{ post.commentNum || 0 }}
+                <el-tag size="small"><el-icon><Calendar /></el-icon>{{ post.createTime }}</el-tag>
+                <el-tag size="small" type="info"><el-icon><View /></el-icon>{{ post.quantity }} 阅读</el-tag>
+                <el-tag size="small" type="success"><el-icon><ChatLineSquare /></el-icon>{{ post.commentNum || 0 }}
                   评论</el-tag>
-                <el-tag size="small" type="warning"><i class="el-icon-star-off"></i>{{ post.likeNum || 0 }} 点赞</el-tag>
+                <el-tag size="small" type="warning"><el-icon><Star /></el-icon>{{ post.likeNum || 0 }} 点赞</el-tag>
               </div>
             </div>
             <div class="post-actions">
-              <el-button type="text" icon="el-icon-view" @click="viewPost(post.id)">查看</el-button>
-              <el-button type="text" icon="el-icon-edit" @click="editPost(post.id)">编辑</el-button>
-              <el-button v-if="canPublish(post)" type="text" @click="changeStatus(post, 1)">上架</el-button>
-              <el-button v-if="canOffline(post)" type="text" @click="changeStatus(post, 0)">下架</el-button>
-              <el-button v-if="canSubmitReview(post)" type="text" @click="changeStatus(post, 3)">提交审核</el-button>
-              <el-button type="text" icon="el-icon-delete" class="delete" @click="deletePost(post)">删除</el-button>
+              <el-button type="link" icon="View" @click="viewPost(post.id)">查看</el-button>
+              <el-button type="link" icon="Edit" @click="editPost(post.id)">编辑</el-button>
+              <el-button v-if="canPublish(post)" type="link" @click="changeStatus(post, 1)">上架</el-button>
+              <el-button v-if="canOffline(post)" type="link" @click="changeStatus(post, 0)">下架</el-button>
+              <el-button v-if="canSubmitReview(post)" type="link" @click="changeStatus(post, 3)">提交审核</el-button>
+              <el-button type="link" icon="Delete" class="delete" @click="deletePost(post)">删除</el-button>
             </div>
           </el-card>
 
@@ -184,16 +184,16 @@
           <el-card v-for="comment in myComments" :key="comment.id" class="comment-item">
             <div class="comment-actions">
               <p class="comment-text" v-html="parseContent(comment.content)"></p>
-              <el-button type="text" icon="el-icon-delete" class="delete"
+              <el-button type="link" icon="Delete" class="delete"
                 @click="deleteComment(comment.id)">删除</el-button>
             </div>
             <div class="comment-meta">
               <el-link type="primary" @click="viewPost(comment.articleId)">文章：{{ comment.articleTitle }}</el-link>
               <el-tag size="small">
-                <i class="el-icon-time"></i>
+                <el-icon><Clock /></el-icon>
                 {{ comment.createTime }}
               </el-tag>
-              <el-tag size="small" type="success"><i class="el-icon-star-off"></i>{{ comment.likeCount ?
+              <el-tag size="small" type="success"><el-icon><Star /></el-icon>{{ comment.likeCount ?
                 comment.likeCount : 0 }} 赞</el-tag>
             </div>
           </el-card>
@@ -217,13 +217,13 @@
                   <el-tag size="small" type="info">回复 @{{ reply.replyNickname }}</el-tag>
                 <p v-html="parseContent(reply.content)"></p>
                 </p>
-                <el-button type="text" icon="el-icon-delete" class="delete"
+                <el-button type="link" icon="Delete" class="delete"
                   @click="deleteReply(reply.id)">删除</el-button>
               </div>
               <div class="reply-meta">
                 <el-link type="primary" @click="viewPost(reply.articleId)">文章：{{ reply.articleTitle }}</el-link>
                 <el-tag size="small">
-                  <i class="el-icon-time"></i>
+                  <el-icon><Clock /></el-icon>
                   {{ reply.createTime }}
                 </el-tag>
               </div>
@@ -249,13 +249,13 @@
             <div class="like-content">
               <div class="comment-actions">
                 <el-link class="article-title" @click="viewPost(like.id)">{{ like.title }}</el-link>
-                <el-button type="text" icon="el-icon-star-off" class="delete"
+                <el-button type="link" icon="Star" class="delete"
                   @click="cancelLike(like.id)">取消点赞</el-button>
               </div>
               <div class="like-meta">
-                <!-- <el-tag size="small"><i class="el-icon-user"></i>{{ like.author }}</el-tag> -->
+                <!-- <el-tag size="small"><el-icon><User /></el-icon>{{ like.author }}</el-tag> -->
                 <el-tag size="small">
-                  <i class="el-icon-time"></i>
+                  <el-icon><Clock /></el-icon>
                   {{ like.createTime }}
                 </el-tag>
               </div>
@@ -293,7 +293,7 @@
               placeholder="请再次输入新密码"></el-input>
           </el-form-item>
           <el-form-item>
-            <el-button size="small" type="primary" @click="submitPasswordChange" icon="el-icon-edit"
+            <el-button size="small" type="primary" @click="submitPasswordChange" icon="Edit"
               :loading="loading">确认修改</el-button>
           </el-form-item>
         </el-form>
@@ -319,7 +319,7 @@
                 <el-input v-model="feedbackForm.email" placeholder="请留下您的联系邮箱，方便我们回复您"></el-input>
               </el-form-item>
               <el-form-item>
-                <el-button type="primary" @click="submitFeedback" icon="el-icon-check"
+                <el-button type="primary" @click="submitFeedback" icon="Check"
                   :loading="loading">提交反馈</el-button>
               </el-form-item>
             </el-form>
@@ -349,7 +349,7 @@
                   </div>
                   <div class="feedback-reply" v-if="feedback.replyContent">
                     <div class="reply-title">
-                      <i class="el-icon-chat-line-round"></i> 管理员回复：
+                      <el-icon><ChatLineRound /></el-icon> 管理员回复：
                     </div>
                     <p class="reply-content">{{ feedback.replyContent }}</p>
                   </div>
@@ -369,7 +369,7 @@
     </main>
 
     <AvatarCropper 
-      :visible.sync="showCropper"
+      v-model="showCropper"
       :user="userInfo"
       @update-avatar="handleAvatarUpdate"
     />

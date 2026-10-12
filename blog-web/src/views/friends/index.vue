@@ -64,7 +64,7 @@
 
       <!-- 申请表单弹窗 -->
       <el-dialog 
-        :visible.sync="showApplyForm" 
+        v-model="showApplyForm" 
         title="申请友链" 
         width="500px" 
         top="3vh"

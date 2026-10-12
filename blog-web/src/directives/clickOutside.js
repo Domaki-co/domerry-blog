@@ -1,5 +1,5 @@
 export default {
-  bind(el, binding) {
+  beforeMount(el, binding) {
     el.clickOutsideEvent = function(event) {
       if (!(el === event.target || el.contains(event.target))) {
         binding.value(event)
@@ -7,7 +7,7 @@ export default {
     }
     document.addEventListener('click', el.clickOutsideEvent)
   },
-  unbind(el) {
+  unmounted(el) {
     document.removeEventListener('click', el.clickOutsideEvent)
   }
-} 
+}

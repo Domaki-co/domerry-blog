@@ -1,9 +1,6 @@
-import Vue from 'vue'
-import Vuex from 'vuex'
+import { createStore } from 'vuex'
 import { loginApi,logoutApi,getUserInfoApi } from '@/api/auth'
 import { getToken, setToken, removeToken } from '@/utils/cookie'
-
-Vue.use(Vuex)
 
 /**
  * 从 sessionStorage 恢复登录用户信息
@@ -21,7 +18,7 @@ function readCachedUser() {
   }
 }
 
-export default new Vuex.Store({
+export default createStore({
   state: {
     userInfo: readCachedUser(),
     webSiteInfo: {

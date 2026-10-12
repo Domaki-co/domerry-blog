@@ -6,7 +6,7 @@
       <div class="message-container">
         <h1 class="message-title">留言板</h1>
         <div class="message-input-wrapper">
-          <el-input class="input" v-model="content" placeholder="说点什么吧" @keyup.enter.native="addToList"
+          <el-input class="input" v-model="content" placeholder="说点什么吧" @keyup.enter="addToList"
             @focus="show = true"></el-input>
           <el-button style="opacity: .6;" class="ml-3" round @click="addToList" v-show="show">发送</el-button>
         </div>
@@ -17,11 +17,11 @@
         class="danmaku"
           :danmus="barrageList"
           style="height: 100%; width: 100%"
-          useSlot
           :speeds="150"
           :channels="15"
         >
-          <template v-slot:dm="{ danmu }">
+          <!-- vue-danmaku 2.x 取消了 useSlot 开关，插槽名也从 dm 改成了 danmu；名字不对会静默不渲染并报 NO_DANMU_SLOT -->
+          <template #danmu="{ danmu }">
             <span class="barrage-items">
               <img
                 :src="danmu.avatar"

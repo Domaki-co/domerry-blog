@@ -185,17 +185,10 @@ export default {
   user-select: none;
   -webkit-user-select: none;
 }
-/* 全局样式建议添加到公共CSS文件 */
-:root {
-  /* 允许常规内容区域文本选择 */
-  --selectable-text: {
-    user-select: text;
-    -webkit-user-select: text;
-    cursor: text;
-  };
-}
-
-/* 需要排除的不可选区域增强样式 */
+/* 需要排除的不可选区域增强样式
+   注意：原来这里用了 `--selectable-text: { ... }` + `@apply --selectable-text;`
+   （Tailwind 语法），在 Vite/esbuild 下既不是合法 CSS 也不生效，
+   构建时还会报 "Expected identifier but found whitespace"，已展开成普通声明。 */
 .chat-messages, .image-preview {
   user-select: none !important;
   -webkit-user-select: none !important;
@@ -204,7 +197,8 @@ export default {
 
 /* 允许选择的区域（根据项目实际情况添加） */
 .article-content, .text-area {
-  @apply --selectable-text;
+  user-select: text;
+  -webkit-user-select: text;
   cursor: auto;
 }
 .menu-show {

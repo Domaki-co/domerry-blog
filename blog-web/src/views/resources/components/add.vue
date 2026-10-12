@@ -3,9 +3,9 @@
     <!-- 上传资源对话框 -->
     <el-dialog
       title="上传资源"
-      :visible.sync="dialogVisible"
+      v-model="dialogVisible"
       width="500px"
-      custom-class="upload-dialog"
+      class="upload-dialog"
       @close="handleClose"
     >
       <el-form
@@ -31,8 +31,8 @@
 
         <el-form-item label="资源类型" prop="isFree">
           <el-radio-group v-model="uploadForm.isFree">
-            <el-radio :label="1">免费</el-radio>
-            <el-radio :label="0">付费</el-radio>
+            <el-radio :value="1">免费</el-radio>
+            <el-radio :value="0">付费</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -45,12 +45,14 @@
           <el-input v-model="uploadForm.panCode" placeholder="请输入提取码" />
         </el-form-item>
       </el-form>
-      <div slot="footer" class="dialog-footer">
+      <template #footer>
+        <div class="dialog-footer">
         <el-button @click="handleClose">取 消</el-button>
         <el-button type="primary" @click="submitUpload" :loading="uploading">
           确 定
         </el-button>
       </div>
+      </template>
     </el-dialog>
   </div>
 </template>

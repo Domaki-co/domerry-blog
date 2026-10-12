@@ -1,6 +1,6 @@
 <template>
   <el-dialog
-      :visible.sync="visible"
+      v-model="visible"
       title="相册密码验证"
       width="400px"
       :close-on-click-modal="false"
@@ -12,14 +12,14 @@
         <i class="fas fa-lock"></i>
       </div>
       <p class="dialog-tip">这是一个加密相册，请输入密码访问</p>
-      <el-form :model="form" ref="form" :rules="rules" @submit.native.prevent="handleSubmit">
+      <el-form :model="form" ref="form" :rules="rules" @submit.prevent="handleSubmit">
         <el-form-item prop="password">
           <el-input
               v-model="form.password"
               type="password"
               placeholder="请输入相册密码"
           >
-            <template slot="prefix">
+            <template #prefix">
               <i class="fas fa-key"></i>
             </template>
           </el-input>

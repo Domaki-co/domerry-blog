@@ -145,7 +145,7 @@ export default {
       audio.addEventListener('error', this.errorHandler, true)
     },
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 组件销毁前清理播放器实例
     if (this.player) {
       const audio = this.player.audio

@@ -46,7 +46,7 @@ export default {
       }
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     if (!this.local) {
       document.body.style.overflow = ''
     }

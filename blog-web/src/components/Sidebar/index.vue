@@ -18,8 +18,11 @@
       </div>
       <div class="social-links">
         <div v-for="item in socialLinksWithData" :key="item.type">
-          <el-tooltip placement="top" :content="item.content">
-            <a v-if="$store.state.webSiteInfo.showList.indexOf(item.type) !== -1" href="javascript:void(0)"
+          <!-- v-if 必须挂在 el-tooltip 上：Element Plus 的 ElOnlyChild 要求默认插槽里存在真实元素，
+               写在 <a> 上时插槽只剩注释节点，每次渲染都会报 ElementPlusError: [ElOnlyChild] no valid child node found -->
+          <el-tooltip v-if="$store.state.webSiteInfo.showList.indexOf(item.type) !== -1"
+            placement="top" :content="item.content">
+            <a href="javascript:void(0)"
                 :title="item.title" :class="`social-btn ${item.type}`" @click="copyToClipboard(item)">
                 <i :class="item.icon"></i>
             </a>

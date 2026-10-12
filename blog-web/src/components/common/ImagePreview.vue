@@ -262,7 +262,7 @@ export default {
       }
     })
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 移除ESC键盘事件监听
     document.removeEventListener('keydown', (e) => {
       if (e.key === 'Escape') {

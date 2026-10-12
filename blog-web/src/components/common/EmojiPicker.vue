@@ -52,7 +52,7 @@ export default {
       this.closePanel()
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     document.body.style.overflow = ''
   }
 }

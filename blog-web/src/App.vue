@@ -115,27 +115,26 @@ export default {
     },
 
     initContextMenu() {
-      const handleContextMenu = (e) => {
+      // 挂到实例上，便于 beforeUnmount 里解绑（Vue 3 已移除「用实例方法监听生命周期钩子」的写法）
+      this.handleContextMenu = (e) => {
         this.$refs.contextMenuRef.show(e)
       }
 
-      const handleClick = () => {
+      this.handleClick = () => {
         this.$refs.contextMenuRef.hide()
       }
 
-      document.addEventListener('contextmenu', handleContextMenu)
-      document.addEventListener('click', handleClick)
-
-      // 在组件销毁时移除事件监听
-      this.$once('hook:beforeDestroy', () => {
-        document.removeEventListener('contextmenu', handleContextMenu)
-        document.removeEventListener('click', handleClick)
-      })
+      document.addEventListener('contextmenu', this.handleContextMenu)
+      document.addEventListener('click', this.handleClick)
     }
   },
   mounted() {
     this.initCursorEffect()
     this.initContextMenu()
+  },
+  beforeUnmount() {
+    document.removeEventListener('contextmenu', this.handleContextMenu)
+    document.removeEventListener('click', this.handleClick)
   }
 }
 </script>

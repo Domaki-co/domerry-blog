@@ -196,7 +196,7 @@
              <!-- 新增引用消息显示 -->
              <div v-if="msg.replyId && !msg.isRecalled" class="reply-message" @click="scrollToMessage(msg.replyId)">
               <span class="reply-content">
-                <i class="el-icon-top"></i>{{msg.replyUserName}}：{{msg.replyContent}}
+                <el-icon><Top /></el-icon>{{msg.replyUserName}}：{{msg.replyContent}}
               </span>
             </div>
           </div>
@@ -339,14 +339,14 @@
       <el-button
         type="primary"
         size="small"
-        icon="el-icon-message"
+        icon="Message"
         @click="sendMessageToFriend"
         >发送信息</el-button
       >
       <el-button
         type="danger"
         size="small"
-        icon="el-icon-delete"
+        icon="Delete"
         @click="deleteFriend"
         >删除好友</el-button
       >
@@ -483,7 +483,7 @@ export default {
     this.checkMobile();
     window.addEventListener("resize", this.checkMobile);
   },
-  beforeDestroy() {
+  beforeUnmount() {
     this.shouldReconnect = false; // 设置不再重连
     this.stopHeartbeat(); // 清理心跳定时器
     if (this.ws) {
@@ -1572,7 +1572,7 @@ export default {
     toggleAudioPlayback(msg, event) {
       if (this.audio) {
         this.audio.pause();
-        this.$set(msg, "isPlaying", false);
+        msg.isPlaying = false; // Vue 3 的 Proxy 能追踪新增属性，不再需要 Vue 2 的 set API
         this.audio = null;
         return;
       }
@@ -1580,9 +1580,9 @@ export default {
       this.audio
         .play()
         .then(() => {
-          this.$set(msg, "isPlaying", true);
+          msg.isPlaying = true;
           this.audio.onended = () => {
-            this.$set(msg, "isPlaying", false);
+            msg.isPlaying = false;
             this.audio = null;
           };
         })

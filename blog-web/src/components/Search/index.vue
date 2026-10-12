@@ -1,9 +1,9 @@
 <template>
   <el-dialog
-    :visible.sync="$store.state.searchVisible"
+    v-model="dialogVisible"
     title="搜索"
     width="650px"
-    @update:visible="handleClose"
+    @closed="handleClose"
   >
     <div 
       class="search-input-wrapper"
@@ -104,8 +104,20 @@ export default {
       total: 0,
     }
   },
+  computed: {
+    // el-dialog 在 Element Plus 里是 v-model（modelValue）语义；
+    // 且 Vuex 的 state 不能直接赋值（v-model 会生成赋值语句），必须提交 mutation
+    dialogVisible: {
+      get() {
+        return this.$store.state.searchVisible
+      },
+      set(val) {
+        this.$store.commit('SET_SEARCH_VISIBLE', val)
+      }
+    }
+  },
   watch: {
-    '$store.state.searchVisible': {
+    dialogVisible: {
       handler(newVal, oldVal) {
         if (newVal) {
           getTagsApi().then(res => {
@@ -244,7 +256,7 @@ export default {
     document.addEventListener('keydown', this.handleKeydown)
   },
 
-  beforeDestroy() {
+  beforeUnmount() {
     if (this.searchTimeout) {
       clearTimeout(this.searchTimeout)
     }

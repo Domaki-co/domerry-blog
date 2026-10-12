@@ -1,10 +1,10 @@
 <template>
   <el-dialog
     title="支付"
-    :visible.sync="visible"
+    v-model="dialogVisible"
     width="500px"
     :close-on-click-modal="false"
-    custom-class="payment-dialog"
+    class="payment-dialog"
     @close="handleClose"
   >
     <div class="payment-content">
@@ -59,7 +59,8 @@
       </div>
     </div>
 
-    <div slot="footer" class="dialog-footer">
+    <template #footer>
+      <div class="dialog-footer">
       <template v-if="!showQRCode">
         <el-button @click="handleClose">取消</el-button>
         <el-button type="primary" @click="handlePay" :loading="loading">
@@ -73,6 +74,7 @@
         </el-button>
       </template>
     </div>
+    </template>
   </el-dialog>
 </template>
 
@@ -82,7 +84,7 @@ import { createOrder, checkOrderStatus } from '@/api/payment'
 export default {
   name: 'PaymentDialog',
   props: {
-    visible: {
+    modelValue: {
       type: Boolean,
       default: false
     },
@@ -108,6 +110,17 @@ export default {
       qrCodeUrl: this.paymentMethod === 'alipay' ? this.$store.state.webSiteInfo.aliPay : this.$store.state.webSiteInfo.weixinPay,
       orderNo: '',
       checkTimer: null
+    }
+  },
+  computed: {
+    // Vue 3 的 props 是只读的：内层 el-dialog 用 v-model 关闭时必须回传事件，不能直接写 prop
+    dialogVisible: {
+      get() {
+        return this.modelValue
+      },
+      set(val) {
+        this.$emit('update:modelValue', val)
+      }
     }
   },
   methods: {
@@ -171,10 +184,10 @@ export default {
       this.showQRCode = false
       this.qrCodeUrl = ''
       this.orderNo = ''
-      this.$emit('update:visible', false)
+      this.$emit('update:modelValue', false)
     }
   },
-  beforeDestroy() {
+  beforeUnmount() {
     clearInterval(this.checkTimer)
   }
 }

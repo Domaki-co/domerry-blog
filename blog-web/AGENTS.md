@@ -1,6 +1,8 @@
 # AGENTS.md - 拾壹博客门户前端（blog-web）
 
-本目录是博客的公开门户，也包含登录、个人中心、投稿、音乐和聊天等用户功能。Vue **2.7.16**（不是 Vue 3）+ JavaScript + Vite 5（`@vitejs/plugin-vue2`）+ Element UI（2.15，不是 Element Plus）+ Vuex 3（单 store，无模块）+ Vue Router 3（history 模式）。
+本目录是博客的公开门户，也包含登录、个人中心、投稿、音乐和聊天等用户功能。Vue **3.5** + JavaScript + Vite 5（`@vitejs/plugin-vue`）+ Element Plus（2.14）+ Vuex 4（单 store，无模块）+ Vue Router 4（history 模式）。
+
+> 本目录已完成 Vue 2.7 → Vue 3 迁移（重构方案见 `docs/Vue3迁移重构方案.md`）。迁移前的写法是 Vue 2 + Element UI（`.sync`、`slot="x"`、`custom-class`、`el-icon-*` 字体图标、`$set` 等），现在一律使用 Element Plus / Vue 3 的写法，不要再引入 Element UI 或 Vue 2 的 API。
 
 ## 常用命令
 
@@ -41,12 +43,22 @@ npm run preview
 
 ## 编码约定
 
-- **Options API everywhere**：现有 48 个 `.vue` 全部是 `export default {}`（data/methods/computed），不要引入 `<script setup>`、Composition API、Pinia 或 Element Plus。
+- **Options API 是存量主体**：48 个 `.vue` 基本还是 `export default {}`（data/methods/computed），改动时沿用原风格；新增文件或整体重写的组件可以用 `<script setup>`。不要引入 Pinia。
 - 路由 `meta` 字段：`title`、`hidden`、`fullscreen`、`transition`、`requireAuth`。**注意 `requireAuth` 和 `requiresAuth` 两种拼写在 router 里并存**，新代码统一用 `requireAuth`。
 - 深色模式：`src/utils/theme.js` 切换 `documentElement` 的 `data-theme="dark"`，偏好存 localStorage `theme-mode`，回退 `prefers-color-scheme`；组件样式应使用 `var(--line)`、`var(--hover-bg)` 等 CSS 变量和 `$dark` map，不要写死颜色。
 - SCSS 变量/混入已通过 vite `additionalData` 全局注入每个组件，无需 import；断点 `$breakpoint-sm 640 / md 768 / lg 1024 / xl 1280`。
-- 全局注册可复用：`svg-icon`（SVG 源文件放 `src/assets/icons/`，symbolId `icon-[dir]-[name]`）、`mj-emoji`、`mj-image-preview`、`mavon-editor`、vue-lazyload。
-- Markdown 能力已有三套：`mavon-editor`（全局组件）、`vditor`（editor 页）、`marked + highlight.js`（文章渲染，atom-one-dark）。改动编辑/渲染时同步考虑 XSS 防护和历史文章兼容。
+- 全局注册可复用：`svg-icon`（SVG 源文件放 `src/assets/icons/`，symbolId `icon-[dir]-[name]`）、`mj-emoji`、`mj-image-preview`、37 个 `@element-plus/icons-vue` 图标组件（在 `main.js` 里按名字全局注册，所以模板里可以直接写 `<el-icon><Edit /></el-icon>`，也可以给 `el-button` / `el-input` 的 `icon` 传字符串 `"Edit"`）、vue-lazyload 的 `v-lazy`。
+- Markdown 能力有两套：`vditor`（editor 页）、`marked + highlight.js`（文章渲染，atom-one-dark）。`mavon-editor` 已随本次迁移删除。改动编辑/渲染时同步考虑 XSS 防护和历史文章兼容。
+
+## Element Plus 迁移要点
+
+- **图标**：Element Plus 不再提供 `el-icon-*` 字体图标，全部换成 `@element-plus/icons-vue` 的 SVG 组件（全局已注册 37 个，见 `src/main.js`）；需要转圈用 `<el-icon class="is-loading">`，而不是 element-ui 的 `class="el-icon-loading"`。
+- **属性差异**：`custom-class` → `class`（EP 的 dialog/drawer 是 `inheritAttrs: false`，`class` 会被合并到内部真正的 `.el-dialog` / `.el-drawer` 上）；`type="text"` 的按钮 → `type="link"`；`el-radio` / `el-checkbox` 的 `label` 语义已变，选项值统一用 `:value`；`size="mini"` / `"medium"` 不再支持，最小是 `small`。
+- **弹窗显隐**：EP 的 `el-dialog` / `el-drawer` 只有 `v-model`（`modelValue`），没有 `visible` 属性——写成 `:visible="x"` 会被当作普通属性透传，弹窗永远打不开。子组件需要在内部关闭时，用 `computed` 的 get/set 转发 `update:modelValue`，**不要**把 `v-model` 直接绑到只读的 prop 上（Vue 3 会报 readonly 警告）。
+- **分页**：`:current-page` + `@current-change` 在 EP 里依然合法（`pagination.mjs` 的 `hasCurrentPageListener` 接受 `@current-change`），不必强行改成 `v-model:current-page`；但 EP 的当前页类名是 `is-active`（不是 element-ui 的 `active`），写自定义分页样式时注意。
+- **XSS**：所有 `v-html` 必须经过 `$sanitize`（`src/utils/sanitize.js`，已在 `main.js` 注入到 `globalProperties`）。
+- **自定义指令**：Vue 3 的钩子是 `mounted` / `updated` / `unmounted`（Vue 2 是 `bind` / `inserted` / `update` / `unbind`）。写了 `mounted` 就要补 `unmounted` 做清理，否则会泄漏监听器（参见 `src/directives/animate.js`）。
+- **UI 库安装方式**：`main.js` 里是 `app.use(ElementPlus)` 全量安装（`$message` / `$confirm` 等全局方法由 `makeInstaller` 注入），改成按需自动导入会丢掉这些方法。
 
 ## 配置与联调
 

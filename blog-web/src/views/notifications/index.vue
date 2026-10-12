@@ -29,7 +29,7 @@
       <div class="notifications-header">
         <h1>{{ currentCategoryName }}</h1>
         <div class="header-actions">
-          <el-button type="text" @click="markAllAsRead" v-if="hasUnread">
+          <el-button type="link" @click="markAllAsRead" v-if="hasUnread">
             <i class="fas fa-check-double"></i> 全部已读
           </el-button>
         </div>
@@ -81,7 +81,7 @@
             </div>
             <div class="notification-actions">
               <el-button 
-                type="text" 
+                type="link" 
                 size="small"
                 @click.stop="deleteNotification(notification.id)"
               >

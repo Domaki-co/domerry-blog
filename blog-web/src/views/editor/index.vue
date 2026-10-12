@@ -310,7 +310,7 @@ export default {
             this.initVditor()
         }
     },
-    beforeDestroy() {
+    beforeUnmount() {
         if (this.vditor) {
             try {
                 this.vditor.destroy()

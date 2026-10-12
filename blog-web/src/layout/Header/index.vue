@@ -328,7 +328,7 @@ export default {
       }
     })
   },
-  beforeDestroy() {
+  beforeUnmount() {
     // 移除滚动事件监听
     window.removeEventListener('scroll', this.handleScroll)
     document.removeEventListener('click', this.closeDropdown)

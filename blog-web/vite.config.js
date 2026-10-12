@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import vue2 from '@vitejs/plugin-vue2'
+import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import { loadEnv } from 'vite'
 import { createSvgIconsPlugin } from 'vite-plugin-svg-icons'
@@ -30,7 +30,7 @@ export default defineConfig(({ command, mode }) => {
         },
         plugins: [
           devUtilityPlugin(),
-          vue2(),
+          vue(),
           createSvgIconsPlugin({
             // 指定需要缓存的图标文件夹
             iconDirs: [path.resolve(process.cwd(), 'src/assets/icons')],

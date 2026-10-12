@@ -3,12 +3,12 @@
         <div class="random-video-btn">
             <el-tooltip class="box-item" effect="dark" content="随机视频播放" placement="right">
                 <div @click="drawer = true">
-                    <i class="el-icon-d-arrow-right"></i>
+                    <el-icon><DArrowRight /></el-icon>
                 </div>
             </el-tooltip>
         </div>
 
-        <el-drawer title="随机视频播放" :visible.sync="drawer" :with-header="false">
+        <el-drawer title="随机视频播放" v-model="drawer" :with-header="false">
             <div class="video-container">
                 <video ref="video" style="width: 100%" controls autoplay :src="videoSrc"></video>
             </div>
@@ -16,7 +16,7 @@
                 <el-button type="primary" :icon="btnIcon" size="small" @click="operateVideo">
                     {{ btnContent }}
                 </el-button>
-                <el-button type="primary" icon="el-icon-arrow-right" size="small" @click="nextVideo">下一个视屏</el-button>
+                <el-button type="primary" icon="ArrowRight" size="small" @click="nextVideo">下一个视屏</el-button>
             </div>
         </el-drawer>
     </div>
@@ -31,7 +31,7 @@ export default {
             videoSrc: 'http://api.yujn.cn/api/zzxjj.php',
             isPlaying: true,
             btnContent: '暂停',
-            btnIcon: 'el-icon-video-pause'
+            btnIcon: 'VideoPause'
         }
     },
     methods: {
@@ -44,12 +44,12 @@ export default {
             if (this.isPlaying) {
                 this.$refs.video.pause();
                 this.btnContent = '播放';
-                this.btnIcon = 'el-icon-video-play';
+                this.btnIcon = 'VideoPlay';
                 this.isPlaying = false;
             } else {
                 this.$refs.video.play();
                 this.btnContent = '暂停';
-                this.btnIcon = 'el-icon-video-pause';
+                this.btnIcon = 'VideoPause';
                 this.isPlaying = true;
             }
         }
