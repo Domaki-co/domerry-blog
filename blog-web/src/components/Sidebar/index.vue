@@ -226,13 +226,13 @@ export default {
 <style lang="scss" scoped>
 .sidebar {
   position: sticky;
-  top: 80px;
+  top: 76px;
   width: 100%;
   max-width: 320px;
-  //侧边栏整体高于视口时，sticky 只会把它钉在 top:80px，超出屏幕的部分得等页面滚到最底
+  //侧边栏整体高于视口时，sticky 只会把它钉在 top:76px，超出屏幕的部分得等页面滚到最底
   //（sticky 约束解除）才露出来。做法：侧边栏自身做成定高 flex 列 —— 作者卡和公告占自然
   //高度、始终可见，下面的 .sidebar-scroll 吃掉剩余高度并在内部滚动
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 90px);
   display: flex;
   flex-direction: column;
 
@@ -263,7 +263,7 @@ export default {
   .author-card {
 
     padding: $spacing-md;
-    margin-bottom: $spacing-lg;
+    margin-bottom: 14px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     position: relative;
 
@@ -483,7 +483,7 @@ export default {
 }
 
 .section {
-  margin-bottom: $spacing-lg;
+  margin-bottom: 14px;
 
   h3 {
     font-size: 1.1rem;

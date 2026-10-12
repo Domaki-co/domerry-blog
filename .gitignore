@@ -64,3 +64,5 @@ deploy/docker/target.crt
 /blog/ip2region.xdb
 unpackage/
 /.zcodeignore
+/design-previews/
+/deploy/

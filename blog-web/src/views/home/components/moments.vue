@@ -67,8 +67,8 @@ export default {
 .moments-list {
   background: var(--card-bg);
   border-radius: $border-radius-lg;
-  padding: $spacing-md $spacing-lg;
-  margin-bottom: $spacing-xl;
+  padding: 10px 18px;
+  margin-bottom: 14px;
   box-shadow: $shadow-sm;
 }
 

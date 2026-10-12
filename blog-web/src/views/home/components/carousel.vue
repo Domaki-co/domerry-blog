@@ -46,7 +46,7 @@ export default {
   border-radius: $border-radius-lg;
   overflow: hidden;
   box-shadow: $shadow-lg;
-  margin-bottom: $spacing-lg;
+  margin-bottom: 14px;
   :deep(.el-carousel__container) {
     height: 400px;
     @include responsive(sm) {

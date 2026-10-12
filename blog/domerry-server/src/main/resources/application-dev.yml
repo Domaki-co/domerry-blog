@@ -25,7 +25,7 @@ spring:
 
   redis:
     host: ${REDIS_HOST:192.168.196.130}
-    port: ${REDIS_PORT:6379}
+    port: ${REDIS_PORT:63579}
     timeout: 10000
     password: ${REDIS_PASSWORD:}
     database: 8

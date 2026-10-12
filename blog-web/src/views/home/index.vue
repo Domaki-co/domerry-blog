@@ -5,6 +5,7 @@
         <Carousel
           v-if="carouselSlides?.length > 0"
           :slides="carouselSlides"
+          class="carousel"
           @click="goToPost"
         />
         <!-- 侧边栏在 <=1024px 时整体隐藏，这里给移动端补一个折叠式置顶入口 -->
@@ -18,7 +19,7 @@
               :key="category.id"
               :name="String(category.id)"
             >
-              <template #label">
+              <template #label>
                 <span class="label-info">
                   <!-- category.icon 存的是已全局注册的 Element Plus 图标组件名 -->
                   <el-icon><component :is="category.icon" /></el-icon>
@@ -192,7 +193,7 @@ export default {
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
-  padding: $spacing-lg;
+  padding: 14px $spacing-lg 24px;
 
   @include responsive(lg) {
     padding: $spacing-sm;
@@ -202,15 +203,15 @@ export default {
 .content-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: $spacing-lg * 2;
-  padding: 0 $spacing-xl;
-  margin-bottom: $spacing-xl * 2;
+  gap: 20px;
+  padding: 0;
+  margin-bottom: $spacing-xl;
   min-height: calc(100vh - 80px);
   align-items: start;
 
   @include responsive(lg) {
     grid-template-columns: 1fr;
-    padding: $spacing-sm;
+    padding: 0;
   }
 }
 
@@ -220,12 +221,12 @@ export default {
   height: 100%;
 
   .carousel {
-    margin-bottom: $spacing-xl;
+    margin-bottom: 14px;
     width: 100%;
     max-height: 480px;
 
     @include responsive(md) {
-      margin-bottom: $spacing-xl;
+      margin-bottom: 14px;
       max-height: 280px;
       :deep(h3) {
         font-size: 1.2em;
