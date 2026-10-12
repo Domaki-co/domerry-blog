@@ -174,15 +174,6 @@ const routes = [
                 }
               },
               {
-                path: '/chat',
-                name: 'Chat',
-                component: () => import(/* webpackPrefetch: true */ '@/views/chat/index.vue'),
-                meta: {
-                  title: "聊天 - doma's blog",
-                  icon: 'fas fa-comments',
-                  hidden: true
-                }
-              }, {
                 path: '/login',
                 name: 'Login',
                 component: () => import('@/views/Login/index.vue'),

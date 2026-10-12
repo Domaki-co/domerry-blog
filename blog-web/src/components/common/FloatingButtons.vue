@@ -1,12 +1,6 @@
 <template>
   <div class="floating-buttons" :class="{ 'show-top': showBackToTop }">
 
-    <el-tooltip content="聊天" placement="left">
-      <router-link to="/chat" class="float-btn chat-btn" title="聊天">
-      <i class="fas fa-comments"></i>
-    </router-link>
-    </el-tooltip>
- 
     <el-tooltip content="切换主题" placement="left">
       <button class="float-btn theme-btn" @click="toggleTheme" title="切换主题">
         <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
@@ -100,16 +94,6 @@ export default {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   }
 
-  &.chat-btn {
-    background: $primary;
-    color: white;
-    text-decoration: none;
-    animation: pulse 2s infinite;
-    &:hover {
-      background: darken($primary, 10%);
-    }
-  }
-
   &.theme-btn {
     background: linear-gradient(135deg, $primary, $secondary);
     color: white;
@@ -151,18 +135,6 @@ export default {
   100% {
     transform: translateY(0) scale(1);
     opacity: 0.8;
-  }
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba($primary, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba($primary, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba($primary, 0);
   }
 }
 

@@ -43,7 +43,7 @@ export default {
       menuWidth: 0,
       menuHeight: 0,
       isDark: false,
-      excludeSelectors: ['.chat-messages','.image-preview']
+      excludeSelectors: ['.image-preview']
     }
   },
   computed: {
@@ -189,7 +189,7 @@ export default {
    注意：原来这里用了 `--selectable-text: { ... }` + `@apply --selectable-text;`
    （Tailwind 语法），在 Vite/esbuild 下既不是合法 CSS 也不生效，
    构建时还会报 "Expected identifier but found whitespace"，已展开成普通声明。 */
-.chat-messages, .image-preview {
+.image-preview {
   user-select: none !important;
   -webkit-user-select: none !important;
   pointer-events: none; /* 防止在这些区域触发选择 */
