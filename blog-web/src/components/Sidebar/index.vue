@@ -1,20 +1,24 @@
 <template>
   <aside class="sidebar">
-    <el-card class="author-card">
-      <div class="floating-cards">
-        <span v-for="n in 12" :key="n" class="card-particle"></span>
-      </div>
-      <div class="card-header">
-        <div class="author-avatar">
-          <el-avatar class="avatar" :src="$store.state.webSiteInfo.authorAvatar" alt="作者头像" />
+    <!-- 作者块：头像 + 昵称 + 签名，然后是等宽的数据行 -->
+    <section class="block author-block">
+      <div class="author">
+        <img
+          class="avatar"
+          :src="$store.state.webSiteInfo.authorAvatar"
+          :alt="$store.state.webSiteInfo.author"
+          @error="handleAvatarError"
+        >
+        <div class="who">
+          <div class="name">{{ $store.state.webSiteInfo.author }}</div>
+          <div class="motto">{{ $store.state.webSiteInfo.authorInfo }}</div>
         </div>
-        <div class="status-badge">
-          <span>在线</span>
-        </div>
       </div>
-      <div class="author-info">
-        <h3>{{ $store.state.webSiteInfo.author }}</h3>
-        <p class="bio">{{ $store.state.webSiteInfo.authorInfo }}</p>
+
+      <!-- 台账取向的「版记」：数字等宽，对齐成两列 -->
+      <div class="colophon">
+        <div><b>{{ postCount }}</b> 篇文章　<b>{{ tagCount }}</b> 个标签</div>
+        <div><b>{{ visitorCount }}</b> 位访客　<b>{{ viewCount }}</b> 次浏览</div>
       </div>
       <div class="social-links">
         <div v-for="item in socialLinksWithData" :key="item.type">
@@ -23,84 +27,78 @@
           <el-tooltip v-if="$store.state.webSiteInfo.showList.indexOf(item.type) !== -1"
             placement="top" :content="item.content">
             <a href="javascript:void(0)"
-                :title="item.title" :class="`social-btn ${item.type}`" @click="copyToClipboard(item)">
+                :title="item.title" class="social-btn" @click="copyToClipboard(item)">
                 <i :class="item.icon"></i>
             </a>
           </el-tooltip>
         </div>
-
       </div>
-    </el-card>
+    </section>
 
-    <el-card class="section announcement" v-if="announcements.length">
-      <h3>
-        <i class="fas fa-bullhorn"></i>
-        公告
-      </h3>
+    <!-- 公告 -->
+    <section class="block" v-if="announcements.length">
+      <h4>公告</h4>
       <div class="announcement-content">
         <div class="announcement-item" v-for="(item, index) in announcements" :key="index">
-          <!-- <i :class="item.icon"></i> -->
           <span v-html="$sanitize(item.content)"></span>
         </div>
       </div>
-    </el-card>
+    </section>
 
     <!--
-      作者卡和公告固定在视口内不参与滚动，推荐/置顶/标签云放进下面这个滚动区，
+      作者块和公告固定在视口内不参与滚动，推荐/置顶/标签云放进下面这个滚动区，
       否则侧边栏整体高于视口时，末尾的标签云要等页面滚到最底才露出来
     -->
     <div class="sidebar-scroll">
-      <el-card class="section" v-if="hot.length > 0">
-        <h3>
-          <i class="fas fa-star"></i>
-          推荐文章
-        </h3>
-        <div class="post-list">
-          <router-link v-for="post in hot" :key="post.id" :to="`/post/${post.id}`" class="post-item">
-            <img v-lazy="resolveCover(post)" :key="resolveCover(post)" :alt="post.title" @error="handleImageError">
-            <div class="post-meta">
-              <h4>{{ post.title }}</h4>
-              <time>{{ post.createTime }}</time>
-            </div>
-          </router-link>
-        </div>
-      </el-card>
+      <section class="block" v-if="sticks.length > 0">
+        <h4>置顶</h4>
+        <ul class="recent">
+          <li v-for="post in sticks" :key="post.id">
+            <router-link :to="`/post/${post.id}`">
+              <span class="d">{{ shortDate(post.createTime) }}</span>
+              <span class="t">{{ post.title }}</span>
+            </router-link>
+          </li>
+        </ul>
+      </section>
 
-      <el-card class="section sticky-card" v-if="sticks.length > 0">
-        <h3>
-          <i class="fas fa-thumbtack"></i>
-          置顶
-        </h3>
-        <div class="sticky-list">
-          <router-link v-for="(post, index) in sticks" :key="post.id" :to="`/post/${post.id}`" class="sticky-item">
-            <span class="sticky-index">{{ index + 1 }}</span>
-            <span class="sticky-title" :title="post.title">{{ post.title }}</span>
-          </router-link>
-        </div>
-      </el-card>
+      <section class="block" v-if="hot.length > 0">
+        <h4>近期</h4>
+        <ul class="recent">
+          <li v-for="post in hot" :key="post.id">
+            <router-link :to="`/post/${post.id}`">
+              <span class="d">{{ shortDate(post.createTime) }}</span>
+              <span class="t">{{ post.title }}</span>
+            </router-link>
+          </li>
+        </ul>
+      </section>
 
-      <el-card class="section">
-        <h3>
-          <i class="fas fa-tags"></i>
-          标签云
-        </h3>
-        <Tag />
-      </el-card>
+      <section class="block">
+        <h4>标签</h4>
+        <div class="cloud">
+          <a
+            v-for="tag in visibleTags"
+            :key="tag.id"
+            href="javascript:void(0)"
+            :class="weightClass(tag.articleNum)"
+            @click="goToTag(tag)"
+          >
+            {{ tag.name }}
+          </a>
+        </div>
+      </section>
     </div>
   </aside>
 </template>
 
 <script>
-import { getRecommendArticlesApi } from '@/api/article'
-import Tag from './components/tagCloud.vue'
-
-const DEFAULT_COVER = '/static/img/book.png'
+import { getRecommendArticlesApi, getArticlesApi } from '@/api/article'
+import { getTagsApi } from '@/api/tags'
+import { pickDisplayTags } from '@/utils/tags'
 
 export default {
   name: 'Sidebar',
-  components: {
-    Tag
-  },
   props: {
     //置顶文章由父级（首页）传入，自带请求与刷新时机，卡片只在有置顶时渲染
     sticks: {
@@ -111,6 +109,9 @@ export default {
   data() {
     return {
       hot: [],
+      tags: [],
+      // 文章总数：只取 total，不拉列表内容
+      articleTotal: null,
       announcements: [],
       socialLinks: [
         {
@@ -153,8 +154,7 @@ export default {
           content: '点击复制微信号',
           icCopy: true
         }
-      ],
-      tags: [],
+      ]
     }
   },
   computed: {
@@ -173,6 +173,29 @@ export default {
           link: linkMap[item.type]
         }
       })
+    },
+    /**
+     * 版记数字：文章总数由 /api/article/list 的 total 提供，
+     * 标签数用已拉到的标签列表长度，访客/浏览量来自 store
+     */
+    postCount() {
+      return this.articleTotal === null ? '—' : formatCount(this.articleTotal)
+    },
+    tagCount() {
+      return this.tags.length ? formatCount(this.tags.length) : '—'
+    },
+    /**
+     * 侧边栏标签云：丢掉没有文章的标签，按文章数倒序，再按数量上限截断
+     * （规则见 src/utils/tags.js）。版记里的 tagCount 仍是全量总数。
+     */
+    visibleTags() {
+      return pickDisplayTags(this.tags)
+    },
+    visitorCount() {
+      return formatCount(this.$store.state.visitorAccess)
+    },
+    viewCount() {
+      return formatCount(this.$store.state.siteAccess)
     }
   },
   watch: {
@@ -184,8 +207,19 @@ export default {
   },
   mounted() {
     getRecommendArticlesApi().then(res => {
-      this.hot = res.data
+      this.hot = res.data || []
     })
+    getTagsApi().then(res => {
+      this.tags = res.data || []
+    })
+    // 版记里的文章总数：只要 total，pageSize 取 1 避免白拉一页数据
+    getArticlesApi({ pageNum: 1, pageSize: 1 })
+      .then(res => {
+        this.articleTotal = res.data?.total ?? 0
+      })
+      .catch(() => {
+        this.articleTotal = 0
+      })
     // 初始化公告数据
     if (this.$store.state.notice && this.$store.state.notice.right) {
       this.announcements = this.$store.state.notice.right
@@ -193,17 +227,31 @@ export default {
   },
   methods: {
     /**
-     * 解析文章封面，缺失时回落到默认封面
+     * 列表里只需要「月-日」，年份在台账里不是关键信息
      */
-    resolveCover(post) {
-      return post.cover || DEFAULT_COVER
+    shortDate(time) {
+      const date = new Date(time)
+      if (!time || Number.isNaN(date.getTime())) return ''
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${month}-${day}`
     },
     /**
-     * 处理图片加载失败
+     * 标签云按文章数分 5 级字号
      */
-    handleImageError(e) {
-      e.target.src = DEFAULT_COVER
-      e.target.classList.add('fallback')
+    weightClass(articleNum) {
+      const n = Number(articleNum) || 0
+      if (n >= 5) return 'w5'
+      if (n >= 4) return 'w4'
+      if (n >= 3) return 'w3'
+      if (n >= 2) return 'w2'
+      return 'w1'
+    },
+    goToTag(tag) {
+      this.$router.push({ path: '/tags', query: { tagId: tag.id, tagName: tag.name } })
+    },
+    handleAvatarError(e) {
+      e.target.style.visibility = 'hidden'
     },
     /**
      * 复制到剪贴板
@@ -221,609 +269,232 @@ export default {
     }
   }
 }
+
+/**
+ * 大数字加千分位，避免版记里出现一长串数字把列撑开
+ */
+function formatCount(value) {
+  const n = Number(value)
+  if (!n) return '—'
+  return n.toLocaleString('en-US')
+}
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  侧栏 · 技术台账
+//
+//  没有卡片、没有阴影、没有彩色图标。作者块 + 版记（等宽数字）+
+//  近期 + 标签云，块与块之间靠留白和一条 1px 线分隔。
+// ════════════════════════════════════════════════════════════════
+
 .sidebar {
   position: sticky;
-  top: 76px;
+  top: 88px;
   width: 100%;
-  max-width: 320px;
-  //侧边栏整体高于视口时，sticky 只会把它钉在 top:76px，超出屏幕的部分得等页面滚到最底
-  //（sticky 约束解除）才露出来。做法：侧边栏自身做成定高 flex 列 —— 作者卡和公告占自然
+  //侧边栏整体高于视口时，sticky 只会把它钉在 top:88px，超出屏幕的部分得等页面滚到最底
+  //（sticky 约束解除）才露出来。做法：侧边栏自身做成定高 flex 列 —— 作者块和公告占自然
   //高度、始终可见，下面的 .sidebar-scroll 吃掉剩余高度并在内部滚动
-  max-height: calc(100vh - 90px);
+  max-height: calc(100vh - 104px);
   display: flex;
   flex-direction: column;
 
-  //作者卡和公告是「固定」的那部分：必须显式 flex:0 0 auto
+  //作者块和公告是「固定」的那部分：必须显式 flex:0 0 auto
   //否则 flex 子项默认 flex-shrink:1，侧边栏内容超过 max-height 时它们会跟着 .sidebar-scroll
-  //一起被按比例压缩（作者卡能被压掉一半以上），再被 el-card 的 overflow:hidden 裁掉，
-  //表现就是"作者卡和公告显示不全"
-  > .author-card,
-  > .announcement {
+  //一起被按比例压缩（作者块能被压掉一半以上），表现就是"作者块显示不全"
+  > .author-block,
+  > .block:not(.author-block) {
     flex: 0 0 auto;
   }
 
   //滚动区：flex:1 吃掉剩余高度；min-height:0 是必须的，否则 flex 子项不会收缩到
-  //内容高度以下，内部就滚不起来。滚动条样式沿用 global.scss 里 ::-webkit-scrollbar 的全局定义
+  //内容高度以下，内部就滚不起来
   .sidebar-scroll {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    //卡片阴影会外溢到 320px 之外，用 hidden 避免被算成横向溢出而多出一条横向滚动条
     overflow-x: hidden;
 
-    //最后一张卡自带的下外边距会在滚动区底部多留一截空白
     > :last-child {
       margin-bottom: 0;
     }
   }
+}
 
-  .author-card {
+.block {
+  margin-bottom: 34px;
 
-    padding: $spacing-md;
-    margin-bottom: 14px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    position: relative;
+  h4 {
+    margin: 0 0 14px;
+    font-family: $font-mono;
+    font-size: 0.7rem;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    color: var(--text-tertiary);
+  }
+}
 
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 120px;
-      background-image: url('/static/img/beijing.jpg');
-      background-size: cover;
-      background-position: center;
-      transition: opacity 0.3s ease;
-      border-top-left-radius: $border-radius-md;
-      border-top-right-radius: $border-radius-md;
+// ── 作者块 ──
+.author {
+  display: flex;
+  gap: 13px;
+  align-items: center;
+
+  .avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--rule);
+    flex: none;
+  }
+
+  .who {
+    min-width: 0;
+
+    .name {
+      font-family: $font-serif;
+      font-size: 1.05rem;
+      line-height: 1.3;
+      color: var(--text-primary);
     }
 
-    &:hover::before {
-      opacity: 0.2;
-    }
-
-    .card-header {
-      position: relative;
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: center;
-
-      .author-avatar {
-        width: 88px;
-        height: 88px;
-        position: relative;
-
-        .avatar {
-          width: 100%;
-          height: 100%;
-          border-radius: 50%;
-          object-fit: cover;
-          border: 3px solid #fff;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
-          transition: transform 0.3s ease;
-
-          &:hover {
-            transform: scale(1.05);
-          }
-        }
-      }
-
-      .status-badge {
-        position: absolute;
-        bottom: 0;
-        right: 50%;
-        transform: translateX(32px);
-        background: linear-gradient(135deg, #10b981, #059669);
-        border-radius: 12px;
-        padding: 4px 12px;
-        font-size: 0.75rem;
-        color: white;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-
-        span {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-
-          &::before {
-            content: '';
-            display: inline-block;
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #fff;
-          }
-        }
-      }
-    }
-
-    .author-info {
-      text-align: center;
-      margin-bottom: 20px;
-
-      h3 {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: $primary;
-        -webkit-background-clip: text;
-        margin-bottom: 8px;
-      }
-
-      .bio {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        line-height: 1.6;
-        margin-bottom: 16px;
-      }
-    }
-
-    .social-links {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-
-      .social-btn {
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        background: rgba(99, 102, 241, 0.05);
-        font-size: 1.1rem;
-        transition: all 0.3s ease;
-        position: relative;
-        text-decoration: none;
-      }
-
-      .qq {
-        color: #60a5fa;
-
-        &:hover {
-          background: #60a5fa;
-          color: white;
-        }
-      }
-
-      .qqGroup {
-        color: #e1c235;
-
-        &:hover {
-          background: #e1c235;
-          color: white;
-        }
-      }
-
-      .github {
-        color: #000;
-
-        &:hover {
-          background: #000;
-          color: white;
-        }
-      }
-
-      .gitee {
-        color: #ee3434;
-
-        &:hover {
-          background: #da3535;
-          color: white;
-        }
-      }
-
-      .email {
-        color: #d872a7;
-
-        &:hover {
-          background: #d872a7;
-          color: white;
-        }
-      }
-
-      .wechat {
-        color: #10b981;
-
-        &:hover {
-          background: #10b981;
-          color: white;
-        }
-      }
-    }
-
-    .floating-cards {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      pointer-events: none;
-      overflow: hidden;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
-    &:hover .floating-cards {
-      opacity: 1;
-    }
-
-    .card-particle {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      background: white;
-      border-radius: 2px;
-      opacity: 0;
-      animation: fall 3s ease-in-out infinite;
-
-      @for $i from 1 through 12 {
-        &:nth-child(#{$i}) {
-          left: #{random(100)}#{"%"};
-          animation-delay: #{random(3000)}ms;
-          background: #{nth(
- (#6366f1,
-            #8b5cf6,
-            #ec4899,
-            #10b981,
-            #f59e0b,
-            #ef4444),
-          random(6))
-        }
-
-        ;
-        transform: rotate(#{$i * 30}deg);
-      }
+    .motto {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin-top: 3px;
     }
   }
 }
 
-.section {
-  margin-bottom: 14px;
+.colophon {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  font-family: $font-mono;
+  font-size: 0.73rem;
+  color: var(--text-tertiary);
+  line-height: 2;
+  font-variant-numeric: tabular-nums;
 
-  h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #6366f1;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid rgba(99, 102, 241, 0.1);
-
-    &::before {
-      content: '';
-      display: inline-block;
-      width: 4px;
-      height: 16px;
-      background: linear-gradient(to bottom, #6366f1, #8b5cf6);
-      margin-right: 8px;
-      border-radius: 2px;
-      vertical-align: middle;
-      transform: translateY(-1px);
-    }
-  }
-
-  .post-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    counter-reset: post-counter;
-
-    .post-item {
-      display: flex;
-      gap: 16px;
-      text-decoration: none;
-      transition: all 0.3s ease;
-      position: relative;
-      padding-left: 32px;
-
-      &::before {
-        content: counter(post-counter);
-        counter-increment: post-counter;
-        position: absolute;
-        left: 0;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 22px;
-        height: 22px;
-        background: var(--number-bg, #f87171);
-        color: white;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 13px;
-        font-weight: 600;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      &:nth-child(2)::before {
-        --number-bg: #fbbf24;
-      }
-
-      &:nth-child(3)::before {
-        --number-bg: #60a5fa;
-      }
-
-      &:nth-child(n+4)::before {
-        --number-bg: #9ca3af;
-      }
-
-      &:hover {
-        transform: translateX(4px);
-
-        h4 {
-          color: #6366f1;
-        }
-
-        img {
-          transform: scale(1.03);
-        }
-      }
-
-      img {
-        width: 100px;
-        height: 70px;
-        border-radius: 6px;
-        object-fit: cover;
-        transition: transform 0.3s ease;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-
-        &.fallback {
-          opacity: 0.7;
-        }
-      }
-
-      .post-meta {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-
-        h4 {
-          font-size: 0.95rem;
-          font-weight: 500;
-          color: var(--text-primary);
-          margin-bottom: 6px;
-          overflow: hidden;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          line-height: 1.4;
-          transition: color 0.3s ease;
-        }
-
-        time {
-          font-size: 0.8rem;
-          color: #8b8b8b;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-
-          &::before {
-            content: '\f017';
-            font-family: 'Font Awesome 5 Free';
-            font-size: 0.75rem;
-            opacity: 0.8;
-          }
-        }
-      }
-    }
+  b {
+    font-weight: 400;
+    color: var(--text-secondary);
   }
 }
 
-.announcement {
-  h3 {
-    i {
-      margin-right: 8px;
-      color: #f59e0b;
-      animation: shake 1.5s ease-in-out infinite;
-    }
-  }
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 14px;
 
-  .announcement-content {
-    .announcement-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 12px;
-      padding: 12px 0;
-      border-bottom: 1px dashed rgba(99, 102, 241, 0.1);
-
-      &:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-      }
-
-      &:first-child {
-        padding-top: 0;
-      }
-
-      i {
-        font-size: 1rem;
-        color: #6366f1;
-        flex-shrink: 0;
-        margin-top: 3px;
-      }
-
-      span {
-        font-size: 0.9rem;
-        color: var(--text-secondary);
-        line-height: 1.6;
-      }
-
-      &:hover {
-        i {
-          transform: scale(1.1);
-        }
-
-        span {
-          color: var(--text-primary);
-        }
-      }
-
-      i,
-      span {
-        transition: all 0.3s ease;
-      }
-    }
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  .sidebar {
-    .section {
-      .post-item {
-        &::before {
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-        }
-
-        img {
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .post-meta {
-          time {
-            color: #777;
-          }
-        }
-
-        &:hover h4 {
-          color: #818cf8;
-        }
-      }
-    }
-  }
-}
-}
-
-@include responsive(lg) {
-  .sidebar {
-    display: none;
-  }
-}
-
-@keyframes float {
-  0% {
-    transform: translateY(0px);
-  }
-
-  50% {
-    transform: translateY(-5px);
-  }
-
-  100% {
-    transform: translateY(0px);
-  }
-}
-
-.author-avatar img {
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes fall {
-  0% {
-    transform: translateY(-20px) rotate(0deg);
-    opacity: 0;
-  }
-
-  20% {
-    opacity: 0.8;
-  }
-
-  80% {
-    opacity: 0.8;
-  }
-
-  100% {
-    transform: translateY(300px) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-@keyframes shake {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  25% {
-    transform: rotate(-10deg);
-  }
-
-  75% {
-    transform: rotate(10deg);
-  }
-
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-.fa-star {
-  color: #ef5151;
-}
-
-.fa-tags {
-  color: #e329d3;
-}
-
-.fa-thumbtack {
-  color: #8b5cf6;
-  transform: rotate(45deg);
-}
-
-.sticky-card {
-  .sticky-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  .sticky-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 10px;
-    border-radius: 6px;
-    background: var(--hover-bg);
-    text-decoration: none;
-    transition: all 0.3s ease;
-
-    &:hover {
-      transform: translateX(4px);
-
-      .sticky-title {
-        color: #6366f1;
-      }
-    }
-  }
-
-  .sticky-index {
-    flex-shrink: 0;
+  .social-btn {
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: #fff;
-    font-size: 13px;
-    font-weight: 600;
+    border-radius: $border-radius-sm;
+    font-size: 0.95rem;
+    // 图标统一单色，hover 才点亮成琥珀
+    color: var(--text-tertiary);
+    transition: color 0.2s ease, background 0.2s ease;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--accent);
+      background: var(--row-hover);
+    }
+  }
+}
+
+// ── 公告 ──
+.announcement-content {
+  font-size: 0.85rem;
+  line-height: 1.75;
+  color: var(--text-secondary);
+
+  .announcement-item + .announcement-item {
+    margin-top: 8px;
+  }
+}
+
+// ── 近期 / 置顶：等宽日期 + 标题 ──
+.recent {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    border-bottom: 1px solid var(--rule);
+
+    &:last-child {
+      border-bottom: 0;
+    }
   }
 
-  .sticky-title {
-    flex: 1;
-    min-width: 0;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition: color 0.3s ease;
+  a {
+    display: flex;
+    gap: 11px;
+    padding: 10px 0;
+    align-items: baseline;
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover .t {
+      color: var(--accent);
+    }
+  }
+
+  .d {
+    font-family: $font-mono;
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+    flex: none;
+    padding-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .t {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+  }
+}
+
+// ── 标签云：按权重分 5 级字号 ──
+.cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
+
+  a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: var(--accent);
+    }
+  }
+
+  .w5 { font-size: 1.02rem; }
+  .w4 { font-size: 0.94rem; }
+  .w3 { font-size: 0.87rem; }
+  .w2 { font-size: 0.82rem; }
+  .w1 {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+  }
+}
+
+// 侧边栏在 <=1024px 时整体隐藏（首页另有 MobileStickyBar 兜底）
+@include responsive(lg) {
+  .sidebar {
+    display: none;
   }
 }
 </style>

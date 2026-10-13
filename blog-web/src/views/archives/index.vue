@@ -156,11 +156,8 @@ export default {
     top: 0;
     bottom: 0;
     width: 2px;
-    background: linear-gradient(
-      to bottom,
-      $primary,
-      $secondary
-    );
+    // 旧版是 $primary→$secondary 紫蓝渐变竖线，新设计只有一个强调色
+    background: var(--accent);
     animation: grow 1s ease-out forwards;
   }
 }

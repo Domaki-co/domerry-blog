@@ -4,28 +4,28 @@
        :class="{ 'menu-show': visible }"
        :style="{ left: adjustedX + 'px', top: adjustedY + 'px' }">
     <div class="menu-item" @click="handleCopyText">
-      <i class="fas fa-copy" style="color: #909399"></i>
+      <i class="fas fa-copy"></i>
       复制
     </div>
     <div class="menu-item" @click="handleRefresh">
-      <i class="fas fa-sync" style="color: #409EFF"></i>
+      <i class="fas fa-sync"></i>
       刷新页面
     </div>
     <div class="menu-item" @click="handleBack">
-      <i class="fas fa-arrow-left" style="color: #67C23A"></i>
+      <i class="fas fa-arrow-left"></i>
       返回上页
     </div>
     <div class="menu-item" @click="handleForward">
-      <i class="fas fa-arrow-right" style="color: #E6A23C"></i>
+      <i class="fas fa-arrow-right"></i>
       前进下页
     </div>
     <div class="menu-item" @click="handleCopyUrl">
-      <i class="fas fa-copy" style="color: #909399"></i>
+      <i class="fas fa-copy"></i>
       复制链接
     </div>
     <div class="divider"></div>
     <div class="menu-item" @click="toggleTheme">
-      <i :class="['fas', isDark ? 'fa-sun' : 'fa-moon']" :style="{ color: isDark ? '#E6A23C' : '#409EFF' }"></i>
+      <i :class="['fas', isDark ? 'fa-sun' : 'fa-moon']"></i>
       {{ isDark ? '浅色模式' : '深色模式' }}
     </div>
   </div>
@@ -232,6 +232,12 @@ export default {
 
 .menu-item i {
   width: 14px;
+  /* 原来每个菜单项一个 Element 主题色（蓝/绿/橙），新设计只有一个强调色 */
+  color: var(--text-tertiary);
+}
+
+.menu-item:hover i {
+  color: var(--accent);
 }
 
 .divider {

@@ -146,7 +146,26 @@ export default {
 * {
   margin: 0;
   padding: 0;
-  font-family: "font";
+  // 原来这里挂的是商业字体 "font"（汉仪唐美人 55W），已移除，改用系统无衬线栈
+  font-family: $font-sans;
   box-sizing: border-box;
+}
+
+// 正文默认无衬线；标题类交给各组件按需设成衬线（$font-serif）
+body {
+  font-family: $font-sans;
+  color: var(--text-primary);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// 日期 / 数字 / 元信息统一等宽，让台账的竖线对得齐
+time,
+code,
+kbd,
+samp,
+pre {
+  font-family: $font-mono;
 }
 </style>

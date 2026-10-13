@@ -1,9 +1,9 @@
 
 
 
-
 #app {
   min-height: 100vh;
+  // 顶栏 fixed 高 64px，这里给内容让位；首页 Hero 用 -64px 负边距顶回页面最顶部
   padding-top: 64px;
   width: 100%;
   display: flex;
@@ -19,13 +19,9 @@
 }
 
 
-@font-face {
-  font-family: 'font';
-  src: url('@/assets/font/2.woff2') format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+// 商业字体（汉仪唐美人 55W）已移除：官方授权仅限个人非商业用途，
+// 不得随 Apache-2.0 仓库分发。全站改用系统字体栈，见 variables.scss 的 $font-*
+// 以及 :root 里的 --font-serif / --font-sans / --font-mono。
 
 
 .underline {
@@ -37,7 +33,7 @@
     left: 0;
     width: 100%;
     height: 1px;
-    background-color: $primary;
+    background-color: var(--accent);
     transform: scaleX(0);
     transition: transform 0.25s ease;
   }
@@ -57,7 +53,7 @@
 
 /* 全局滚动条样式 */
 ::-webkit-scrollbar {
-  width: 8px;  /* 稍微调窄一点 */
+  width: 8px;
   height: 8px;
 }
 
@@ -66,28 +62,28 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba($primary, 0.8);  /* 增加不透明度 */
-  transition: all 0.3s ease;
+  background: var(--rule-strong);
+  transition: background 0.3s ease;
   border-radius: 10px;
 
   &:hover {
-    background: $primary;  /* 悬浮时完全不透明 */
+    background: var(--text-tertiary);
   }
 }
 
 /* 深色模式滚动条 */
 :root[data-theme='dark'] {
   ::-webkit-scrollbar-thumb {
-    background: rgba($primary, 0.6);  /* 深色模式下的基础颜色 */
+    background: var(--rule-strong);
 
     &:hover {
-      background: rgba($primary, 0.8);  /* 深色模式下悬浮颜色 */
+      background: var(--text-tertiary);
     }
   }
 
   /* 代码块滚动条特殊处理 */
   pre::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.3);  /* 代码块中使用浅色滚动条 */
+    background: rgba(255, 255, 255, 0.3);
 
     &:hover {
       background: rgba(255, 255, 255, 0.5);
@@ -98,23 +94,18 @@
 
 
 
-/* Header 相关的所有元素应用字体 */
+/* 顶栏文字统一用无衬线（原来这里用 !important 强推商业字体，已去掉） */
 .header,
-.header *,
 .nav,
-.nav *,
 .menu,
-.menu *,
 .dropdown,
-.dropdown *,
 .dropdown-menu,
-.dropdown-menu *,
 .nav-item,
 .nav-link,
 .header-title,
 .logo-text,
 .menu-item {
-  font-family: "font" !important;
+  font-family: $font-sans;
 }
 
 /* 添加图标特殊规则 */
@@ -150,7 +141,7 @@
   position: fixed;
   width: 20px;
   height: 20px;
-  border: 2px solid $primary;
+  border: 2px solid $accent;
   border-radius: 50%;
   transform: translate(-50%, -50%) scale(0);
   animation: cursorFx 0.5s ease-out forwards;
@@ -172,20 +163,19 @@
 }
 
 ::selection {
-  background-color: #45bcd1 !important;
-  color: #fff;
+  background-color: rgba($accent, 0.22);
+  color: inherit;
 }
 
 ::-moz-selection {
-  background-color: #45bcd1 !important;
-  color: #fff;
+  background-color: rgba($accent, 0.22);
+  color: inherit;
 }
 
 ::-webkit-selection {
-  background-color: #45bcd1 !important;
-  color: #fff;
+  background-color: rgba($accent, 0.22);
+  color: inherit;
 }
-
 
 
 
@@ -193,33 +183,52 @@
 :root {
   --text-primary: #{$text-primary};
   --text-secondary: #{$text-secondary};
+  --text-tertiary: #{$text-tertiary};
   --background: #{$background};
   --surface: #{$surface};
-  --border-color: rgba(0, 0, 0, 0.1);
+  --rule: #{$rule};
+  --rule-strong: #{$rule-strong};
+  --border-color: #{$rule};
   --card-bg: #{$surface};
   --loading-bg: #{$loading-bg};
-  --hover-bg: #{rgba($primary, 0.1)};
+  --hover-bg: #{$row-hover};
+  --row-hover: #{$row-hover};
   --input-bg: #{$surface};
+  --accent: #{$accent};
+  --accent-soft: #{rgba($accent, 0.12)};
   --surface-rgb: 255, 255, 255;
   --border-color-rgb: 0, 0, 0;
-  --about-me: linear-gradient(135deg, #409efff2, #a855f7f2);
-  --reply-message-bg: #f9f6f6;
-  --resources-bg: linear-gradient(135deg, #f8faff 0%, #f1f5ff 100%);
+
+  // 字体栈
+  --font-serif: #{$font-serif};
+  --font-sans: #{$font-sans};
+  --font-mono: #{$font-mono};
+
+  // 旧的彩色渐变（关于我 / 音乐页背景），换成中性面
+  --about-me: var(--surface);
+  --reply-message-bg: #{rgba($rule, 0.45)};
+  --resources-bg: var(--surface);
 }
 
 :root[data-theme='dark'] {
   --text-primary: #{map-get($dark, 'text-primary')};
   --text-secondary: #{map-get($dark, 'text-secondary')};
+  --text-tertiary: #{map-get($dark, 'text-tertiary')};
   --background: #{map-get($dark, 'background')};
   --surface: #{map-get($dark, 'surface')};
+  --rule: #{map-get($dark, 'border')};
+  --rule-strong: #{map-get($dark, 'rule-strong')};
   --border-color: #{map-get($dark, 'border')};
   --card-bg: #{map-get($dark, 'card-bg')};
   --hover-bg: #{map-get($dark, 'hover-bg')};
+  --row-hover: #{map-get($dark, 'hover-bg')};
   --input-bg: #{map-get($dark, 'input-bg')};
   --loading-bg: #{map-get($dark, 'loading-bg')};
-  --surface-rgb: 17, 25, 39;
+  --accent: #{map-get($dark, 'accent')};
+  --accent-soft: #{rgba(map-get($dark, 'accent'), 0.16)};
+  --surface-rgb: 22, 26, 32;
   --border-color-rgb: 255, 255, 255;
-  --about-me:linear-gradient(135deg, #1f2937, #000000);
-  --reply-message-bg: #333; 
-  --resources-bg: linear-gradient(135deg, #1f2937 0%, #000000 100%);
+  --about-me: var(--surface);
+  --reply-message-bg: #{rgba(map-get($dark, 'border'), 0.5)};
+  --resources-bg: var(--surface);
 }

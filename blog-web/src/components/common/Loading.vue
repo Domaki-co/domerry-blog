@@ -66,7 +66,8 @@ export default {
   justify-content: center;
   z-index: 9999;
   backdrop-filter: blur(4px);
-  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  // 旧版是 #f5f7fa→#c3cfe2 冷蓝渐变，新设计用纸白面
+  background: var(--loading-bg);
   opacity: 0.95;
 
   &.local {

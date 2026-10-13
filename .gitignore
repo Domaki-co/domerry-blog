@@ -66,3 +66,4 @@ unpackage/
 /.zcodeignore
 /design-previews/
 /deploy/
+/.agents/

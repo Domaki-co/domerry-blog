@@ -1270,29 +1270,28 @@ export default {
   }
 
   :deep(h2) {
+    font-family: $font-serif;
     font-size: 1.7em;
     margin: $spacing-xl * 1.4 0 $spacing-lg;
     padding-bottom: $spacing-sm;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--rule);
     position: relative;
     color: var(--text-primary);
-    background: linear-gradient(90deg, rgba($primary, 0.12), transparent 60%);
-    border-radius: 6px;
-    padding: $spacing-md $spacing-lg;
+    padding: $spacing-md 0;
 
     &::after {
       content: '';
       position: absolute;
       bottom: -1px;
-      left: $spacing-lg;
+      left: 0;
       width: 42px;
-      height: 3px;
-      background: linear-gradient(90deg, $primary, rgba($primary, 0.3));
-      border-radius: 2px;
+      height: 2px;
+      background: var(--accent);
     }
   }
 
   :deep(h3) {
+    font-family: $font-serif;
     font-size: 1.35em;
     margin: $spacing-xl 0 $spacing-md;
     color: var(--text-primary);
@@ -1304,10 +1303,9 @@ export default {
       position: absolute;
       left: 0;
       top: 0.35em;
-      width: 4px;
+      width: 2px;
       height: 1em;
-      background: linear-gradient($primary, rgba($primary, 0.4));
-      border-radius: 2px;
+      background: var(--rule-strong);
     }
   }
 
@@ -1339,9 +1337,9 @@ export default {
   :deep(blockquote) {
     margin: $spacing-lg 0;
     padding: $spacing-md $spacing-lg;
-    background: linear-gradient(135deg, rgba($primary, 0.06), rgba($primary, 0.02));
-    border-left: 3px solid $primary;
-    border-radius: 0 8px 8px 0;
+    background: var(--surface);
+    border-left: 2px solid var(--rule-strong);
+    border-radius: 0 $border-radius-sm $border-radius-sm 0;
     color: var(--text-secondary);
     font-style: italic;
     position: relative;
@@ -1909,34 +1907,24 @@ export default {
   .toc-container {
     position: sticky;
     top: 90px;
-    background: var(--card-bg);
-    border-radius: $border-radius-lg;
-    box-shadow: $shadow-md;
+    background: var(--surface);
+    border-radius: $border-radius-md;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    border: 1px solid var(--border-color);
-    backdrop-filter: blur(10px);
-
-    &::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(45deg, transparent, rgba($primary, 0.03), transparent);
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
-
+    border: 1px solid var(--rule);
 
     .toc-header {
-      padding: $spacing-lg;
-      background: var(--hover-bg);
+      padding: $spacing-md $spacing-lg;
+      background: var(--surface);
       color: var(--text-primary);
-      font-weight: 500;
+      font-family: $font-mono;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
       display: flex;
       align-items: center;
       gap: $spacing-sm;
       position: relative;
-      border-bottom: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--rule);
       justify-content: space-between;
 
       .title-wrapper {
@@ -2010,29 +1998,23 @@ export default {
           transform: translateY(-50%);
           width: 5px;
           height: 5px;
-          background: $primary;
+          background: var(--rule-strong);
           border-radius: 50%;
-          opacity: 0.18;
         }
 
         &:hover {
-          color: $primary;
-          background: linear-gradient(90deg,
-            rgba($primary, 0.05),
-            rgba($primary, 0.02)
-          );
+          color: var(--text-primary);
+          background: var(--row-hover);
         }
 
         &.active {
-          color: $primary;
-          background: linear-gradient(90deg,
-            rgba($primary, 0.1),
-            rgba($primary, 0.05)
-          );
+          color: var(--accent);
+          background: var(--row-hover);
           font-weight: 500;
           padding-left: 22px;
 
           &::before {
+            background: var(--accent);
             opacity: 1;
             animation: tocDotPulse 1.5s infinite;
           }
@@ -2243,9 +2225,11 @@ export default {
 
 .ai-description {
   margin: $spacing-md $spacing-xl;
-  border-radius: $border-radius-lg;
-  background-image: linear-gradient(180deg, rgba(247, 232, 255, .54), rgba(191, 223, 255, .35));
-  border: 1px solid rgba(0, 150, 136, 0.1);
+  border-radius: $border-radius-md;
+  // 旧版是粉紫→浅蓝渐变底 + 青色描边，新设计用中性面 + 强调色左线
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--accent);
   transition: all 0.3s ease;
   overflow: hidden;
 
@@ -2257,12 +2241,14 @@ export default {
 
   .ai-header {
     padding: $spacing-sm $spacing-md;
-    font-weight: 500;
+    font-family: $font-mono;
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
     display: flex;
     align-items: center;
     gap: $spacing-sm;
     justify-content: flex-start;
-    color: #a855f7;
+    color: var(--accent);
     cursor: pointer;
 
     i {
@@ -2276,7 +2262,7 @@ export default {
   }
   .ai-description-text {
     margin-top: $spacing-sm;
-    color: #8c8a8e;
+    color: var(--text-secondary);
   }
 }
 

@@ -279,11 +279,12 @@ export default {
   
   &:focus-within {
     border-color: $primary;
-    box-shadow: 0 0 0 3px rgba(202, 90, 210, 0.1);
+    // 旧值 rgba(202,90,210) 是旧紫主题的残留，改用强调色的极淡底
+    box-shadow: 0 0 0 3px var(--accent-soft);
   }
   
   .search-icon {
-    color: #909399;
+    color: var(--text-tertiary);
     font-size: 18px;
     margin-right: 10px;
   }
@@ -291,7 +292,7 @@ export default {
   .clear-btn {
     cursor: pointer;
     padding: 4px;
-    color: #909399;
+    color: var(--text-tertiary);
     transition: all 0.3s ease;
     
     &:hover {
@@ -305,8 +306,8 @@ export default {
     right: 15px;
     width: 20px;
     height: 20px;
-    border: 2px solid #dcdfe6;
-    border-top-color: var(--primary-color);
+    border: 2px solid var(--rule);
+    border-top-color: $primary;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
@@ -314,7 +315,7 @@ export default {
   .enter-tip {
     position: absolute;
     right: 15px;
-    color: #909399;
+    color: var(--text-tertiary);
     font-size: 12px;
     display: flex;
     align-items: center;
@@ -359,13 +360,15 @@ export default {
   
   h4 {
     margin: 0 0 15px;
-    color: #606266;
-    font-size: 16px;
+    font-family: $font-mono;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
     display: flex;
     align-items: center;
     
     i {
-      color: #ff9800;
+      color: var(--accent);
       margin-right: 8px;
     }
   }
@@ -381,11 +384,11 @@ export default {
   }
   
   &::-webkit-scrollbar-thumb {
-    background-color: #e4e7ed;
+    background-color: var(--rule-strong);
     border-radius: 3px;
     
     &:hover {
-      background-color: #c0c4cc;
+      background-color: var(--text-tertiary);
     }
   }
 }
@@ -393,7 +396,7 @@ export default {
 .search-result-item {
   padding: 15px;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: $border-radius-sm;
   margin-bottom: 10px;
   transition: all 0.3s ease;
   border: 1px solid var(--border-color);
@@ -401,7 +404,7 @@ export default {
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary-color);
+    border-color: $primary;
   }
   
   .result-header {
@@ -419,7 +422,7 @@ export default {
     
     .result-date {
       font-size: 12px;
-      color: #909399;
+      color: var(--text-tertiary);
       margin-left: 10px;
     }
   }
@@ -427,7 +430,7 @@ export default {
   p {
     margin: 0 0 10px;
     font-size: 14px;
-    color: #606266;
+    color: var(--text-secondary);
     line-height: 1.6;
   }
   
@@ -435,7 +438,7 @@ export default {
     display: flex;
     gap: 15px;
     font-size: 12px;
-    color: #909399;
+    color: var(--text-tertiary);
     
     i {
       margin-right: 4px;
@@ -458,30 +461,34 @@ export default {
 
 .hot-tag {
   padding: 6px 12px;
-  background-color: #f4f4f5;
-  border-radius: 20px;
-  font-size: 13px;
-  color: #606266;
+  // 台账取向：标签是描边条目，不是灰底胶囊
+  background-color: transparent;
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
+  font-family: $font-mono;
+  font-size: 12px;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.3s ease;
   text-decoration: none;
   &:hover {
-    color: #fff;
-    background-color: $primary;
-    transform: translateY(-2px);
+    color: var(--accent);
+    border-color: var(--accent);
+    background-color: transparent;
   }
 }
 
 :deep(mark) {
-  background-color: rgba(202, 90, 210, 0.2);
+  // 搜索命中高亮：旧值 rgba(202,90,210) 是旧紫主题残留
+  background-color: var(--accent-soft);
   padding: 0 2px;
   border-radius: 2px;
-  color: var(--primary-color);
+  color: var(--accent);
   font-weight: 500;
   transition: all 0.3s ease;
   
   &:hover {
-    background-color: rgba(202, 90, 210, 0.4);
+    background-color: rgba($accent, 0.3);
   }
 }
 

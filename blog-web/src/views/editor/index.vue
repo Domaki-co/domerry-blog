@@ -588,7 +588,7 @@ export default {
         transition: all 0.15s;
 
         &:hover {
-            border-color: #409EFF;
+            border-color: var(--accent);
         }
     }
 
@@ -657,7 +657,7 @@ export default {
 
             i {
                 font-size: 14px;
-                color: #409EFF;
+                color: var(--accent);
             }
         }
 

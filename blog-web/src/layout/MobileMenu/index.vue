@@ -75,13 +75,13 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 
 .mobile-menu {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg-color);
+  background: var(--surface);
 }
 
 .menu-header {
@@ -95,7 +95,7 @@ export default {
 .logo {
   height: 36px;
   width: auto;
-  border-radius: 5px;
+  border-radius: $border-radius-sm;
   transition: transform 0.3s ease;
 }
 
@@ -104,9 +104,10 @@ export default {
 }
 
 .site-name {
+  font-family: $font-serif;
   font-size: 1.2rem;
   font-weight: 600;
-  color: var(--text-color, #615959);
+  color: var(--text-primary);
   margin: 0;
 }
 
@@ -120,9 +121,9 @@ export default {
   display: flex;
   align-items: center;
   padding: 14px 16px;
-  color: var(--text-color, #918484);
+  color: var(--text-secondary);
   text-decoration: none;
-  border-radius: 8px;
+  border-radius: $border-radius-sm;
   margin-bottom: 8px;
   transition: all 0.3s ease;
 }
@@ -139,7 +140,8 @@ export default {
 }
 
 .menu-item:hover {
-  background-color: var(--hover-color, #f5f5f5);
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
   transform: translateX(4px);
 }
 
@@ -148,16 +150,16 @@ export default {
 }
 
 .menu-item.active {
-  background-color: var(--primary-color, #1890ff);
+  background-color: var(--accent);
   color: #fff;
 }
 
 .menu-footer {
   padding: 16px;
   text-align: center;
-  color: var(--text-secondary-color, #666);
+  color: var(--text-secondary);
   font-size: 0.9rem;
-  border-top: 1px solid var(--border-color, #eee);
+  border-top: 1px solid var(--border-color);
 }
 
 /* 菜单项动画 */

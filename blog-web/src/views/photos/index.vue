@@ -92,21 +92,21 @@ export default {
     margin-bottom: 20px;
   }
 
+  // 台账取向：标题走衬线墨色，不用渐变裁切文字
+  // （渐变字是「SaaS 落地页」的标志，和 1px 实线 + 留白的层次逻辑冲突）
   h1 {
-    font-size: 3em;
-    font-weight: 700;
+    font-family: $font-serif;
+    font-size: 2.4em;
+    font-weight: 600;
     margin-bottom: 15px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 2px;
+    color: var(--text-primary);
+    letter-spacing: 0.02em;
   }
 
   .decorative-line {
     width: 60px;
-    height: 4px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
-    border-radius: 2px;
+    height: 2px;
+    background: var(--accent);
     margin-top: -5px;
   }
 
@@ -134,10 +134,11 @@ export default {
     opacity: 0.1;
   }
 
+  // 原来两个圆是紫/靛/粉三色渐变，新设计只有一个强调色
   .circle-1 {
     width: 200px;
     height: 200px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: var(--accent);
     top: -100px;
     left: -50px;
   }
@@ -145,7 +146,7 @@ export default {
   .circle-2 {
     width: 150px;
     height: 150px;
-    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    background: var(--accent);
     bottom: -50px;
     right: -30px;
   }
@@ -221,9 +222,10 @@ export default {
     .photo-count {
       display: inline-block;
       padding: 4px 12px;
-      background: rgba(99, 102, 241, 0.1);
-      color: #6366f1;
-      border-radius: 20px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border-radius: $border-radius-sm;
+      font-family: $font-mono;
       font-size: 0.8em;
       font-weight: 500;
     }

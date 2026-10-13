@@ -2,7 +2,7 @@
   <div class="friends-page">
     <el-card class="content-card">
       <div class="page-header">
-        <h1>友情链接</h1>
+        <h1>友链</h1>
         <div class="header-divider">
           <span class="line"></span>
           <i class="fas fa-link"></i>
@@ -63,19 +63,19 @@
       </div>
 
       <!-- 申请表单弹窗 -->
-      <el-dialog 
-        v-model="showApplyForm" 
-        title="申请友链" 
-        width="500px" 
+      <el-dialog
+        v-model="showApplyForm"
+        title="申请友链"
+        width="500px"
         top="3vh"
         :append-to-body="true"
       >
         <div class="apply-form">
-          <el-form 
-            size="small" 
-            :model="form" 
-            :rules="rules" 
-            ref="ruleForm" 
+          <el-form
+            size="small"
+            :model="form"
+            :rules="rules"
+            ref="ruleForm"
             label-width="100px"
           >
           <div class="form-group">
@@ -253,14 +253,13 @@ export default {
   position: relative;
 
   h1 {
+    font-family: $font-serif;
     font-size: 2em;
     margin-bottom: $spacing-md;
-    font-weight: 800;
-    background: linear-gradient(135deg, $primary, $secondary);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    letter-spacing: 2px;
-    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+    // 台账取向：墨色衬线，不用渐变裁切文字
+    color: var(--text-primary);
+    letter-spacing: 0.02em;
   }
 
   .header-divider {
@@ -273,15 +272,12 @@ export default {
 
     .line {
       width: 60px;
-      height: 2px;
-      background: linear-gradient(90deg,
-          transparent,
-          var(--text-secondary),
-          transparent);
+      height: 1px;
+      background: var(--rule-strong);
     }
 
     i {
-      color: $primary;
+      color: var(--accent);
       font-size: 1.4em;
       transform: rotate(45deg);
       animation: pulse 2s infinite;
@@ -323,8 +319,9 @@ export default {
     top: 0;
     left: 0;
     width: 100%;
-    height: 4px;
-    background: linear-gradient(90deg, $primary, $secondary);
+    height: 2px;
+    // 台账取向：顶部只留一条强调色实线，不用双色渐变
+    background: var(--accent);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
@@ -434,8 +431,8 @@ export default {
     top: 0;
     left: 0;
     right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, $primary, $secondary);
+    height: 2px;
+    background: var(--accent);
   }
 
   .site-avatar {
@@ -506,12 +503,10 @@ export default {
 
     h2 {
       color: var(--text-primary);
+      font-family: $font-serif;
       font-size: 1.5em;
       margin-bottom: $spacing-xs;
-      font-weight: 700;
-      background: linear-gradient(135deg, $primary, $secondary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-weight: 600;
     }
 
     p {
@@ -614,7 +609,7 @@ export default {
     left: 0;
     width: 100px;
     height: 2px;
-    background: linear-gradient(90deg, $primary, $secondary);
+    background: var(--accent);
   }
 
   h2 {
@@ -635,10 +630,11 @@ export default {
 
 .apply-btn {
   padding: $spacing-sm $spacing-lg;
-  background: linear-gradient(135deg, $primary, $secondary);
+  // 台账取向：实底强调色 + 近直角，不用双色渐变胶囊
+  background: var(--accent);
   color: white;
   border: none;
-  border-radius: 30px;
+  border-radius: $border-radius-sm;
   font-size: 1em;
   font-weight: 600;
   cursor: pointer;
@@ -646,7 +642,6 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: $spacing-sm;
-  box-shadow: 0 4px 15px rgba($primary, 0.3);
 
   i {
     font-size: 1.1em;
@@ -709,7 +704,7 @@ export default {
       border: 1px solid var(--border-color);
       background: var(--input-bg);
       color: var(--text-primary);
-      
+
       &:focus {
         border-color: $primary;
         box-shadow: 0 0 0 2px rgba($primary, 0.1);
@@ -727,12 +722,12 @@ export default {
     margin-top: $spacing-lg;
 
     .submit-btn {
-      background: linear-gradient(135deg, $primary, $secondary);
+      background: var(--accent);
       border: none;
       padding: $spacing-sm $spacing-xl;
       font-size: 1em;
-      border-radius: 25px;
-      
+      border-radius: $border-radius-sm;
+
       i {
         margin-right: $spacing-xs;
       }

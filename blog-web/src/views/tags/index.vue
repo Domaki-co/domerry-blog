@@ -5,25 +5,28 @@
         <el-card class="content-card">
           <div class="page-header">
             <h3>标签云</h3>
-            <p class="subtitle">共 {{ tags.length }} 个标签</p>
+            <p class="subtitle">
+              共 {{ tags.length }} 个标签<template v-if="tags.length > visibleTags.length">，展示 {{ visibleTags.length }} 个</template>
+            </p>
+            <p class="cloud-hint">底部色条表示文章数量</p>
           </div>
 
           <div class="tags-cloud" ref="tagsCloud">
-            <div 
-              v-for="tag in tags" 
+            <div
+              v-for="(tag, index) in tagCloud"
               :key="`tag-${tag.name}`"
               class="tag-item"
-              :class="{ active: activeTag === tag.name }"
+              :class="[{ active: activeTag === tag.name }, `hue-${index % 6}`]"
               :style="{
-                '--tag-color': `hsl(${(tag.name.length * 40) % 360}, 70%, 60%)`,
-                '--animation-delay': `${Math.random() * 0.5}s`
+                '--tag-ratio': tag.ratio,
+                '--animation-delay': `${Math.min(index * 0.03, 0.6)}s`
               }"
-              @click="selectTag(tag.name,tag.id)"
+              @click="selectTag(tag.name, tag.id)"
             >
-              <div class="tag-background"></div>
-              <i class="fas fa-tag"></i>
+              <i class="fas fa-tag tag-icon"></i>
               <span class="tag-name">{{ tag.name }}</span>
               <span class="tag-count">{{ tag.articleNum }}</span>
+              <span class="tag-bar" aria-hidden="true"></span>
             </div>
           </div>
 
@@ -63,6 +66,7 @@ import ArticleList from '@/components/ArticleList/index.vue'
 import Sidebar from '@/components/Sidebar/index.vue'
 import { getTagsApi } from '@/api/tags'
 import { getArticlesApi } from '@/api/article'
+import { pickDisplayTags } from '@/utils/tags'
 
 
 export default {
@@ -84,6 +88,33 @@ export default {
         pageSize:10,
         tagId:null
       }
+    }
+  },
+  computed: {
+    /**
+     * 标签云展示的标签：先丢掉没有文章的，再按文章数倒序，最后按数量上限截断。
+     * 规则和数量都在 src/utils/tags.js + src/config/index.js 里统一调整。
+     */
+    visibleTags() {
+      return pickDisplayTags(this.tags)
+    },
+    /**
+     * 标签云条目：字号统一，只用底部长条表示文章数占最大值的比例。
+     * 颜色交给模板按序号循环取 6 个色相，避免 46 个标签变成 46 种随机颜色。
+     */
+    tagCloud() {
+      const tags = this.visibleTags
+      if (!tags.length) return []
+
+      const max = Math.max(...tags.map(tag => Number(tag.articleNum) || 0))
+
+      return tags.map(tag => {
+        const count = Number(tag.articleNum) || 0
+        return {
+          ...tag,
+          ratio: max > 0 ? Number((count / max).toFixed(3)) : 0
+        }
+      })
     }
   },
   methods: {
@@ -134,9 +165,10 @@ export default {
     if(this.$route.query.tagId){
       this.selectTag(this.$route.query.tagName,this.$route.query.tagId)
     }else{
-      if (this.tags.length) {
-        const randomTag = this.tags[0]
-        this.selectTag(randomTag.name, randomTag.id)
+      // 默认选中排在最前（文章最多）的那个标签
+      const defaultTag = this.visibleTags[0]
+      if (defaultTag) {
+        this.selectTag(defaultTag.name, defaultTag.id)
       }
     }
   },
@@ -158,9 +190,8 @@ export default {
     left: 0;
     width: 100%;
     height: 100%;
-    background: 
-      radial-gradient(circle at 10% 20%, rgba($primary, 0.03) 0%, transparent 20%),
-      radial-gradient(circle at 90% 80%, rgba(adjust-hue($primary, 60deg), 0.03) 0%, transparent 20%);
+    // 旧版是两团紫蓝径向光晕，新设计层次靠实线不靠光晕，去掉
+    background: none;
     pointer-events: none;
     z-index: -1;
   }
@@ -192,14 +223,13 @@ export default {
   overflow: hidden;
   
   h3 {
+    font-family: $font-serif;
     font-size: 1.6em;
-    font-weight: 800;
-    background: linear-gradient(120deg, $primary, adjust-hue($primary, 60deg));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-weight: 600;
+    // 台账取向：墨色衬线标题，不用渐变裁切文字
+    color: var(--text-primary);
     margin-bottom: $spacing-sm;
-    letter-spacing: 2px;
-    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.02em;
     position: relative;
     display: inline-block;
   }
@@ -211,38 +241,53 @@ export default {
     display: inline-block;
     padding: $spacing-xs $spacing-lg;
   }
+
+  .cloud-hint {
+    margin-top: $spacing-xs;
+    font-size: 0.85em;
+    color: var(--text-tertiary);
+  }
 }
 
 .tags-cloud {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: $spacing-md;
   margin-bottom: $spacing-sm;
   padding: 0 $spacing-md $spacing-md;
   justify-content: center;
 
   .tag-item {
-    padding: $spacing-sm $spacing-sm;
-    border-radius: $border-radius-md;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.3s ease;
+    position: relative;
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
-    font-size: 1em;
-    border: 2px solid transparent;
-    position: relative;
+    gap: 0.5em;
+    padding: 0.4em 0.7em;
+    font-size: 1rem;
+    line-height: 1.2;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: $border-radius-sm;
+    cursor: pointer;
     overflow: hidden;
+    transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
     animation: tagAppear 0.4s ease-out backwards;
-    animation-delay: var(--animation-delay);
-    background: var(--bg-secondary);
-    
-    i {
-      font-size: 0.9em;
-      color: var(--tag-color);
-      transition: transform 0.3s ease;
+    animation-delay: var(--animation-delay, 0s);
+
+    .tag-icon {
+      font-size: 0.8em;
+      transition: transform 0.3s ease, color 0.25s ease;
     }
+
+    // 6 个色相按标签顺序循环，给图标上色；色相取自同一组低饱和色，不刺眼
+    &.hue-0 .tag-icon { color: #b7791f; }
+    &.hue-1 .tag-icon { color: #2f8f83; }
+    &.hue-2 .tag-icon { color: #3b6ea5; }
+    &.hue-3 .tag-icon { color: #7a5aa8; }
+    &.hue-4 .tag-icon { color: #b5527a; }
+    &.hue-5 .tag-icon { color: #4f8a4f; }
 
     .tag-name {
       position: relative;
@@ -250,36 +295,55 @@ export default {
     }
 
     .tag-count {
-      font-size: 0.85em;
-      color: var(--text-secondary);
-      background: rgba(var(--tag-color), 0.1);
-      padding: 3px 12px;
-      border-radius: $border-radius-lg;
-      transition: all 0.3s ease;
+      position: relative;
+      z-index: 1;
+      font-family: $font-mono;
+      font-size: 0.72em;
+      color: var(--text-tertiary);
+      transition: color 0.25s ease;
+    }
+
+    // 底部长条：长度 = 该标签文章数占最大值的比例。是数据，不是装饰
+    .tag-bar {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 2px;
+      width: calc(var(--tag-ratio, 0) * 100%);
+      background: var(--accent);
+      opacity: 0.3;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
     }
 
     &:hover {
-      transform: translateY(-2px);
-      border-color: var(--tag-color);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-      
-      i {
+      border-color: var(--accent);
+      color: var(--accent);
+
+      .tag-icon {
         transform: rotate(-10deg);
+      }
+
+      .tag-bar {
+        opacity: 0.75;
       }
     }
 
     &.active {
-      background: var(--tag-color);
-      color: white;
-      box-shadow: 0 4px 12px rgba(var(--tag-color), 0.2);
-      
-      i {
-        color: white;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+
+      .tag-icon {
+        color: #fff;
       }
-      
+
       .tag-count {
-        background: rgba(255, 255, 255, 0.25);
-        color: white;
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      .tag-bar {
+        opacity: 0;
       }
     }
   }
@@ -288,8 +352,9 @@ export default {
 .tag-header {
   margin-bottom: $spacing-xl;
   padding: $spacing-md $spacing-xl;
-  background: var(--bg-secondary);
-  border-radius: $border-radius-lg;
+  background: transparent;
+  border-bottom: 1px solid var(--rule-strong);
+  border-radius: 0;
   position: relative;
   overflow: hidden;
   
@@ -297,9 +362,9 @@ export default {
     position: absolute;
     top: 0;
     left: 0;
-    width: 4px;
+    width: 2px;
     height: 100%;
-    background: linear-gradient(to bottom, $primary, adjust-hue($primary, 40deg));
+    background: var(--accent);
     
     &::before,
     &::after {
@@ -308,7 +373,7 @@ export default {
       left: 0;
       width: 100%;
       height: 10px;
-      background: white;
+      background: var(--surface);
       filter: blur(4px);
     }
     
@@ -322,6 +387,7 @@ export default {
   }
 
   h2 {
+    font-family: $font-serif;
     font-size: 1.6em;
     color: var(--text-primary);
     display: flex;
@@ -330,19 +396,19 @@ export default {
     margin: 0;
 
     i {
-      color: $primary;
+      color: var(--accent);
       font-size: 0.9em;
       transition: transform 0.3s ease;
     }
 
     .post-count {
+      font-family: $font-mono;
       font-size: 0.6em;
       color: var(--text-secondary);
       margin-left: auto;
       padding: $spacing-xs $spacing-md;
-      background: linear-gradient(120deg, rgba($primary, 0.1), rgba(adjust-hue($primary, 60deg), 0.1));
-      backdrop-filter: blur(4px);
-      border: 1px solid rgba($primary, 0.15);
+      background: transparent;
+      border: 1px solid var(--rule);
       transition: all 0.3s ease;
       border-radius: $border-radius-lg;
       letter-spacing: 0.5px;
@@ -380,6 +446,16 @@ export default {
     height: auto;
     overflow-y: visible;
   }
+}
+
+// 深色模式：色相整体提亮，保证在深底上仍有对比
+:root[data-theme='dark'] .tag-item {
+  &.hue-0 .tag-icon { color: #e0a94a; }
+  &.hue-1 .tag-icon { color: #4bbfae; }
+  &.hue-2 .tag-icon { color: #6aa3dd; }
+  &.hue-3 .tag-icon { color: #a98fd6; }
+  &.hue-4 .tag-icon { color: #e08aab; }
+  &.hue-5 .tag-icon { color: #7bc47b; }
 }
 
 @keyframes tagAppear {
@@ -437,8 +513,7 @@ export default {
     gap: $spacing-sm;
     
     .tag-item {
-      padding: $spacing-xs $spacing-md;
-      font-size: 0.9em;
+      font-size: 0.9rem;
     }
   }
 
@@ -455,7 +530,6 @@ export default {
   }
 }
 
-.tag-background,
 .header-waves,
 .wave {
   display: none;

@@ -55,3 +55,5 @@ domerry-server(启动) ──> domerry-api ─> domerry-admin ─> domerry-commo
 - 审计字段（创建/更新时间人）由 `MyMetaObjectHandler` 自动填充，不要手动赋值
 
 > 前端项目不在本目录内：`blog-admin` 为后台前端，`blog-web` 为门户前端，均位于仓库根目录。
+
+> 验证策略以仓库根目录 [AGENTS.md](../AGENTS.md) 的「验证与测试约束」为准：本项目无测试，`mvn clean package` 全量打包昂贵，除非必要（交付 jar、改 pom）不要反复执行，优先用 `mvn -pl <模块> -am compile` 增量编译。

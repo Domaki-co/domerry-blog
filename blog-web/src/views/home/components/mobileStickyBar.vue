@@ -71,7 +71,7 @@ export default {
   user-select: none;
 
   .fa-thumbtack {
-    color: #8b5cf6;
+    color: var(--accent);
     transform: rotate(45deg);
   }
 
@@ -87,10 +87,12 @@ export default {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    font-family: $font-mono;
     font-size: 12px;
-    color: #fff;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: $border-radius-sm;
+    background: transparent;
   }
 
   .head-arrow {
@@ -135,10 +137,12 @@ export default {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-family: $font-mono;
   font-size: 12px;
-  color: #fff;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: var(--text-tertiary);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
+  background: transparent;
 }
 
 .sticky-title {

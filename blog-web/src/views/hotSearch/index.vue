@@ -364,16 +364,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 10px;
-            font-size: 1.1em;
+            border-radius: $border-radius-sm;
+            font-family: $font-mono;
+            font-size: 1em;
             font-weight: 600;
-            color: var(--text-primary);
+            color: var(--text-tertiary);
             flex-shrink: 0;
             transition: all 0.3s ease;
   
-            &.rank-1 { background: linear-gradient(135deg, #ff6b6b, #ee5253); }
-            &.rank-2 { background: linear-gradient(135deg, #5c7cfa, #4263eb); }
-            &.rank-3 { background: linear-gradient(135deg, #ffd43b, #fab005); }
+            // 台账取向：名次用等宽数字 + 描边，不用红蓝黄实心渐变块
+            &.rank-1 { color: var(--accent); border: 1px solid var(--accent); }
+            &.rank-2 { border: 1px solid var(--rule-strong); }
+            &.rank-3 { border: 1px solid var(--rule); }
           }
   
           .card-content {
@@ -427,7 +429,8 @@
                 display: flex;
                 align-items: center;
                 gap: 6px;
-                color: #ff6b6b;
+                font-family: $font-mono;
+                color: var(--accent);
                 font-weight: 500;
                 
                 i {

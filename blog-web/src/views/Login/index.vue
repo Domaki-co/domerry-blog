@@ -689,13 +689,13 @@ export default {
     font-size: 14px;
 
     &::placeholder {
-      color: #9ca3af;
+      color: var(--text-tertiary);
     }
   }
 
   :deep(.el-input__prefix) {
     left: 12px;
-    color: #6b7280;
+    color: var(--text-secondary);
   }
 }
 
@@ -703,8 +703,8 @@ export default {
   width: 100%;
   height: 42px;
   border: none;
-  border-radius: 8px;
-  background: #6366f1;
+  border-radius: $border-radius-md;
+  background: var(--accent);
   color: #fff;
   font-size: 16px;
   font-weight: 500;
@@ -712,7 +712,8 @@ export default {
   transition: all 0.2s;
 
   &:hover {
-    background: #4f46e5;
+    // 旧值 #4f46e5 是靛蓝，改成强调色压暗
+    filter: brightness(0.92);
     transform: translateY(-1px);
   }
 
@@ -723,10 +724,10 @@ export default {
 
 .divider {
   margin: 24px 0;
-  color: #9ca3af;
+  color: var(--text-tertiary);
 
   :deep(.el-divider__text) {
-    background-color: #fff;
+    background-color: var(--card-bg);
     padding: 0 12px;
     font-size: 14px;
   }
@@ -749,12 +750,13 @@ export default {
   font-size: 20px;
   cursor: pointer;
   transition: all 0.2s;
-  background: #f3f4f6;
+  background: var(--hover-bg);
 
   &:hover {
     transform: translateY(-2px);
   }
 
+  // 第三方登录按钮保留各家品牌色（这是品牌识别，不属于本站配色体系）
   &.github {
     color: #24292e;
   }
@@ -777,7 +779,7 @@ export default {
   justify-content: center;
   align-items: center;
   margin-top: 24px;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 14px;
 
   a {
@@ -787,13 +789,13 @@ export default {
     cursor: pointer;
 
     &:hover {
-      color: darken($primary, 10%);
+      filter: brightness(0.85);
     }
   }
 }
 
 .divider-line {
-  color: #e5e7eb;
+  color: var(--rule);
   margin: 0 12px;
 }
 
@@ -808,8 +810,8 @@ export default {
   height: 200px;
   margin: 0 auto 16px;
   padding: 8px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: $border-radius-md;
 
   img {
     width: 100%;
@@ -820,12 +822,12 @@ export default {
 
 .qrcode-tip {
   margin: 8px 0;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .code-text {
-  color: #6366f1;
+  color: var(--accent);
   font-weight: 500;
   i {
     cursor: pointer;
@@ -889,12 +891,12 @@ export default {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: #f3f4f6;
+  background: var(--hover-bg);
   border: none;
-  color: #6b7280;
+  color: var(--text-secondary);
 
   &:hover {
-    background: #e5e7eb;
+    background: var(--rule);
     transform: rotate(180deg);
   }
 
@@ -915,15 +917,15 @@ export default {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: #f3f4f6;
+  background: var(--hover-bg);
   border: none;
-  color: #6b7280;
+  color: var(--text-secondary);
   z-index: 1;
 
   &:hover {
-    background: #e5e7eb;
+    background: var(--rule);
     transform: translateX(-4px);
-    color: #6366f1;
+    color: var(--accent);
   }
 
   i {

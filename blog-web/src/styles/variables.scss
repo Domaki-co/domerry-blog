@@ -1,33 +1,69 @@
-// 颜色
-$primary: #409eff;
-$secondary: #a855f7;
+// ════════════════════════════════════════════════════════════════
+//  设计令牌 · 技术台账
+//
+//  取向：把站点做成一本工程笔记。冷灰纸白底、墨黑正文、单一暖琥珀色
+//  只用于「当前态 / 置顶 / 强调」。层次靠 1px 实线分隔和留白，不靠卡片
+//  阴影和渐变；日期、数字、元信息一律等宽字体，对齐成竖线。
+//
+//  ⚠️ 变量名保持与旧版一致（$primary / $text-secondary / --card-bg …），
+//  因为全站 48 个组件都在引用它们。改值不改名 = 一次改完全站配色。
+// ════════════════════════════════════════════════════════════════
 
-// 浅色模式
-$text-primary: #1f2937;
-$text-secondary: #666;
-$background: linear-gradient(125deg, #e0f2ff 0%, #f0f5ff 20%, #f5f0ff 40%, #fff0f7 60%, #fff5f5 80%, #fff8f0 100%);
+// ── 强调色 ──
+// 唯一的彩色，只出现在：当前分类下划线、置顶标记、hover 高亮、链接强调
+$accent: #a86a10;
+// 存量代码里 $primary 出现 200+ 次，直接指向强调色
+$primary: $accent;
+// 旧的紫蓝渐变副色。新设计不用双色渐变，降级成中性石板色，
+// 仅留给少数确实需要第二层次的地方（不参与任何渐变）
+$secondary: #6b7683;
+
+// ── 浅色模式 ──
+$paper: #f4f6f8;
 $surface: #ffffff;
-$loading-bg: rgba(255, 255, 255, 0.95);
-// 深色模式
+$text-primary: #12171d;
+$text-secondary: #59636f;
+$text-tertiary: #8b949f;
+$rule: #e0e4e8;
+$rule-strong: #c9cfd6;
+$row-hover: rgba(18, 23, 29, 0.035);
+// 旧的六段彩虹渐变背景，换成纯纸白
+$background: $paper;
+$loading-bg: rgba(244, 246, 248, 0.9);
+
+// ── 深色模式 ──
 $dark: (
-  text-primary: #e2e8f0,
-  text-secondary: #94a3b8,
-  background: linear-gradient(90deg, rgba(47, 49, 51, 0.9), rgba(43, 42, 85, 0.9) 15%, rgba(39, 38, 123, 0.9) 30%, rgba(31, 32, 71, 0.9) 44%, rgba(30, 35, 84, 0.9) 58%, rgba(16, 52, 73, 0.9) 72%, rgba(7, 49, 55, 0.9) 86%, rgba(29, 46, 30, 0.9)),
-  surface: #000c,
-  loading-bg: rgba(18, 17, 17, 0.55),
-  border: rgba(255, 255, 255, 0.1),
-  card-bg: #1a1e24,                
-  hover-bg: rgba(255, 255, 255, 0.05),
-  input-bg: rgba(255, 255, 255, 0.05)
+  text-primary: #e9ecf0,
+  text-secondary: #a2acb8,
+  text-tertiary: #6f7986,
+  background: #101317,
+  surface: #161a20,
+  card-bg: #161a20,
+  loading-bg: rgba(16, 19, 23, 0.75),
+  border: #242a31,
+  rule-strong: #333b44,
+  hover-bg: rgba(255, 255, 255, 0.04),
+  input-bg: rgba(255, 255, 255, 0.04),
+  accent: #d99a3d
 );
 
-// 断点
+// ── 字体 ──
+// 标题衬线 + 正文无衬线 + 数字等宽。等宽数字是这套设计的关键：
+// 日期列、阅读时长、浏览量靠它对齐成一条竖线，台账感就出来了。
+// 全部走系统字体栈，不引入任何 webfont（含授权与体积考虑）
+$font-serif: "Songti SC", "Source Han Serif SC", "Noto Serif SC", "SimSun", Georgia, serif;
+$font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+  "Microsoft YaHei", "Segoe UI", sans-serif;
+$font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+  "Liberation Mono", monospace;
+
+// ── 断点 ──
 $breakpoint-sm: 640px;
 $breakpoint-md: 768px;
 $breakpoint-lg: 1024px;
 $breakpoint-xl: 1280px;
 
-// 间距
+// ── 间距 ──
 $spacing-base: 4px;
 $spacing-xs: $spacing-base;
 $spacing-sm: $spacing-base * 2;
@@ -35,15 +71,18 @@ $spacing-md: $spacing-base * 4;
 $spacing-lg: $spacing-base * 6;
 $spacing-xl: $spacing-base * 8;
 
-// 圆角
-$border-radius-sm: 4px;
-$border-radius-md: 8px;
-$border-radius-lg: 10px;
+// ── 圆角 ──
+// 台账取向：接近直角。旧值 4/8/10 太圆，是「SaaS 卡片」的默认长相
+$border-radius-sm: 2px;
+$border-radius-md: 4px;
+$border-radius-lg: 6px;
 
-// 阴影
-$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-$shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-$shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1); 
+// ── 阴影 ──
+// 设计里几乎不用阴影，层次交给 1px 实线。这里保留极轻的版本，
+// 只给浮层（下拉、抽屉）用，卡片一律不用
+$shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+$shadow-md: 0 2px 8px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1);
 
 @mixin image-fallback {
   position: relative;
@@ -56,7 +95,7 @@ $shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: var(--text-secondary);
+    color: var(--text-tertiary);
     font-size: 1.5em;
     opacity: 0.5;
   }
@@ -72,4 +111,4 @@ $shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
       display: block;
     }
   }
-} 
+}

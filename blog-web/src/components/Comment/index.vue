@@ -1036,14 +1036,15 @@ export default {
 }
 
 .reply-btn {
-  color: #409eff;
+  color: var(--accent);
   cursor: pointer;
   margin-left: 10px;
   font-size: 12px;
 }
 
 .reply-btn:hover {
-  color: #66b1ff;
+  // 旧值 #66b1ff 是 Element 蓝的 hover 色，已随主题改为强调色
+  opacity: 0.75;
 }
 
 .reply-box {

@@ -1,5 +1,8 @@
 <template>
-  <div class="floating-buttons" :class="{ 'show-top': showBackToTop }">
+  <div
+    class="floating-buttons"
+    :class="{ 'show-top': showBackToTop, 'over-hero': overHero }"
+  >
 
     <el-tooltip content="切换主题" placement="left">
       <button class="float-btn theme-btn" @click="toggleTheme" title="切换主题">
@@ -28,7 +31,9 @@ export default {
   data() {
     return {
       isDarkMode: false,
-      showBackToTop: false
+      showBackToTop: false,
+      // 首页首屏：整屏大图右下角已经有「向下」指示，这里要让位
+      overHero: false
     }
   },
   computed: {
@@ -50,11 +55,30 @@ export default {
     },
     handleScroll() {
       this.showBackToTop = window.pageYOffset > 300
+      this.updateOverHero()
+    },
+    /**
+     * 首页首屏大图上，右下角是「向下」指示的位置。
+     * 悬浮按钮是 fixed 的，会和大图上的指示叠在一起，所以首屏内先淡出。
+     */
+    updateOverHero() {
+      if (this.$route.path !== '/') {
+        this.overHero = false
+        return
+      }
+      // 大图高度就是视口高度，滚出大图后按钮再出现
+      this.overHero = window.pageYOffset < window.innerHeight - 120
+    }
+  },
+  watch: {
+    '$route.path'() {
+      this.updateOverHero()
     }
   },
   mounted() {
     this.isDarkMode = initTheme()
     window.addEventListener('scroll', this.handleScroll)
+    this.updateOverHero()
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll)
@@ -71,6 +95,14 @@ export default {
   flex-direction: column;
   gap: $spacing-sm;
   z-index: 1000;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+
+  // 首页首屏让位给大图上的「向下」指示
+  &.over-hero {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+  }
 }
 
 .float-btn {
@@ -94,10 +126,11 @@ export default {
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
   }
 
+  // 主题切换按钮：原来用 $primary→$secondary 渐变，新设计不用双色渐变，
+  // 改成琥珀实底 + 白图标
   &.theme-btn {
-    background: linear-gradient(135deg, $primary, $secondary);
-    color: white;
-   
+    background: var(--accent);
+    color: #fff;
   }
   
 

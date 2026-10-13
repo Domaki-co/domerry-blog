@@ -1,5 +1,11 @@
 <template>
-  <header class="site-header" :class="{ 'header-hidden': !isHeaderVisible }">
+  <header
+    class="site-header"
+    :class="{
+      'header-hidden': !isHeaderVisible,
+      'header-transparent': headerTransparent
+    }"
+  >
     <nav class="navbar">
       <!-- 移动端菜单按钮 -->
       <button class="menu-btn" @click="handleOpenMobileMenu">
@@ -8,6 +14,7 @@
 
       <div class="nav-left">
         <router-link to="/" class="logo">
+          <span class="logo-mark">~/</span>
           <img :src="$store.state.webSiteInfo.logo" :alt="$store.state.webSiteInfo.name">
           <span class="logo-text">{{$store.state.webSiteInfo.name}}</span>
         </router-link>
@@ -25,8 +32,7 @@
             class="nav-link"
             :class="{
               'has-dropdown': item.children,
-              'active': isActive(item),
-              [item.colorClass]: true
+              'active': isActive(item)
             }"
             @mouseenter="handleMouseEnter(item)"
           >
@@ -118,80 +124,72 @@ export default {
       showMobileSearch: false,
       lastScrollTop: 0,
       isHeaderVisible: true,
+      // 当前滚动距离，供首页透明顶栏判断何时切回毛玻璃
+      scrollTop: 0,
+      // 首屏大图高度就是视口高度，窗口大小变化时要跟着更新
+      viewportHeight: window.innerHeight,
       menuItems: [
         {
           name: '首页',
           path: '/',
-          icon: 'fas fa-home',
-          colorClass: 'home-link'
+          icon: 'fas fa-home'
         },
         {
           name: '文章归档',
           path: '/archives',
           icon: 'fas fa-archive',
-          colorClass: 'archive-link',
           children: [
             {
               name: '归档',
               path: '/archive',
-              icon: 'fas fa-clock',
-              colorClass: 'clock-link'
+              icon: 'fas fa-clock'
             },
             {
               name: '分类',
               path: '/categories',
-              icon: 'fas fa-folder',
-              colorClass: 'category-link'
+              icon: 'fas fa-folder'
             },
             {
               name: '标签',
               path: '/tags',
-              icon: 'fas fa-tags',
-              colorClass: 'tag-link'
+              icon: 'fas fa-tags'
             }
           ]
         },
         {
           name: '说说',
           path: '/moments',
-          icon: 'fas fa-comment-dots',
-          colorClass: 'talk-link'
+          icon: 'fas fa-comment-dots'
         },
         {
           name: '音乐',
           path: '/resources',
-          icon: 'fas fa-music',
-          colorClass: 'resource-link'
+          icon: 'fas fa-music'
         },
         {
           name: '相册',
           path: '/photos',
-          icon: 'fas fa-images',
-          colorClass: 'photos-link'
+          icon: 'fas fa-images'
         },
         {
           name: '留言板',
           path: '/messages',
-          icon: 'fas fa-envelope',
-          colorClass: 'message-link'
+          icon: 'fas fa-envelope'
         },
         {
-          name: '友情链接',
+          name: '友链',
           path: '/friends',
-          icon: 'fas fa-users',
-          colorClass: 'friend-link'
+          icon: 'fas fa-users'
         },
         {
-          name: '关于本站',
+          name: '更多',
           path: '/about',
           icon: 'fas fa-info-circle',
-          colorClass: 'about-link',
           children: [
             {
               name: '关于我',
               path: '/about',
-              icon: 'fas fa-user',
-              colorClass: 'about-me-link'
+              icon: 'fas fa-user'
             },
             // {
             //   name: '网站源码',
@@ -204,7 +202,6 @@ export default {
               name: '后台管理',
               path: import.meta.env.VITE_APP_ADMIN_URL || 'http://localhost:3000',
               icon: 'fas fa-tv',
-              colorClass: 'admin-link',
               external: true
             }
           ]
@@ -213,7 +210,7 @@ export default {
       activeDropdown: null,
       showDropdown: false,
       showSearch: false,
-      unreadCount: 0,
+      unreadCount: 0
     }
   },
   computed: {
@@ -222,6 +219,16 @@ export default {
         ...item,
         path: item.children ? item.children[0].path : item.path
       }))
+    },
+    /**
+     * 顶部标签浮在首页整屏大图上（透明 + 白字），滚出首屏后恢复原来的毛玻璃；
+     * 其他页面一律保持现状
+     */
+    headerTransparent() {
+      if (this.$route.path !== '/') return false
+      // 首屏高度就是大图高度，减掉顶栏自身 64px 再切换
+      const heroHeight = Math.max(this.viewportHeight - 64, 0)
+      return this.scrollTop < heroHeight
     }
   },
   methods: {
@@ -296,6 +303,7 @@ export default {
     },
     handleScroll() {
       const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop
+      this.scrollTop = currentScrollTop
 
       // 如果滚动位置小于 100px，始终显示 header
       if (currentScrollTop < 100) {
@@ -315,10 +323,15 @@ export default {
 
       this.lastScrollTop = currentScrollTop
     },
+    handleResize() {
+      this.viewportHeight = window.innerHeight
+    }
   },
   mounted() {
     // 添加滚动事件监听
     window.addEventListener('scroll', this.handleScroll)
+    // 首屏大图高度随视口变化，窗口缩放时要重新判断顶栏是否透明
+    window.addEventListener('resize', this.handleResize)
 
     // 保留原有的事件监听
     document.addEventListener('click', (e) => {
@@ -331,54 +344,54 @@ export default {
   beforeUnmount() {
     // 移除滚动事件监听
     window.removeEventListener('scroll', this.handleScroll)
+    window.removeEventListener('resize', this.handleResize)
     document.removeEventListener('click', this.closeDropdown)
   }
 }
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  顶栏 · 技术台账
+//
+//  首屏透明悬浮在整屏大图上（白字），滚出大图后切成毛玻璃实底。
+//  菜单靠右，当前页用琥珀色下划线标记；图标去掉彩色，只留单色。
+// ════════════════════════════════════════════════════════════════
+
+$header-height: 64px;
+
 .site-header {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   z-index: 1000;
-  background: rgba(var(--surface-rgb), 0.65);
-  backdrop-filter: blur(10px) saturate(180%);
-  -webkit-backdrop-filter: blur(10px) saturate(180%);
-  border-bottom: 1px solid rgba(var(--border-color-rgb), 0.08);
-  transition: all 0.3s ease;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--rule);
+  transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
   transform: translateY(0);
 
   &.header-hidden {
     transform: translateY(-100%);
-    box-shadow: none;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      rgba(var(--surface-rgb), 0.05),
-      rgba(var(--surface-rgb), 0)
-    );
-    pointer-events: none;
   }
 }
 
 .navbar {
-  padding: $spacing-sm $spacing-xl;
+  padding: 0 $spacing-xl;
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  height: 64px;
+  height: $header-height;
   position: relative;
+  gap: $spacing-lg;
 }
 
+// ── 左：站标 ──
 .nav-left {
-  margin-right: 50px;
+  flex-shrink: 0;
+
   .logo {
     display: flex;
     align-items: center;
@@ -386,52 +399,43 @@ export default {
     gap: $spacing-sm;
 
     img {
-      height: 38px;
-      width: 40px;
-      border-radius: 5px;
+      height: 30px;
+      width: 30px;
+      border-radius: $border-radius-sm;
+      object-fit: cover;
+    }
+
+    // 终端提示符式的记号，呼应「工程笔记」的取向
+    .logo-mark {
+      font-family: $font-mono;
+      font-size: 0.95rem;
+      color: var(--accent);
+      letter-spacing: -0.02em;
     }
 
     .logo-text {
-      font-size: 1.2em;
-      font-weight: 700;
-      background: linear-gradient(135deg, $primary, $secondary);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
+      font-family: $font-serif;
+      font-size: 1.08rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: 0.01em;
       max-width: 200px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-
-    @media screen and (max-width: 1400px) {
-      .logo-text {
-        max-width: 160px;
-        font-size: 1.1em;
-      }
-    }
-
-    @media screen and (max-width: 1200px) {
-      .logo-text {
-        max-width: 140px;
-        font-size: 1em;
-      }
-    }
-
-    @media screen and (max-width: 1000px) {
-      .logo-text {
-        max-width: 120px;
-        font-size: 0.9em;
-      }
-    }
   }
 }
 
+// ── 中：菜单（整体靠右，紧挨右侧操作区）──
 .nav-center {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   flex: 1;
+  gap: 2px;
   font-size: 1em;
+
   .nav-item {
     position: relative;
     white-space: nowrap;
@@ -440,7 +444,7 @@ export default {
       .dropdown-menu {
         opacity: 1;
         visibility: visible;
-        transform: translateX(-50%) translateY(0);
+        transform: translateY(0);
         pointer-events: auto;
       }
 
@@ -454,142 +458,94 @@ export default {
     color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.3s ease;
+    transition: color 0.2s ease;
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-sm;
-    border-radius: $border-radius-md;
-    font-size: 0.95em;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: $border-radius-sm;
+    font-size: 0.9rem;
     position: relative;
-    height: 40px;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 
     i {
-      font-size: 1.1em;
+      font-size: 0.85em;
+      color: var(--text-tertiary);
+      transition: color 0.2s ease;
     }
 
-    &:hover, &.active {
-      color: $primary;
-      // background: var(--hover-bg);
+    // 当前页：琥珀色 + 一条下划线，不用背景块
+    &.active {
+      color: var(--text-primary);
+
+      i {
+        color: var(--accent);
+      }
+
+      &::after {
+        content: '';
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 0;
+        height: 2px;
+        background: var(--accent);
+        border-radius: 1px;
+      }
+    }
+
+    &:hover {
+      color: var(--text-primary);
+
+      i {
+        color: var(--accent);
+      }
     }
 
     &.has-dropdown {
-      padding-right: $spacing-lg;
+      padding-right: 22px;
 
       .dropdown-icon {
         position: absolute;
-        right: $spacing-sm;
-        font-size: 0.8em;
-        transition: transform 0.3s ease;
+        right: 8px;
+        font-size: 0.6em;
+        transition: transform 0.25s ease;
       }
-    }
-
-    &.home-link i { color: #4CAF50; }
-    &.archive-link i { color: #9C27B0; }
-    &.clock-link i { color: #00BCD4; }
-    &.category-link i { color: #FF9800; }
-    &.tag-link i { color: #E91E63; }
-    &.talk-link i { color: #2196F3; }
-    &.code-link i { color: #607D8B; }
-    &.photos-link i { color: #9b36f4; }
-    &.message-link i { color: #009688; }
-    &.friend-link i { color: #3F51B5; }
-    &.about-link i { color: #795548; }
-    &.about-me-link i { color: #8BC34A; }
-    &.github-link i { color: #333333; }
-    &.changelog-link i { color: #673AB7; }
-    &.resource-link i { color: #009688; }
-
-    &:hover {
-      i {
-        transform: scale(1.1);
-      }
-    }
-
-    i {
-      transition: transform 0.3s ease;
-      font-size: 1.2em;
-    }
-  }
-
-  @media screen and (max-width: 1400px) {
-    .nav-link {
-      font-size: 0.85em;
-      padding: $spacing-sm $spacing-sm;
-      gap: $spacing-xs;
-    }
-  }
-
-  @media screen and (max-width: 1200px) {
-    .nav-link {
-      font-size: 0.8em;
-      padding: $spacing-xs $spacing-sm;
-
-      i {
-        font-size: 1em;
-      }
-
-      .dropdown-icon {
-        display: none;
-      }
-    }
-  }
-
-  @media screen and (max-width: 1000px) {
-    .nav-link {
-      i {
-        display: none;
-      }
-
-      padding: $spacing-xs $spacing-xs;
-      font-size: 0.75em;
     }
   }
 }
 
+// ── 右：搜索 / 消息 / 头像 ──
 .nav-right {
   display: flex;
   align-items: center;
-  gap: $spacing-md;
-  margin-left: auto;
-  position: relative;
-  right: 0px;
+  gap: $spacing-sm;
+  flex-shrink: 0;
 
   .search-btn {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: var(--hover-bg);
-    border-radius: 20px;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border-radius: $border-radius-sm;
     color: var(--text-secondary);
     text-decoration: none;
-    transition: all 0.3s ease;
-    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+    border: 1px solid var(--rule);
 
     i {
-      font-size: 0.9em;
-      transition: transform 0.3s ease;
+      font-size: 0.85em;
     }
 
     .search-text {
-      font-size: 0.9em;
-      font-weight: 500;
+      font-size: 0.85rem;
     }
 
     &:hover {
-      background: var(--surface);
-      color: $primary;
-      border-color: $primary;
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba($primary, 0.1);
-
-      i {
-        transform: scale(1.1);
-      }
+      color: var(--text-primary);
+      border-color: var(--rule-strong);
+      background: var(--row-hover);
     }
   }
 
@@ -597,35 +553,29 @@ export default {
     position: relative;
     display: flex;
     align-items: center;
-    padding: 8px;
+    padding: 7px;
     color: var(--text-secondary);
     text-decoration: none;
-    transition: all 0.3s ease;
-    border-radius: 50%;
+    transition: color 0.2s ease;
+    border-radius: $border-radius-sm;
 
     i {
-      font-size: 1.2em;
-      transition: transform 0.3s ease;
+      font-size: 1rem;
     }
 
     &:hover {
-      color: $primary;
-      background: var(--hover-bg);
-
-      i {
-        transform: scale(1.1);
-      }
+      color: var(--text-primary);
+      background: var(--row-hover);
     }
 
     .message-count {
       position: absolute;
-      top: 2px;
-      right: 2px;
-      background: red;
-      width: 8px;
-      height: 8px;
+      top: 4px;
+      right: 4px;
+      background: var(--accent);
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      transform: none;
       padding: 0;
     }
   }
@@ -640,26 +590,27 @@ export default {
         top: 100%;
         left: 0;
         width: 100%;
-        height: 8px;
+        // 要盖住 .user-dropdown 的 `top: calc(100% + 10px)`，少 1px 就会留出
+        // 鼠标划过去时触发 mouseleave、把菜单关掉的死区
+        height: 10px;
         background: transparent;
       }
     }
 
     .avatar {
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       cursor: pointer;
       border-radius: 50%;
       overflow: hidden;
-      transition: transform 0.2s;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 2px solid $primary;
+      border: 1px solid var(--rule);
+      transition: border-color 0.2s ease;
 
       &:hover {
-        transform: scale(1.05);
-        background: var(--hover-bg);
+        border-color: var(--accent);
       }
 
       .avatar-icon {
@@ -671,42 +622,44 @@ export default {
 
     .user-dropdown {
       position: absolute;
-      top: calc(100% + 8px);
+      top: calc(100% + 10px);
       right: 0;
-      width: 240px;
+      width: 232px;
       background: var(--surface);
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      border: 1px solid var(--rule);
+      border-radius: $border-radius-md;
+      box-shadow: $shadow-lg;
       overflow: hidden;
       z-index: 1000;
-      animation: slideDown 0.2s ease;
+      animation: slideDown 0.18s ease;
 
       .dropdown-header {
-        padding: 20px;
+        padding: $spacing-md;
         display: flex;
         align-items: center;
-        gap: 12px;
-        background: linear-gradient(135deg, $primary, $secondary);
-        color: #fff;
+        gap: $spacing-sm;
+        background: var(--row-hover);
+        border-bottom: 1px solid var(--rule);
+        color: var(--text-primary);
 
         img {
-          width: 48px;
-          height: 48px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
-          border: 2px solid rgba(255, 255, 255, 0.8);
+          border: 1px solid var(--rule);
         }
 
         .user-details {
           .username {
             display: block;
-            font-weight: 500;
-            font-size: 16px;
+            font-weight: 600;
+            font-size: 0.92rem;
           }
 
           .role {
             display: block;
-            font-size: 13px;
-            opacity: 0.8;
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
             margin-top: 2px;
           }
         }
@@ -714,31 +667,34 @@ export default {
 
       .dropdown-divider {
         height: 1px;
-        background: var(--border-color);
-        margin: 8px 0;
+        background: var(--rule);
+        margin: 0;
       }
 
       .dropdown-item {
-        padding: 12px 20px;
+        padding: 10px $spacing-md;
         display: flex;
         align-items: center;
-        gap: 12px;
-        color: var(--text-primary);
+        gap: $spacing-sm;
+        color: var(--text-secondary);
         text-decoration: none;
         transition: all 0.2s;
         cursor: pointer;
+        font-size: 0.88rem;
 
         i {
-          font-size: 16px;
-          opacity: 0.8;
+          font-size: 0.9rem;
+          width: 16px;
+          text-align: center;
+          color: var(--text-tertiary);
         }
 
         &:hover {
-          background: var(--hover-bg);
-          color: $primary;
+          background: var(--row-hover);
+          color: var(--text-primary);
 
           i {
-            opacity: 1;
+            color: var(--accent);
           }
         }
       }
@@ -752,115 +708,42 @@ export default {
   background: none;
   border: none;
   padding: $spacing-sm;
-  font-size: 1.2em;
-  color: $text-secondary;
+  font-size: 1.1rem;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 
   &:hover {
-    color: $primary;
+    color: var(--text-primary);
   }
 }
 
-.mobile-search {
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  background: white;
-  width: 80%;
-  max-width: 360px;
-  z-index: 1100;
-  transform: translateX(-100%);
-  transition: transform 0.3s ease;
-  overflow-y: auto;
-
-  &.active {
-    transform: translateX(0);
-  }
-}
-
-
-@include responsive(lg) {
-  .nav-center {
-    display: none;
-  }
-
-  .nav-right .search-btn {
-    width: 160px;
-  }
-}
-
-@include responsive(md) {
-  .navbar {
-    padding: $spacing-sm $spacing-md;
-  }
-
-  .menu-btn,
-  .mobile-search-btn {
-    display: block;
-  }
-
-  .nav-center,
-  .nav-right .search-btn {
-    display: none;
-  }
-
-  .nav-left {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    margin-right: 0;
-
-    .logo {
-      img {
-        height: 40px;
-        width: 42px;
-      }
-
-      .logo-text {
-        max-width: 160px;
-        font-size: 1em;
-        display: block;
-      }
-    }
-  }
-
-  .nav-right .user-info {
-    display: none;
-  }
-
-  .nav-right .message-btn {
-    display: none;
-  }
-}
-
-@media screen and (max-width: 480px) {
-  .nav-left .logo .logo-text {
-    max-width: 120px;
-    font-size: 1.3em;
-  }
-}
-
+// ── 下拉菜单 ──
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(15px);
+  top: calc(100% + 6px);
+  right: 0;
   background: var(--surface);
+  border: 1px solid var(--rule);
   border-radius: $border-radius-md;
   box-shadow: $shadow-lg;
   width: max-content;
-  min-width: 120px;
+  min-width: 132px;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateY(6px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
-  padding: $spacing-xs 0;
+  padding: 4px 0;
 
+  // 触发项和菜单之间有 6px 视觉空隙，鼠标往下移动时会先离开 .nav-item，
+  // 触发 mouseleave 把菜单关掉。这块透明桥接条把空隙并入菜单自身的命中区域
+  // （`overflow: hidden` 会把它裁掉，所以菜单上不能有 overflow: hidden）。
+  // top/height 要跟上面的 `top: calc(100% + 6px)` 和 1px 边框对上。
   &::before {
     content: '';
     position: absolute;
-    top: -8px;
+    top: -7px;
     left: 0;
     width: 100%;
     height: 8px;
@@ -872,26 +755,27 @@ export default {
     align-items: center;
     gap: $spacing-sm;
     padding: 8px $spacing-md;
-    height: 36px;
     color: var(--text-secondary);
     text-decoration: none;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     white-space: nowrap;
-    font-size: 0.9em;
+    font-size: 0.86rem;
+
     i {
       width: 16px;
       text-align: center;
-      font-size: 0.9em;
-      color: var(--text-secondary);
-      margin-right: 8px;
+      font-size: 0.85rem;
+      color: var(--text-tertiary);
+      margin-right: 0;
     }
 
-    &:hover {
-      color: $primary;
-      background: var(--hover-bg);
+    &:hover,
+    &.active {
+      color: var(--text-primary);
+      background: var(--row-hover);
 
       i {
-        color: $primary;
+        color: var(--accent);
       }
     }
   }
@@ -899,30 +783,15 @@ export default {
   &.active {
     opacity: 1;
     visibility: visible;
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     pointer-events: auto;
-  }
-
-  @keyframes dropdownEnter {
-    from {
-      opacity: 0;
-      transform: translateX(-50%) translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-  }
-
-  &.active {
-    animation: dropdownEnter 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
@@ -930,79 +799,170 @@ export default {
   }
 }
 
-/* 色模式适配 */
-:root[data-theme='dark'] {
-  .site-header {
-    background: rgba(var(--surface-rgb), 0.75);
-    backdrop-filter: blur(10px) saturate(160%);
-    -webkit-backdrop-filter: blur(10px) saturate(160%);
-    border-bottom-color: rgba(var(--border-color-rgb), 0.15);
-  }
+// ── 响应式 ──
+@media screen and (max-width: 1400px) {
+  .nav-center .nav-link {
+    font-size: 0.84rem;
+    padding: 6px 8px;
+    gap: 5px;
 
-  .user-dropdown {
-    background: var(--surface);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-
-    .dropdown-item {
-      color: var(--text-primary);
-
-      &:hover {
-        background: var(--hover-bg);
-      }
+    &.active::after {
+      left: 8px;
+      right: 8px;
     }
   }
 }
 
-/* 深色模式下的图标颜色整 */
-:root[data-theme='dark'] {
-  .nav-link {
-    &.home-link i { color: #81C784; }
-    &.archive-link i { color: #CE93D8; }
-    &.clock-link i { color: #4DD0E1; }
-    &.category-link i { color: #FFB74D; }
-    &.tag-link i { color: #F06292; }
-    &.talk-link i { color: #64B5F6; }
-    &.code-link i { color: #90A4AE; }
-    &.hot-link i { color: #EF5350; }
-    &.message-link i { color: #4DB6AC; }
-    &.friend-link i { color: #7986CB; }
-    &.about-link i { color: #A1887F; }
-    &.about-me-link i { color: #AED581; }
-    &.github-link i { color: #FFFFFF; }
-    &.changelog-link i { color: #9575CD; }
+@media screen and (max-width: 1200px) {
+  .navbar {
+    padding: 0 $spacing-lg;
+  }
+
+  .nav-center .nav-link {
+    font-size: 0.8rem;
+    padding: 6px 6px;
+
+    i {
+      display: none;
+    }
+
+    &.has-dropdown {
+      padding-right: 18px;
+
+      .dropdown-icon {
+        display: block;
+      }
+    }
+
+    &.active::after {
+      left: 6px;
+      right: 6px;
+    }
+  }
+
+  .nav-right .search-btn .search-text {
+    display: none;
   }
 }
 
-/* 添加图标悬浮动画 */
-@keyframes iconFloat {
-  0% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-3px);
-  }
-  100% {
-    transform: translateY(0);
+@include responsive(lg) {
+  .nav-center {
+    display: none;
   }
 }
 
-.nav-link:hover i {
-  animation: iconFloat 0.6s ease-in-out;
+@include responsive(md) {
+  .navbar {
+    padding: 0 $spacing-md;
+  }
+
+  .menu-btn,
+  .mobile-search-btn {
+    display: block;
+  }
+
+  .nav-right .search-btn,
+  .nav-right .message-btn,
+  .nav-right .user-info {
+    display: none;
+  }
+
+  // 移动端站标居中
+  .nav-left {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+
+    .logo .logo-text {
+      max-width: 150px;
+      font-size: 1rem;
+    }
+  }
 }
 
-/* 修改字体相关样式 */
-.nav-link {
-  font-family: 'Poppins', sans-serif;
-  font-weight: 500;
-  letter-spacing: 0.2px;
-  /* ... 其他样式保持不变 ... */
+// ── 首屏透明态：悬浮在整屏大图上，文字与图标统一转白 ──
+// 深色模式里 :root[data-theme='dark'] .site-header 带半透明底色（特异度更高），
+// 所以这里必须带上同样的前缀选择器才能压得过它
+.site-header.header-transparent,
+:root[data-theme='dark'] .site-header.header-transparent {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: transparent;
+
+  .logo-mark {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  .logo-text {
+    color: #fff;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.4);
+  }
+
+  .nav-center .nav-link {
+    color: rgba(255, 255, 255, 0.82);
+
+    i {
+      color: rgba(255, 255, 255, 0.72);
+    }
+
+    &:hover {
+      color: #fff;
+
+      i {
+        color: #fff;
+      }
+    }
+
+    &.active {
+      color: #fff;
+
+      i {
+        color: #fff;
+      }
+
+      &::after {
+        background: #fff;
+      }
+    }
+  }
+
+  .search-btn {
+    color: rgba(255, 255, 255, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+
+    &:hover {
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.6);
+      background: rgba(255, 255, 255, 0.12);
+    }
+  }
+
+  .message-btn {
+    color: rgba(255, 255, 255, 0.9);
+
+    &:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.14);
+    }
+  }
+
+  .avatar {
+    border-color: rgba(255, 255, 255, 0.5);
+
+    &:hover {
+      border-color: #fff;
+    }
+  }
+
+  .menu-btn,
+  .mobile-search-btn {
+    color: #fff;
+  }
 }
 
-.logo-text {
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.5px;
-  /* ... 其他样式保持不变 ... */
+// 深色模式下顶栏底色略加深，避免和页面底色糊在一起
+:root[data-theme='dark'] .site-header:not(.header-transparent) {
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
 }
-
 </style>

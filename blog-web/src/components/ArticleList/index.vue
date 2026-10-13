@@ -1,47 +1,30 @@
 <template>
   <div class="article-list-component" v-loading="loading">
-    <transition-group name="post-list" tag="div" class="posts-list">
-      <article v-for="post in articles" :key="post.id" class="post-item">
-        <div class="post-content">
-          <div class="post-main">
-            <div class="post-text">
-              <h3>
-                <span v-if="post.isStick" class="stick-tag">
-                  <i class="fas fa-thumbtack"></i>
-                  置顶
-                </span>
-                <span v-if="post.status === 4" class="stick-tag private-tag">
-                  <i class="fas fa-lock"></i>
-                  私密
-                </span>
-                <span class="post-title underline" @click="$emit('article-click', post.id)">{{ post.title }}</span>
-              </h3>
-              <p class="post-excerpt">{{ post.summary }}</p>
-            </div>
-            <div class="post-image" @click="$emit('article-click', post.id)">
-              <img v-lazy="resolveCover(post)" :key="resolveCover(post)" :alt="post.title">
-              <div class="image-placeholder">
-                <i class="fas fa-image"></i>
-              </div>
-            </div>
+    <!-- 台账式列表：日期 | 标题+摘要+元信息 | 缩略图 -->
+    <transition-group name="post-list" tag="ol" class="ledger">
+      <li v-for="post in articles" :key="post.id" class="entry">
+        <div class="entry-link">
+          <div class="entry-date">
+            <span class="y">{{ dateParts(post.createTime).year }}</span>
+            <span class="md">{{ dateParts(post.createTime).md }}</span>
           </div>
 
-          <div class="post-footer">
-            <div class="footer-left">
-              <div class="author-info">
-                <el-avatar :size="24" :src="post.avatar"></el-avatar>
-                <span class="author-name">{{ post.nickname }}</span>
-              </div>
-              <div class="post-date">
-                <i class="far fa-calendar"></i>
-                {{ formatTime(post.createTime) }}
-              </div>
-              <div class="post-view">
-                <i class="far fa-eye"></i>
-                {{ post.quantity }}
-              </div>
-            </div>
-            <div class="footer-right">
+          <div class="entry-main">
+            <h3 class="entry-title">
+              <span v-if="post.isStick" class="badge">置顶</span>
+              <span v-if="post.status === 4" class="badge muted">私密</span>
+              <router-link :to="`/post/${post.id}`">{{ post.title }}</router-link>
+            </h3>
+
+            <p v-if="post.summary" class="entry-sum">{{ post.summary }}</p>
+
+            <div class="entry-meta">
+              <span v-if="post.categoryName" class="cat">{{ post.categoryName }}</span>
+              <span>{{ readMinutes(post) }} 分钟</span>
+              <span>{{ post.quantity || 0 }} 次浏览</span>
+              <span v-if="post.commentNum">{{ post.commentNum }} 条评论</span>
+
+              <!-- 管理员专属的置顶开关 -->
               <el-tooltip v-if="isAdmin && canStick(post)"
                 :content="post.isStick === 1 ? '取消置顶' : '设为置顶'"
                 placement="top">
@@ -51,27 +34,31 @@
                   {{ post.isStick === 1 ? '取消置顶' : '置顶' }}
                 </button>
               </el-tooltip>
-              <span class="category-tag">{{ post.categoryName }}</span>
-              <span class="read-time">
-                <i class="far fa-clock"></i>
-                {{ Math.ceil(post.contentMd.split(" ").length / 300) }}分钟阅读
-              </span>
             </div>
           </div>
+
+          <!-- 缩略图：加载中显示 lazy 占位图，无封面或加载失败回退到 book -->
+          <router-link :to="`/post/${post.id}`" class="entry-thumb">
+            <img
+              v-lazy="{ src: post.cover || defaultCover, loading: lazyPlaceholder, error: defaultCover }"
+              :key="post.cover || defaultCover"
+              :alt="post.title"
+              @error="handleImageError">
+          </router-link>
         </div>
-      </article>
+      </li>
     </transition-group>
 
     <el-empty v-if="!loading && articles.length === 0" description="暂无文章" />
 
     <div class="pagination-box">
-      <el-pagination 
-        background 
-        v-if="articles.length" 
+      <el-pagination
+        background
+        v-if="articles.length"
         @current-change="$emit('page-change', $event)"
-        :current-page="params.pageNum" 
-        :page-size="params.pageSize" 
-        layout="prev, pager, next" 
+        :current-page="params.pageNum"
+        :page-size="params.pageSize"
+        layout="prev, pager, next"
         :total="total">
       </el-pagination>
     </div>
@@ -79,11 +66,10 @@
 </template>
 
 <script>
-import { formatTime } from '@/utils/time'
 import { updateArticleStatusApi } from '@/api/article'
 
-const LOADING_COVER = '/static/img/lazy.gif'
 const DEFAULT_COVER = '/static/img/book.png'
+const LAZY_PLACEHOLDER = '/static/img/lazy.gif'
 
 export default {
   name: 'ArticleList',
@@ -118,30 +104,35 @@ export default {
   },
   data() {
     return {
-      // 无封面文章:先展示 3 秒加载动画,之后回落到静态默认封面
-      defaultCoverReady: false,
       // 正在提交置顶请求的文章id，用于禁用按钮防止重复点击
-      stickLoadingId: null
+      stickLoadingId: null,
+      // 暴露给模板：占位图与回退图
+      defaultCover: DEFAULT_COVER,
+      lazyPlaceholder: LAZY_PLACEHOLDER
     }
-  },
-  watch: {
-    articles(val) {
-      if (val.length && !this.defaultCoverTimer) {
-        this.defaultCoverTimer = setTimeout(() => {
-          this.defaultCoverReady = true
-        }, 3000)
-      }
-    }
-  },
-  beforeUnmount() {
-    clearTimeout(this.defaultCoverTimer)
   },
   methods: {
-    formatTime(time) {
-      return formatTime(time)
+    /**
+     * 把时间拆成「年」和「月-日」两行，让日期列对齐成一条竖线
+     */
+    dateParts(time) {
+      const date = new Date(time)
+      if (!time || Number.isNaN(date.getTime())) {
+        return { year: '', md: '' }
+      }
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return { year: String(date.getFullYear()), md: `${month}-${day}` }
     },
-    resolveCover(post) {
-      return post.cover || (this.defaultCoverReady ? DEFAULT_COVER : LOADING_COVER)
+    /**
+     * 估算阅读时长。contentMd 在列表接口里可能为空，这里兜底避免报错
+     */
+    readMinutes(post) {
+      const words = post.contentMd ? post.contentMd.split(' ').length : 0
+      return Math.max(1, Math.ceil(words / 300))
+    },
+    handleImageError(e) {
+      e.target.src = DEFAULT_COVER
     },
     /**
      * 能否置顶：只有上架(1)/私密(4) 才会出现在门户置顶栏；
@@ -174,236 +165,248 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-md;
+// ════════════════════════════════════════════════════════════════
+//  文章台账
+//
+//  三列：日期（年小/月日大）| 标题+摘要+元信息 | 118px 缩略图。
+//  hover 只做底色变化和标题下划线展开，不位移 —— 位移会让整列
+//  文字在鼠标扫过时抖动，台账要的是稳。
+// ════════════════════════════════════════════════════════════════
+
+.ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.post-item {
-  @include card;
-  background: var(--card-bg);
-  padding: $spacing-lg;
-  transition: all 0.3s ease;
+.entry {
+  border-bottom: 1px solid var(--rule);
+}
+
+.entry-link {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 118px;
+  gap: clamp(16px, 2vw, 28px);
+  align-items: start;
+  padding: 24px 18px;
+  margin: 0 -18px;
+  transition: background 0.22s ease;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-  }
-}
+    background: var(--row-hover);
 
-.post-main {
-  display: grid;
-  grid-template-columns: 1fr 200px;
-  gap: $spacing-lg;
-  margin-bottom: $spacing-md;
-
-  .post-text {
-    h3 {
-      font-size: 1.2em;
-      margin-bottom: $spacing-md;
-      line-height: 1.4;
-      color: var(--text-primary);
-      cursor: pointer;
-      .stick-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 0.6em;
-        background: linear-gradient(135deg, $secondary, darken($secondary, 10%));
-        color: white;
-        padding: 3px 8px;
-        border-radius: 4px;
-        margin-right: $spacing-sm;
-
-        i {
-          transform: rotate(45deg);
-        }
-      }
-      .private-tag {
-        background: linear-gradient(135deg, #909399, darken(#909399, 10%));
-
-        i {
-          transform: none;
-        }
-      }
+    .entry-title a {
+      background-size: 100% 1px;
     }
 
-    .post-title {
-      &:hover {
-        color: $primary;
-      }
-    }
-
-    .post-excerpt {
-      color: var(--text-secondary);
-      line-height: 1.6;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-  }
-
-  .post-image {
-    position: relative;
-    height: 140px;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-
-    &:hover img {
-      transform: scale(1.05);
+    .entry-thumb img {
+      filter: saturate(1);
     }
   }
 }
 
-.post-footer {
+.entry-date {
+  font-family: $font-mono;
+  font-variant-numeric: tabular-nums;
+  padding-top: 3px;
+
+  .y {
+    display: block;
+    font-size: 0.68rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+  }
+
+  .md {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    letter-spacing: -0.01em;
+  }
+}
+
+.entry-main {
+  min-width: 0;
+}
+
+.entry-title {
+  font-family: $font-serif;
+  font-size: 1.2rem;
+  line-height: 1.45;
+  font-weight: 600;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: $spacing-md;
-  border-top: 1px solid var(--border-color);
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin: 0;
+
+  a {
+    color: var(--text-primary);
+    text-decoration: none;
+    // 下划线从左侧展开
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    transition: background-size 0.32s ease;
+  }
+}
+
+// 置顶 / 私密：描边小标签，不用实心色块
+.badge {
+  font-family: $font-mono;
+  font-size: 0.63rem;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  padding: 3px 6px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: $border-radius-sm;
+  flex: none;
+  transform: translateY(-1px);
+
+  &.muted {
+    border-color: var(--rule-strong);
+    color: var(--text-tertiary);
+  }
+}
+
+.entry-sum {
+  margin-top: 9px;
   color: var(--text-secondary);
-  .fa-calendar{
-    color: $primary;
-  }
-  .fa-eye{
-    color: #67c23a;
-  }
-  .fa-clock{
-    color: #2fa9e1;
-  }
-  .footer-left {
-    display: flex;
-    align-items: center;
-    gap: $spacing-lg;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  max-width: 62ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
-    .author-info {
-      display: flex;
-      align-items: center;
-      gap: $spacing-sm;
+.entry-meta {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-family: $font-mono;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
 
-      .author-name {
-        font-weight: 500;
-        color: $primary;
-      }
-    }
-
-    .post-date {
-      color: var(--text-secondary);
-      font-size: 0.9em;
-      display: flex;
-      align-items: center;
-      gap: $spacing-sm;
-    }
-  }
-
-  .footer-right {
-    display: flex;
-    align-items: center;
-    gap: $spacing-lg;
-
-    .category-tag {
-      padding: 4px 12px;
-      background: var(--hover-bg);
-      border-radius: 20px;
-      font-size: 0.9em;
-      color: var(--text-secondary);
-    }
-
-    .read-time {
-      color: var(--text-secondary);
-      font-size: 0.9em;
-      display: flex;
-      align-items: center;
-      gap: $spacing-sm;
-    }
-
-    // 管理员专属的置顶按钮
-    .stick-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      height: 24px;
-      padding: 0 10px;
-      font-size: 0.85em;
-      border-radius: 20px;
-      border: 1px solid var(--border-color);
-      background: transparent;
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      i {
-        transform: rotate(45deg);
-      }
-
-      &:hover:not(:disabled) {
-        color: $primary;
-        border-color: $primary;
-      }
-
-      &.is-stick {
-        color: $secondary;
-        border-color: $secondary;
-        background: rgba($secondary, 0.12);
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
+  .cat {
+    color: var(--text-secondary);
   }
 }
 
-@include responsive(md) {
-  .post-main {
-    grid-template-columns: 1fr;
-    
-    .post-image {
-      height: 200px;
-      order: -1;
-    }
+.entry-thumb {
+  width: 118px;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: var(--row-hover);
+  display: block;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: saturate(0.9);
+    transition: filter 0.3s ease;
+  }
+
+}
+
+// 管理员置顶按钮：融进元信息行，不额外占位
+.stick-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  font-family: $font-mono;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  border-radius: $border-radius-sm;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  i {
+    font-size: 0.8em;
+  }
+
+  &:hover:not(:disabled) {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  &.is-stick {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
-@include responsive(sm) {
-  .post-item {
-    padding: $spacing-sm;
-  }
-
-  .post-footer {
-    flex-direction: column;
-    gap: $spacing-md;
-    
-    .footer-left, .footer-right {
-      width: 100%;
-      justify-content: space-between;
-    }
-  }
+.pagination-box {
+  margin-top: $spacing-xl;
 }
 
-// 保持动画效果不变
+// 列表进场：轻微上浮，不做大幅位移
 .post-list-enter-active {
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-  transition-delay: calc(0.1s * var(--index));
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition-delay: calc(0.04s * var(--index, 0));
 }
 
 .post-list-leave-active {
-  transition: all 0.6s ease;
+  transition: opacity 0.3s ease;
 }
 
 .post-list-enter,
 .post-list-leave-to {
   opacity: 0;
-  transform: translateY(30px);
+  transform: translateY(6px);
+}
+
+@include responsive(lg) {
+  .entry-link {
+    grid-template-columns: 64px minmax(0, 1fr) 108px;
+    gap: 16px;
+    padding: 20px 14px;
+    margin: 0 -14px;
+  }
+
+  .entry-thumb {
+    width: 108px;
+  }
+}
+
+@include responsive(md) {
+  .entry-link {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 14px;
+    padding: 20px 12px;
+    margin: 0 -12px;
+  }
+
+  // 窄屏优先保住标题和摘要，缩略图让位
+  .entry-thumb {
+    display: none;
+  }
+
+  .entry-title {
+    font-size: 1.08rem;
+  }
+
+  .entry-sum {
+    font-size: 0.88rem;
+    -webkit-line-clamp: 3;
+  }
 }
 </style>

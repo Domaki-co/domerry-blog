@@ -68,10 +68,10 @@ export default {
 
 <style lang="scss" scoped>
 .site-footer {
-  background: var(--card-bg);
+  background: var(--surface);
   padding: $spacing-lg 0;
   margin-top: auto;
-  border-top: 1px solid rgba(125, 125, 125, 0.1);
+  border-top: 1px solid var(--rule);
 }
 
 .footer-content {
@@ -92,12 +92,12 @@ export default {
   color: var(--text-secondary);
 
   .time-value {
-    color: #ff6b81;
-    font-family: 'Fira Code', monospace;
+    font-family: $font-mono;
+    color: var(--accent);
   }
 
   .icon {
-    color: #4CAF50;
+    color: var(--text-tertiary);
     margin-right: 4px;
   }
 }
