@@ -612,13 +612,13 @@ export default {
         }
 
         .submit-btn {
-          padding: $spacing-sm $spacing-xl;
-          background: $primary;
-          color: white;
-          border: none;
-          border-radius: 20px;
+          padding: 8px 20px;
+          background: var(--accent);
+          color: #fff;
+          border: 1px solid var(--accent);
+          border-radius: $border-radius-sm;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background 0.2s ease, color 0.2s ease;
 
           &:disabled {
             opacity: 0.6;
@@ -626,8 +626,8 @@ export default {
           }
 
           &:not(:disabled):hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba($primary, 0.2);
+            background: transparent;
+            color: var(--accent);
           }
         }
       }
@@ -942,27 +942,27 @@ export default {
         gap: $spacing-sm;
 
         button {
-          padding: $spacing-xs $spacing-lg;
-          border: none;
-          border-radius: 16px;
+          padding: 5px 16px;
+          border: 1px solid var(--rule);
+          border-radius: $border-radius-sm;
+          background: transparent;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
           font-size: 0.9em;
 
           &.cancel-btn {
-            background: none;
             color: var(--text-secondary);
-            border: 1px solid var(--border-color);
 
             &:hover {
-              color: $primary;
-              border-color: $primary;
+              color: var(--text-primary);
+              border-color: var(--rule-strong);
             }
           }
 
           &.submit-btn {
-            background: $primary;
-            color: white;
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
 
             &:disabled {
               opacity: 0.6;
@@ -970,8 +970,8 @@ export default {
             }
 
             &:not(:disabled):hover {
-              transform: translateY(-1px);
-              box-shadow: 0 2px 8px rgba($primary, 0.2);
+              background: transparent;
+              color: var(--accent);
             }
           }
         }
@@ -1109,27 +1109,27 @@ export default {
       gap: $spacing-sm;
 
       button {
-        padding: $spacing-xs $spacing-lg;
-        border: none;
-        border-radius: 16px;
+        padding: 5px 16px;
+        border: 1px solid var(--rule);
+        border-radius: $border-radius-sm;
+        background: transparent;
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
         font-size: 0.9em;
 
         &.cancel-btn {
-          background: none;
           color: var(--text-secondary);
-          border: 1px solid var(--border-color);
 
           &:hover {
-            color: $primary;
-            border-color: $primary;
+            color: var(--text-primary);
+            border-color: var(--rule-strong);
           }
         }
 
         &.submit-btn {
-          background: $primary;
-          color: white;
+          background: var(--accent);
+          border-color: var(--accent);
+          color: #fff;
 
           &:disabled {
             opacity: 0.6;
@@ -1137,8 +1137,8 @@ export default {
           }
 
           &:not(:disabled):hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba($primary, 0.2);
+            background: transparent;
+            color: var(--accent);
           }
         }
       }
@@ -1150,10 +1150,10 @@ export default {
   position: absolute;
   bottom: 100%;
   left: 0;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
+  box-shadow: $shadow-md;
   z-index: 1000;
   margin-bottom: 8px;
 }

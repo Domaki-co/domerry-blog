@@ -1119,9 +1119,9 @@ export default {
 }
 
 .article-main {
-  background: var(--card-bg);
-  border-radius: $border-radius-lg;
-  box-shadow: $shadow-md;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-md;
   overflow: hidden;
 }
 
@@ -1132,8 +1132,9 @@ export default {
   background: var(--card-bg);
 
   .article-title {
+    font-family: $font-serif;
     color: var(--text-primary);
-    font-size: 1.8em;
+    font-size: clamp(1.5rem, 3vw, 1.9rem);
     line-height: 1.4;
     margin: 0 0 $spacing-lg;
     text-align: left;
@@ -1156,15 +1157,8 @@ export default {
         height: 42px;
         border-radius: 50%;
         object-fit: cover;
-        border: 2px solid rgba($primary, 0.2);
-        padding: 2px;
-        background: var(--card-bg);
-        transition: all 0.3s ease;
-
-        &:hover {
-          transform: rotate(360deg);
-          border-color: $primary;
-        }
+        border: 1px solid var(--rule);
+        background: var(--surface);
       }
 
       .author-meta {
@@ -1235,12 +1229,12 @@ export default {
 .reprint-notice {
   margin: $spacing-md $spacing-md * 2;
   padding: $spacing-base $spacing-lg;
-  border-left: 3px solid $primary;
-  background: rgba(127, 127, 127, 0.08);
+  border-left: 2px solid var(--accent);
+  background: var(--row-hover);
   color: var(--text-secondary);
   font-size: 0.9em;
   line-height: 1.7;
-  border-radius: 4px;
+  border-radius: $border-radius-sm;
 
   a {
     color: $primary;
@@ -1383,7 +1377,7 @@ export default {
     position: relative;
     color: #e05d6d;
     background: rgba($primary, 0.08);
-    border-radius: 5px;
+    border-radius: $border-radius-sm;
     padding: 0.15em 0.4em;
     margin: 0 0.2em;
     font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
@@ -1393,12 +1387,11 @@ export default {
     margin: $spacing-lg 0;
     position: relative;
     background: #282c34;
-    border-radius: 10px;
+    border-radius: $border-radius-sm;
     padding-top: 2.5em;
     overflow: hidden;
     max-height: 2000px;
     transition: max-height 0.4s ease-in-out;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
 
     &.collapsed {
       max-height: 300px;
@@ -1428,7 +1421,7 @@ export default {
       padding: 6px 16px;
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 20px;
+      border-radius: $border-radius-sm;
       color: #abb2bf;
       cursor: pointer;
       z-index: 3;
@@ -1487,19 +1480,15 @@ export default {
       position: relative;
     }
 
-    /* 仿 macOS 风格按钮 */
+    /* 代码块顶部一条 1px 分隔线，替代仿 macOS 的红黄绿圆点 */
     &::before {
       content: '';
       position: absolute;
-      top: 12px;
-      left: 12px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #ff5f56;
-      box-shadow:
-        20px 0 0 #ffbd2e,
-        40px 0 0 #27c93f;
+      top: 2.5em;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
     }
 
     .code-header {
@@ -1519,7 +1508,7 @@ export default {
       padding: 4px 10px;
       background: rgba(255, 255, 255, 0.1);
       border: none;
-      border-radius: 6px;
+      border-radius: $border-radius-sm;
       color: #abb2bf;
       cursor: pointer;
       font-size: 14px;
@@ -1559,26 +1548,17 @@ export default {
 
   :deep(img) {
     max-width: 100%;
-    border-radius: 10px;
+    border-radius: $border-radius-sm;
+    border: 1px solid var(--rule);
     margin: $spacing-lg auto;
     display: block;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     cursor: zoom-in;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
-    }
   }
 
   :deep(table) {
     width: 100%;
     margin: $spacing-lg 0;
     border-collapse: collapse;
-    border-radius: 10px;
-    overflow: hidden;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
 
     th,
     td {
@@ -1598,7 +1578,7 @@ export default {
     }
 
     tr:hover {
-      background: rgba($primary, 0.05);
+      background: var(--row-hover);
     }
   }
 
@@ -1606,20 +1586,7 @@ export default {
     margin: $spacing-xl * 1.2 0;
     border: none;
     height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
-    position: relative;
-
-    &::before {
-      content: '\2726';
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      background: var(--card-bg);
-      padding: 0 $spacing-lg;
-      color: $primary;
-      font-size: 0.9em;
-    }
+    background: var(--rule);
   }
 .locked-content {
     position: relative;
@@ -1636,7 +1603,7 @@ export default {
         left: 0;
         right: 0;
         height: 100px;
-        background: linear-gradient(transparent, var(--card-bg));
+        background: linear-gradient(transparent, var(--surface));
         pointer-events: none;
       }
     }
@@ -1646,24 +1613,24 @@ export default {
       margin-top: -60px;
       padding: $spacing-xl;
       text-align: center;
-      background: var(--card-bg);
-      border-radius: $border-radius-lg;
-      box-shadow: $shadow-lg;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: $border-radius-md;
       z-index: 1;
 
       .locker-icon {
-        width: 60px;
-        height: 60px;
+        width: 52px;
+        height: 52px;
         margin: 0 auto $spacing-lg;
-        background: rgba($primary, 0.1);
-        border-radius: 50%;
+        background: var(--accent-soft);
+        border-radius: $border-radius-sm;
         display: flex;
         align-items: center;
         justify-content: center;
 
         i {
-          font-size: 1.8em;
-          color: $primary;
+          font-size: 1.5em;
+          color: var(--accent);
         }
       }
 
@@ -1714,7 +1681,7 @@ export default {
     margin-bottom: $spacing-xl;
     padding: $spacing-md $spacing-lg;
     background: var(--hover-bg);
-    border-left: 4px solid #00c1a2;
+    border-left: 2px solid var(--accent);
     border-radius: $border-radius-sm;
 
     .notice-content {
@@ -1761,18 +1728,18 @@ export default {
     }
 
     .tag-item {
-      padding: $spacing-xs $spacing-md;
-      background: var(--hover-bg);
+      padding: 3px 10px;
+      background: transparent;
+      border: 1px solid var(--rule);
       color: var(--text-secondary);
-      border-radius: $border-radius-lg;
-      font-size: 0.9em;
+      border-radius: $border-radius-sm;
+      font-size: 0.85em;
       text-decoration: none;
-      transition: all 0.3s ease;
+      transition: color 0.2s ease, border-color 0.2s ease;
 
       &:hover {
-        background: $primary;
-        color: white;
-        transform: translateY(-2px);
+        border-color: var(--accent);
+        color: var(--accent);
       }
     }
   }
@@ -1786,35 +1753,36 @@ export default {
     .action-btn {
       display: inline-flex;
       align-items: center;
-      gap: $spacing-sm;
-      padding: $spacing-sm $spacing-xl;
-      border: none;
-      border-radius: 20px;
-      font-size: 1em;
+      gap: 7px;
+      padding: 8px 20px;
+      border: 1px solid var(--rule);
+      border-radius: $border-radius-sm;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 
       &.like {
-        background: var(--hover-bg);
-        color: var(--text-secondary);
-
         &.active {
-          background: $primary;
-          color: white;
+          border-color: var(--accent);
+          color: var(--accent);
         }
 
         &:hover {
-          transform: scale(1.05);
+          border-color: var(--accent);
+          color: var(--accent);
         }
       }
 
       &.share {
-        background: $primary;
-        color: white;
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
 
         &:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba($primary, 0.2);
+          background: transparent;
+          color: var(--accent);
         }
       }
     }
@@ -1826,9 +1794,9 @@ export default {
         position: absolute;
         bottom: calc(100% + 8px);
         right: 0;
-        background: var(--card-bg);
-        border-radius: $border-radius-lg;
-        box-shadow: $shadow-lg;
+        background: var(--surface);
+        border-radius: $border-radius-md;
+        box-shadow: $shadow-md;
         padding: $spacing-xs;
         min-width: 180px;
         z-index: 100;
@@ -1890,12 +1858,7 @@ export default {
           }
 
           &:hover {
-            background: var(--hover-bg);
-            padding-left: $spacing-xl;
-          }
-
-          &:active {
-            transform: scale(0.95);
+            background: var(--row-hover);
           }
         }
       }
@@ -1910,7 +1873,6 @@ export default {
     background: var(--surface);
     border-radius: $border-radius-md;
     overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--rule);
 
     .toc-header {
@@ -1941,17 +1903,13 @@ export default {
 
       .progress-wrapper {
         font-size: 0.9em;
-        color: var(--text-secondary);
+        color: var(--text-tertiary);
         display: flex;
         align-items: center;
         gap: $spacing-xs;
-        padding: 4px 8px;
-        background: rgba($primary, 0.05);
-        border-radius: $border-radius-lg;
-        transition: all 0.3s ease;
 
         i {
-          color: $primary;
+          color: var(--text-tertiary);
           font-size: 0.9em;
         }
 
@@ -2016,7 +1974,6 @@ export default {
           &::before {
             background: var(--accent);
             opacity: 1;
-            animation: tocDotPulse 1.5s infinite;
           }
         }
 
@@ -2073,18 +2030,6 @@ export default {
 }
 
 
-@keyframes tocDotPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba($primary, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 4px rgba($primary, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba($primary, 0);
-  }
-}
-
 @keyframes shareMenuIn {
   from {
     opacity: 0;
@@ -2127,9 +2072,10 @@ export default {
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      background: var(--card-bg);
-      transition: all 0.3s ease;
+      border-radius: $border-radius-sm;
+      border: 1px solid var(--rule);
+      background: var(--surface);
+      transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 
       i {
         font-size: 1.2em;
@@ -2151,12 +2097,10 @@ export default {
 
     &:hover {
       .action-button {
-        background: rgba($primary, 0.1);
-        transform: translateY(-2px);
+        border-color: var(--accent);
 
         i {
-          color: $primary;
-          transform: scale(1.1);
+          color: var(--accent);
         }
       }
     }
@@ -2170,13 +2114,14 @@ export default {
       left: calc(100% + 16px);
       top: 50%;
       transform: translateY(-50%);
-      background: var(--card-bg);
-      border-radius: $border-radius-lg;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: $border-radius-md;
       padding: $spacing-md;
       box-shadow: $shadow-lg;
       opacity: 0;
       visibility: hidden;
-      transition: all 0.3s ease;
+      transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
       pointer-events: none;
       width: 510px;
 

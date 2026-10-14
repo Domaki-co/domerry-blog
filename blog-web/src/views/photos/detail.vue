@@ -34,7 +34,6 @@
         </div>
         <div class="header-background">
           <div class="gradient-overlay"></div>
-          <div class="pattern-overlay"></div>
         </div>
       </div>
 
@@ -200,19 +199,6 @@ export default {
       );
     }
     
-    .pattern-overlay {
-      position: absolute;
-      inset: 0;
-      opacity: 0.4;
-      background-image: 
-        linear-gradient(45deg, rgba(255,255,255,0.1) 25%, transparent 25%),
-        linear-gradient(-45deg, rgba(255,255,255,0.1) 25%, transparent 25%),
-        linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.1) 75%),
-        linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.1) 75%);
-      background-size: 20px 20px;
-      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-      animation: patternMove 20s linear infinite;
-    }
   }
   
   .header-content {
@@ -231,29 +217,21 @@ export default {
     align-items: center;
     gap: 10px;
     cursor: pointer;
-    padding: 12px 24px;
-    border-radius: 30px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 10px 20px;
+    border-radius: $border-radius-sm;
+    background: rgba(255, 255, 255, 0.08);
+    transition: background 0.2s ease, border-color 0.2s ease;
     border: 1px solid rgba(255, 255, 255, 0.15);
     font-weight: 500;
     letter-spacing: 0.5px;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.15);
-      transform: translateX(-5px);
-      border-color: rgba(255, 255, 255, 0.25);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     i {
-      font-size: 1.1em;
-      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    &:hover i {
-      transform: translateX(-4px);
+      font-size: 1.05em;
     }
   }
 
@@ -274,33 +252,27 @@ export default {
         gap: 8px;
         font-size: 0.95em;
         color: rgba(255, 255, 255, 0.8);
-        padding: 6px 16px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 20px;
-        backdrop-filter: blur(8px);
+        padding: 4px 12px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: $border-radius-sm;
+        font-family: $font-mono;
+        font-size: 0.82em;
         
         i {
-          color: #64B5F6;
-          font-size: 1.1em;
+          color: rgba(255, 255, 255, 0.7);
+          font-size: 1em;
         }
       }
     }
 
     h1 {
-      font-size: 2.5em;
+      font-family: $font-serif;
+      font-size: 2.3em;
       margin: 0;
-      font-weight: 800;
-      letter-spacing: -1px;
-      background: linear-gradient(120deg, 
-        #ffffff 0%,
-        #e0e0e0 50%,
-        #ffffff 100%
-      );
-      background-size: 200% auto;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      animation: shine 3s linear infinite;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      color: #fff;
     }
 
     .album-description {
@@ -322,34 +294,32 @@ export default {
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 12px 24px;
-        border-radius: 30px;
-        border: none;
-        font-size: 1em;
+        padding: 10px 22px;
+        border-radius: $border-radius-sm;
+        font-size: 0.95em;
         font-weight: 500;
         cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         background: transparent;
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.2);
 
         i {
-          font-size: 1.1em;
+          font-size: 1.05em;
         }
 
         &:hover {
-          background: rgba(255, 255, 255, 0.1);
-          transform: translateY(-2px);
-          border-color: rgba(255, 255, 255, 0.3);
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.34);
         }
 
         &.share-btn {
-          background: #64B5F6;
-          border: none;
+          background: var(--accent);
+          border-color: var(--accent);
 
           &:hover {
-            background: #42A5F5;
+            background: transparent;
+            color: var(--accent);
           }
         }
       }
@@ -384,18 +354,14 @@ export default {
 .photo-card {
   height: 100%;
   position: relative;
-  border-radius: 16px;
+  border-radius: $border-radius-sm;
   overflow: hidden;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: block;
-  
-  &:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
 
+  &:hover {
     img {
-      transform: scale(1.1);
+      transform: scale(1.05);
     }
   }
 
@@ -444,7 +410,7 @@ export default {
           gap: 6px;
 
           i {
-            color: #64B5F6;
+            color: rgba(255, 255, 255, 0.7);
           }
         }
       }
@@ -477,21 +443,6 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes patternMove {
-  from {
-    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-  }
-  to {
-    background-position: 40px 0, 40px 10px, 50px -10px, 30px 0px;
-  }
-}
-
-@keyframes shine {
-  to {
-    background-position: 200% center;
   }
 }
 

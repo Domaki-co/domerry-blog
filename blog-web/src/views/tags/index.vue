@@ -2,59 +2,55 @@
   <div class="tags-page">
     <div class="content-layout">
       <main class="main-content">
-        <el-card class="content-card">
-          <div class="page-header">
-            <h3>标签云</h3>
-            <p class="subtitle">
-              共 {{ tags.length }} 个标签<template v-if="tags.length > visibleTags.length">，展示 {{ visibleTags.length }} 个</template>
-            </p>
-            <p class="cloud-hint">底部色条表示文章数量</p>
+        <header class="ledger-head">
+          <h1>标签</h1>
+          <span class="head-meta">
+            共 {{ tags.length }} 个<template v-if="tags.length > visibleTags.length"> · 展示 {{ visibleTags.length }} 个</template>
+          </span>
+        </header>
+
+        <section class="cloud-block">
+          <div class="cloud-head">
+            <h2>标签云</h2>
+            <span class="cloud-hint">底部色条长度表示文章数量</span>
           </div>
 
           <div class="tags-cloud" ref="tagsCloud">
-            <div
-              v-for="(tag, index) in tagCloud"
+            <a
+              v-for="tag in tagCloud"
               :key="`tag-${tag.name}`"
+              href="javascript:void(0)"
               class="tag-item"
-              :class="[{ active: activeTag === tag.name }, `hue-${index % 6}`]"
-              :style="{
-                '--tag-ratio': tag.ratio,
-                '--animation-delay': `${Math.min(index * 0.03, 0.6)}s`
-              }"
+              :class="{ active: activeTag === tag.name }"
+              :style="{ '--tag-ratio': tag.ratio }"
               @click="selectTag(tag.name, tag.id)"
             >
-              <i class="fas fa-tag tag-icon"></i>
               <span class="tag-name">{{ tag.name }}</span>
               <span class="tag-count">{{ tag.articleNum }}</span>
               <span class="tag-bar" aria-hidden="true"></span>
-            </div>
+            </a>
+          </div>
+        </section>
+
+        <section v-if="activeTag" class="tag-posts" ref="postsSection">
+          <div class="tag-header">
+            <h2>{{ activeTag }}</h2>
+            <span class="post-count">
+              <span class="count-number">{{ total }}</span>
+              篇
+            </span>
           </div>
 
-      
-        </el-card>
-        <div v-if="activeTag" class="tag-posts" ref="postsSection">
-            <div class="tag-header">
-              <div class="header-line"></div>
-              <h2>
-                <i class="fas fa-bookmark"></i>
-                {{ activeTag }}
-                <span class="post-count">
-                  <span class="count-number">{{ total }}</span>
-                  篇文章
-                </span>
-              </h2>
-            </div>
-            
-            <div class="articles-wrapper" v-loading="loading">
-              <ArticleList
-                :articles="selectedTagPosts"
-                :total="total"
-                :params="params"
-                @article-click="goToPost"
-                @page-change="changePage"
-              />
-            </div>
+          <div class="articles-wrapper" v-loading="loading">
+            <ArticleList
+              :articles="selectedTagPosts"
+              :total="total"
+              :params="params"
+              @article-click="goToPost"
+              @page-change="changePage"
+            />
           </div>
+        </section>
       </main>
       <Sidebar class="sidebar-container" />
     </div>
@@ -100,7 +96,7 @@ export default {
     },
     /**
      * 标签云条目：字号统一，只用底部长条表示文章数占最大值的比例。
-     * 颜色交给模板按序号循环取 6 个色相，避免 46 个标签变成 46 种随机颜色。
+     * 单一强调色，不再按序号循环 6 个色相。
      */
     tagCloud() {
       const tags = this.visibleTags
@@ -176,270 +172,214 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  标签 · 技术台账
+//
+//  标签云不是彩色胶囊墙：统一字号，只有底部长条（长度 = 文章数占比）
+//  和等宽数字是变量。选中态用强调色描边 + 实底，其余保持墨色。
+// ════════════════════════════════════════════════════════════════
+
 .tags-page {
   max-width: 1400px;
   margin: 0 auto;
-  padding: $spacing-lg 0;
-  min-height: calc(100vh - 80px);
-  position: relative;
-  
-  &::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    // 旧版是两团紫蓝径向光晕，新设计层次靠实线不靠光晕，去掉
-    background: none;
-    pointer-events: none;
-    z-index: -1;
-  }
 }
 
 .content-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 380px;
-  gap: $spacing-xl;
-  padding: 0 $spacing-lg;
-  min-height: 100vh;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: clamp(36px, 4vw, 64px);
+  padding: $spacing-lg clamp(20px, 4vw, 48px) $spacing-xl;
+  min-height: calc(100vh - 80px);
   align-items: start;
-  
+
   @include responsive(lg) {
     grid-template-columns: 1fr;
+    padding: $spacing-lg $spacing-md;
+  }
+
+  @include responsive(md) {
     padding: $spacing-md;
   }
 }
 
 .main-content {
-  position: relative;
+  min-width: 0;
 }
 
-.page-header {
-  margin-bottom: $spacing-sm;
-  text-align: center;
-  position: relative;
-  padding: $spacing-xl 0;
-  overflow: hidden;
-  
-  h3 {
+.ledger-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: clamp(28px, 4vh, 44px);
+
+  h1 {
     font-family: $font-serif;
-    font-size: 1.6em;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
     font-weight: 600;
-    // 台账取向：墨色衬线标题，不用渐变裁切文字
     color: var(--text-primary);
-    margin-bottom: $spacing-sm;
-    letter-spacing: 0.02em;
-    position: relative;
-    display: inline-block;
+    margin: 0;
   }
-  
-  .subtitle {
-    color: var(--text-secondary);
-    font-size: 1.2em;
-    opacity: 0.8;
-    display: inline-block;
-    padding: $spacing-xs $spacing-lg;
+
+  .head-meta {
+    @include ledger-meta;
+  }
+}
+
+// ── 标签云 ──
+.cloud-block {
+  margin-bottom: clamp(36px, 5vh, 56px);
+}
+
+.cloud-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 18px;
+
+  h2 {
+    font-family: $font-serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    flex: none;
+  }
+
+  // 标题右侧拉一条实线到提示文字
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+    transform: translateY(-3px);
   }
 
   .cloud-hint {
-    margin-top: $spacing-xs;
-    font-size: 0.85em;
-    color: var(--text-tertiary);
+    @include ledger-meta;
+    flex: none;
   }
 }
 
 .tags-cloud {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: $spacing-md;
-  margin-bottom: $spacing-sm;
-  padding: 0 $spacing-md $spacing-md;
-  justify-content: center;
+  gap: 8px 10px;
+}
 
-  .tag-item {
+.tag-item {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 11px 9px;
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
+  text-decoration: none;
+  color: var(--text-secondary);
+  overflow: hidden;
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+
+  .tag-name {
     position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.4em 0.7em;
-    font-size: 1rem;
-    line-height: 1.2;
-    color: var(--text-secondary);
-    background: transparent;
-    border: 1px solid var(--rule);
-    border-radius: $border-radius-sm;
-    cursor: pointer;
-    overflow: hidden;
-    transition: border-color 0.25s ease, color 0.25s ease, background 0.25s ease;
-    animation: tagAppear 0.4s ease-out backwards;
-    animation-delay: var(--animation-delay, 0s);
+    z-index: 1;
+    font-size: 0.88rem;
+  }
 
-    .tag-icon {
-      font-size: 0.8em;
-      transition: transform 0.3s ease, color 0.25s ease;
-    }
+  .tag-count {
+    position: relative;
+    z-index: 1;
+    @include ledger-meta;
+    font-size: 0.68rem;
+  }
 
-    // 6 个色相按标签顺序循环，给图标上色；色相取自同一组低饱和色，不刺眼
-    &.hue-0 .tag-icon { color: #b7791f; }
-    &.hue-1 .tag-icon { color: #2f8f83; }
-    &.hue-2 .tag-icon { color: #3b6ea5; }
-    &.hue-3 .tag-icon { color: #7a5aa8; }
-    &.hue-4 .tag-icon { color: #b5527a; }
-    &.hue-5 .tag-icon { color: #4f8a4f; }
+  // 底部长条：长度 = 该标签文章数占最大值的比例。是数据，不是装饰。
+  .tag-bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 2px;
+    width: calc(var(--tag-ratio, 0) * 100%);
+    background: var(--accent);
+    opacity: 0.35;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+  }
 
-    .tag-name {
-      position: relative;
-      z-index: 1;
-    }
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
 
-    .tag-count {
-      position: relative;
-      z-index: 1;
-      font-family: $font-mono;
-      font-size: 0.72em;
-      color: var(--text-tertiary);
-      transition: color 0.25s ease;
-    }
-
-    // 底部长条：长度 = 该标签文章数占最大值的比例。是数据，不是装饰
     .tag-bar {
-      position: absolute;
-      left: 0;
-      bottom: 0;
-      height: 2px;
-      width: calc(var(--tag-ratio, 0) * 100%);
-      background: var(--accent);
-      opacity: 0.3;
-      transition: opacity 0.25s ease;
-      pointer-events: none;
-    }
-
-    &:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-
-      .tag-icon {
-        transform: rotate(-10deg);
-      }
-
-      .tag-bar {
-        opacity: 0.75;
-      }
-    }
-
-    &.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-
-      .tag-icon {
-        color: #fff;
-      }
-
-      .tag-count {
-        color: rgba(255, 255, 255, 0.85);
-      }
-
-      .tag-bar {
-        opacity: 0;
-      }
+      opacity: 0.8;
     }
   }
+
+  &.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+
+    .tag-count {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .tag-bar {
+      opacity: 0;
+    }
+  }
+}
+
+// ── 选中标签下的文章 ──
+.tag-posts {
+  animation: ledgerIn 0.35s ease-out;
 }
 
 .tag-header {
-  margin-bottom: $spacing-xl;
-  padding: $spacing-md $spacing-xl;
-  background: transparent;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--rule-strong);
-  border-radius: 0;
-  position: relative;
-  overflow: hidden;
-  
-  .header-line {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 2px;
-    height: 100%;
-    background: var(--accent);
-    
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      left: 0;
-      width: 100%;
-      height: 10px;
-      background: var(--surface);
-      filter: blur(4px);
-    }
-    
-    &::before {
-      top: 0;
-    }
-    
-    &::after {
-      bottom: 0;
-    }
-  }
+  margin-bottom: 6px;
 
   h2 {
     font-family: $font-serif;
-    font-size: 1.6em;
+    font-size: 1.25rem;
+    font-weight: 600;
     color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: $spacing-sm;
     margin: 0;
+    flex: none;
+  }
 
-    i {
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+    transform: translateY(-3px);
+  }
+
+  .post-count {
+    @include ledger-meta;
+    flex: none;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+
+    .count-number {
       color: var(--accent);
-      font-size: 0.9em;
-      transition: transform 0.3s ease;
-    }
-
-    .post-count {
-      font-family: $font-mono;
-      font-size: 0.6em;
-      color: var(--text-secondary);
-      margin-left: auto;
-      padding: $spacing-xs $spacing-md;
-      background: transparent;
-      border: 1px solid var(--rule);
-      transition: all 0.3s ease;
-      border-radius: $border-radius-lg;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      gap: $spacing-xs;
-      
-      .count-number {
-        color: $primary;
-        font-weight: 600;
-        font-size: 1.2em;
-      }
-
-      &:hover {
-        border-color: rgba($primary, 0.4);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba($primary, 0.15);
-      }
+      font-size: 0.95rem;
     }
   }
-}
-
-.articles-wrapper {
-  padding: 0 $spacing-lg;
-  animation: slideUp 0.6s ease-out;
 }
 
 .sidebar-container {
   position: sticky;
   top: 80px;
-  /* 确保在移动端时取消sticky效果 */
+
   @include responsive(lg) {
     position: relative;
     top: 0;
@@ -448,90 +388,37 @@ export default {
   }
 }
 
-// 深色模式：色相整体提亮，保证在深底上仍有对比
-:root[data-theme='dark'] .tag-item {
-  &.hue-0 .tag-icon { color: #e0a94a; }
-  &.hue-1 .tag-icon { color: #4bbfae; }
-  &.hue-2 .tag-icon { color: #6aa3dd; }
-  &.hue-3 .tag-icon { color: #a98fd6; }
-  &.hue-4 .tag-icon { color: #e08aab; }
-  &.hue-5 .tag-icon { color: #7bc47b; }
-}
-
-@keyframes tagAppear {
+@keyframes ledgerIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
   }
 }
 
 @include responsive(sm) {
-  .tags-page {
-    padding: $spacing-md 0;
-  }
-
-  .content-card {
-    border-radius: $border-radius-lg;
-    margin: 0;
-  }
-
-  .page-header {
-    padding: $spacing-lg 0;
-    
-    h1 {
-      font-size: 2.4em;
-    }
-
-  }
-
   .tags-cloud {
-    padding: 0 $spacing-md $spacing-lg;
-    gap: $spacing-sm;
-    
-    .tag-item {
-      font-size: 0.9rem;
-    }
+    gap: 7px 8px;
   }
 
-  .tag-header {
-    padding: $spacing-sm $spacing-md;
-    
-    h2 {
-      font-size: 1.4em;
-    }
-  }
+  .tag-item {
+    padding: 6px 9px 8px;
 
-  .articles-wrapper {
-    padding: 0 $spacing-md;
+    .tag-name {
+      font-size: 0.84rem;
+    }
   }
 }
 
-.header-waves,
-.wave {
-  display: none;
+@media (prefers-reduced-motion: reduce) {
+  .tag-item,
+  .tag-bar,
+  .tag-posts {
+    animation: none !important;
+    transition: none !important;
+  }
 }
-</style> 
+</style>

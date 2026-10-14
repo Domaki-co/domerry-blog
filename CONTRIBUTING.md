@@ -49,7 +49,7 @@ npm run preview
   - `domerry-admin` 管理端接口，`domerry-api` 门户端接口
   - `domerry-auth` 认证与第三方登录，`domerry-file` 文件存储与第三方平台
   - `domerry-quartz` 定时任务，`domerry-server` 启动模块（主类、配置文件、Mapper XML）
-- `blog-web/`：门户前端（Vue 2.7 + element-ui + Vite）
+- `blog-web/`：门户前端（Vue 3.5 + Element Plus + Vuex + Vue Router + Vite 5，已完成 Vue 2.7 → Vue 3 迁移）
 - `blog-admin/`：管理后台（Vue 3 + element-plus + Pinia + Vite + TypeScript）
 
 每个模块目录下都有 `AGENTS.md`，写明了该模块的职责、约定与已知坑；改动某个模块前请先读它
@@ -76,8 +76,9 @@ npm run preview
 
 ### 前端
 
-- `blog-web`：全部为 Options API（`export default {}`），请**不要**引入 `<script setup>`、
-  Composition API、Pinia 或 Element Plus；请求统一走 `src/utils/request.js`，
+- `blog-web`：Options API（`export default {}`）是**存量主体**，改动旧文件时沿用原风格；新增或整体
+  重写的组件可以用 `<script setup>`。UI 库是 **Element Plus**（不要再用 element-ui / Vue 2 的 API），
+  状态管理是 **Vuex**，请**不要**引入 Pinia；请求统一走 `src/utils/request.js`，
   不要在视图组件里自建 axios 实例；样式使用全局注入的 SCSS 变量与 CSS 变量，不要写死颜色。
 - `blog-admin`：全部为 `<script setup lang="ts">` + scoped 样式，请**不要**引入 Options API；
   请求统一走 `src/utils/request.ts`；API 函数以 `xxxApi` 命名并按业务域放在 `src/api/<domain>/`。
@@ -109,7 +110,8 @@ npm run preview
 2. 只改与本次目的相关的文件，避免顺带格式化整个文件（会产生难以审查的 diff）。
 3. 提交前自测：后端 `mvn clean package`、前端 `npm run build` 通过，并手动验证受影响功能。
 4. 提 PR 时说明：**做了什么 / 为什么 / 如何验证**；涉及界面改动请附截图；涉及数据库改动请附
-   `docs/sql/` 下的增量脚本（**不要**直接改 `domerry-blog.sql` 的历史数据）。
+   增量 SQL 脚本（**不要**直接改 `domerry-blog.sql` 的历史数据）。注意 `docs/` 属于本地/内部资产、
+   已被 `.gitignore` 忽略，脚本本身要随 PR 提交。
 5. PR 描述里请关联相关 issue（如有）。
 6. 改动后端接口契约时，请同步检查 `blog-admin` 与 `blog-web` 两侧调用方。
 
@@ -131,9 +133,9 @@ npm run preview
 
 - 普通 Bug 与功能建议请提 issue；请附上**环境信息**（JDK / MySQL / Redis / Node 版本）、复现步骤、
   期望行为与实际行为、以及关键日志或截图。
-- 报 Bug 前请先确认你已按 README「快速开始」完成建库（`CREATE DATABASE domerry_blog`）、导入
-  `domerry-blog.sql`、并正确设置了环境变量（后端默认值是 `192.168.1.100` 之类的占位值，
-  未替换会直接连不上）。
+- 报 Bug 前请先确认你已按 README「快速开始」完成建库（推荐库名 `domerry_blog`，并让后端 profile
+  与库名一致）、导入 `domerry-blog.sql`、并正确设置了环境变量（后端默认值是 `192.168.1.100` /
+  `192.168.196.130` 之类的占位值，未替换会直接连不上）。
 - **安全问题请勿公开提 issue**，见 [`SECURITY.md`](SECURITY.md)。
 
 ## 8. 不得提交的内容（清单）

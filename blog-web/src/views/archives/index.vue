@@ -2,51 +2,53 @@
   <div class="archives-page">
     <div class="content-layout">
       <main class="main-content">
-        <el-card class="content-card">
-          <div class="timeline">
-            <div 
-              v-for="(item, index) in archives" 
-              :key="index" 
-              class="year-group"
-              v-animate-on-scroll
+        <header class="ledger-head">
+          <h1>归档</h1>
+          <span class="head-meta">{{ totalPosts }} 篇 · {{ archives.length }} 个年份</span>
+        </header>
+
+        <div class="timeline">
+          <section
+            v-for="(item, index) in archives"
+            :key="index"
+            class="year-group"
+            v-animate-on-scroll
+          >
+            <button
+              type="button"
+              class="year-header"
+              :aria-expanded="!collapsedYears[item.year]"
+              @click="toggleYear(item.year)"
             >
-              <div 
-                class="year-header"
-                @click="toggleYear(item.year)"
-              >
-                <span class="year">{{ item.year }}</span>
-                <span class="toggle-icon" :class="{ 'is-open': !collapsedYears[item.year] }">
-                  <i class="fas fa-chevron-down"></i>
-                </span>
-              </div>
-              <transition
-                name="expand"
-                @enter="startTransition"
-                @leave="endTransition"
-              >
-                <div 
-                  class="posts-list"
-                  v-show="!collapsedYears[item.year]"
+              <span class="year">{{ item.year }}</span>
+              <span class="year-rule"></span>
+              <span class="year-count">{{ item.posts.length }}</span>
+              <i class="fas fa-chevron-down toggle-icon" :class="{ 'is-open': !collapsedYears[item.year] }"></i>
+            </button>
+
+            <transition
+              name="expand"
+              @enter="startTransition"
+              @leave="endTransition"
+            >
+              <div class="posts-list" v-show="!collapsedYears[item.year]">
+                <a
+                  v-for="post in item.posts"
+                  :key="post.id"
+                  href="javascript:void(0)"
+                  class="post-item"
+                  @click="goToPost(post.id)"
                 >
-                  <div 
-                    v-for="post in item.posts" 
-                    :key="post.id"
-                    class="post-item"
-                    @click="goToPost(post.id)"
-                  >
-                    <div class="post-date">
-                      <span class="month">{{ formatMonth(post.createTime) }}</span>
-                      <span class="day">{{ formatDay(post.createTime) }}</span>
-                    </div>
-                    <div class="post-info">
-                      <h3 class="post-title">{{ post.title }}</h3>
-                    </div>
-                  </div>
-                </div>
-              </transition>
-            </div>
-          </div>
-        </el-card>
+                  <span class="post-date">
+                    <span class="month">{{ formatMonth(post.createTime) }}</span>
+                    <span class="day">{{ formatDay(post.createTime) }}</span>
+                  </span>
+                  <span class="post-title">{{ post.title }}</span>
+                </a>
+              </div>
+            </transition>
+          </section>
+        </div>
       </main>
       <Sidebar />
     </div>
@@ -71,7 +73,11 @@ export default {
       collapsedYears: {}
     }
   },
-
+  computed: {
+    totalPosts() {
+      return this.archives.reduce((sum, item) => sum + item.posts.length, 0)
+    }
+  },
   methods: {
     formatMonth(date) {
       return new Date(date).toLocaleString('zh-CN', { month: 'short' })
@@ -81,9 +87,6 @@ export default {
     },
     goToPost(id) {
       this.$router.push(`/post/${id}`)
-    },
-    async loadMore() {
-      await this.fetchPosts({ append: true })
     },
     toggleYear(year) {
       // Vue 3 的 Proxy 能追踪新增/修改的属性，不再需要 Vue 2 的 set API
@@ -115,6 +118,14 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  归档 · 技术台账
+//
+//  年份是一行等宽的「年份 ——— 篇数」，下面挂该年的文章行。
+//  日期列等宽右对齐，标题左对齐，行与行之间一条 1px 线。
+//  没有卡片、没有阴影、hover 不位移。
+// ════════════════════════════════════════════════════════════════
+
 .archives-page {
   max-width: 1400px;
   margin: 0 auto;
@@ -123,16 +134,16 @@ export default {
 .content-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: $spacing-xl * 2;
-  padding: $spacing-lg;
+  gap: clamp(36px, 4vw, 64px);
+  padding: $spacing-lg clamp(20px, 4vw, 48px) $spacing-xl;
   min-height: calc(100vh - 80px);
   align-items: start;
-  
+
   @include responsive(lg) {
     grid-template-columns: 1fr;
-    padding: $spacing-lg;
+    padding: $spacing-lg $spacing-md;
   }
-  
+
   @include responsive(md) {
     padding: $spacing-md;
   }
@@ -140,30 +151,34 @@ export default {
 
 .main-content {
   min-width: 0;
-  height: 100%;
 }
 
+// ── 页头 ──
+.ledger-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: clamp(28px, 4vh, 44px);
 
-.timeline {
-  position: relative;
-  padding-left: $spacing-xl * 2;
-  margin-top: $spacing-lg;
+  h1 {
+    font-family: $font-serif;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
 
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    // 旧版是 $primary→$secondary 紫蓝渐变竖线，新设计只有一个强调色
-    background: var(--accent);
-    animation: grow 1s ease-out forwards;
+  .head-meta {
+    @include ledger-meta;
   }
 }
 
+// ── 年份分组 ──
 .year-group {
-  margin-bottom: $spacing-xl * 2;
+  margin-bottom: clamp(34px, 5vh, 56px);
 
   &:last-child {
     margin-bottom: 0;
@@ -171,179 +186,98 @@ export default {
 }
 
 .year-header {
-  margin-bottom: $spacing-xl;
-  position: relative;
+  width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: 14px;
+  padding: 0 0 12px;
+  margin-bottom: 4px;
+  border: none;
+  background: none;
   cursor: pointer;
-  padding-right: $spacing-md;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: -$spacing-xl * 2;
-    top: 50%;
-    width: $spacing-lg;
-    height: 2px;
-    background: $primary;
-    animation: slideRight 0.5s ease-out forwards;
-  }
+  text-align: left;
 
   .year {
-    font-size: 1.8em;
-    font-weight: 700;
+    font-family: $font-mono;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
     color: var(--text-primary);
+    letter-spacing: 0.02em;
+    flex: none;
+  }
+
+  // 年份和篇数之间拉一条实线，把「年份 ——— 篇数」读成一行台账
+  .year-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+    transform: translateY(-3px);
+  }
+
+  .year-count {
+    @include ledger-meta;
+    flex: none;
   }
 
   .toggle-icon {
-    transition: transform 0.3s ease;
-    
+    flex: none;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+    transition: transform 0.25s ease;
+    transform: translateY(-1px);
+
     &.is-open {
-      transform: rotate(-180deg);
-    }
-    
-    i {
-      font-size: 0.8em;
-      color: var(--text-secondary);
+      transform: translateY(-1px) rotate(-180deg);
     }
   }
 
-  &:hover {
-    .toggle-icon i {
-      color: $primary;
-    }
+  &:hover .year {
+    color: var(--accent);
   }
 }
 
+// ── 文章行 ──
 .post-item {
-  display: flex;
-  align-items: center;
-  gap: $spacing-xl;
-  padding: $spacing-md;
-  border-radius: $border-radius-md;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 28px);
+  align-items: baseline;
+  padding: 12px 14px;
+  margin: 0 -14px;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  transition: background 0.2s ease;
 
   &:hover {
-    background: var(--hover-bg);
-    transform: translateX(10px);
+    background: var(--row-hover);
 
-    .post-date {
-      border-color: $primary;
-      background: rgba($primary, 0.1);
+    .post-title {
+      color: var(--accent);
     }
   }
 
   .post-date {
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.76rem;
+    color: var(--text-tertiary);
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: $spacing-xs;
-    border: 1px solid var(--border-color);
-    border-radius: $border-radius-sm;
-    transition: all 0.3s ease;
-    min-width: 60px;
+    gap: 6px;
+    white-space: nowrap;
 
     .month {
-      font-size: 0.9em;
-      color: var(--text-secondary);
-    }
-
-    .day {
-      font-size: 1.2em;
-      font-weight: 600;
-      color: var(--text-primary);
+      color: var(--text-tertiary);
     }
   }
 
-  .post-info {
-    flex: 1;
-    min-width: 0;
-
-    .post-title {
-      color: var(--text-primary);
-      font-size: 1em;
-      margin-bottom: 0;
-      transition: color 0.3s ease;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-
-      &:hover {
-        color: $primary;
-      }
-    }
-  }
-}
-
-@include responsive(md) {
-  .archives-page {
-    padding: $spacing-lg;
-  }
-
-  .content-card {
-    padding: $spacing-lg;
-  }
-
-  .timeline {
-    padding-left: $spacing-xl;
-  }
-
-  .year-header::before {
-    left: -$spacing-xl;
-  }
-}
-
-@include responsive(sm) {
-  .archives-page {
-    padding: $spacing-md;
-  }
-
-  .content-card {
-    padding: $spacing-md;
-    border-radius: 0;
-    margin: -$spacing-md;
-  }
-
-  .post-item {
-    gap: $spacing-md;
-
-    .post-date {
-      min-width: 50px;
-    }
-  }
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba($primary, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba($primary, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba($primary, 0);
-  }
-}
-
-@keyframes grow {
-  from {
-    height: 0;
-  }
-  to {
-    height: 100%;
-  }
-}
-
-@keyframes slideRight {
-  from {
-    width: 0;
-    opacity: 0;
-  }
-  to {
-    width: $spacing-lg;
-    opacity: 1;
+  .post-title {
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    line-height: 1.5;
+    transition: color 0.2s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -368,4 +302,23 @@ export default {
 .expand-leave-from {
   opacity: 1;
 }
-</style> 
+
+@include responsive(md) {
+  .post-item {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 14px;
+    padding: 12px 10px;
+    margin: 0 -10px;
+  }
+}
+
+// 尊重系统的「减少动态效果」设置
+@media (prefers-reduced-motion: reduce) {
+  .toggle-icon,
+  .posts-list,
+  .expand-enter-active,
+  .expand-leave-active {
+    transition: none !important;
+  }
+}
+</style>

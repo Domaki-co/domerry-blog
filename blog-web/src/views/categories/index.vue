@@ -1,384 +1,347 @@
 <template>
-    <div class="categories-page">
-      <div class="content-layout">
-        <main class="main-content">
-          <div class="content-card">
-            <div class="categories-nav">
-              <div 
-                v-for="category in categories"
-                :key="category.name"
-                class="category-tab"
-                :class="{ active: activeCategory === category.name }"
-                @click="scrollToCategory(category.name)"
+  <div class="categories-page">
+    <div class="content-layout">
+      <main class="main-content">
+        <header class="ledger-head">
+          <h1>分类</h1>
+          <span class="head-meta">{{ categories.length }} 个分类</span>
+        </header>
+
+        <!-- 分类索引：文字 + 当前项下划线，吸顶在顶栏下方 -->
+        <nav class="categories-nav">
+          <a
+            v-for="category in categories"
+            :key="category.name"
+            href="javascript:void(0)"
+            class="category-tab"
+            :class="{ active: activeCategory === category.name }"
+            @click="scrollToCategory(category.name)"
+          >
+            {{ category.name }}
+            <span class="tab-count">{{ category.posts.length }}</span>
+          </a>
+        </nav>
+
+        <div class="categories-list">
+          <section
+            v-for="category in categories"
+            :key="category.name"
+            class="category-group"
+            v-animate-on-scroll
+            :ref="category.name"
+          >
+            <div class="category-header">
+              <h2 class="category-name">{{ category.name }}</h2>
+              <span class="post-count">{{ category.posts.length }} 篇</span>
+            </div>
+
+            <div class="posts-list">
+              <a
+                v-for="post in category.posts"
+                :key="post.id"
+                href="javascript:void(0)"
+                class="post-item"
+                @click="goToPost(post.id)"
               >
-                <i class="fas fa-folder-open"></i>
-                <span>{{ category.name }}</span>
-              </div>
+                <span class="post-date">
+                  <span class="month">{{ formatMonth(post.createTime) }}</span>
+                  <span class="day">{{ formatDay(post.createTime) }}</span>
+                </span>
+                <span class="post-title">{{ post.title }}</span>
+              </a>
             </div>
-  
-            <div class="categories-list">
-              <div 
-                v-for="category in categories" 
-                :key="category.name"
-                class="category-group"
-                v-animate-on-scroll
-                :ref="category.name"
-              >
-                <div class="category-header">
-                  <h2 class="category-name">
-                    <i class="fas fa-folder-open"></i>
-                    {{ category.name }}
-                    <span class="post-count">{{ category.posts.length }} 篇文章</span>
-                  </h2>
-                </div>
-                <div class="posts-list">
-                  <div 
-                    v-for="post in category.posts" 
-                    :key="post.id"
-                    class="post-item"
-                    @click="goToPost(post.id)"
-                  >
-                    <div class="post-date">
-                      <span class="month">{{ formatMonth(post.createTime) }}</span>
-                      <span class="day">{{ formatDay(post.createTime) }}</span>
-                    </div>
-                    <div class="post-info">
-                      <h3 class="post-title">{{ post.title }}</h3>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-  
-            <div v-if="loading" class="loading-state">
-              <i class="fas fa-spinner fa-spin"></i>
-              加载中...
-            </div>
-          </div>
-        </main>
-        <Sidebar />
-      </div>
+          </section>
+        </div>
+
+        <div v-if="loading" class="loading-state">
+          <i class="fas fa-spinner fa-spin"></i>
+          加载中…
+        </div>
+      </main>
+      <Sidebar />
     </div>
-  </template>
-  
-  <script>
-  import { mapState, mapActions } from 'vuex'
-  import gsap from 'gsap'
-  import ScrollTrigger from 'gsap/ScrollTrigger'
-  import Sidebar from '@/components/Sidebar/index.vue'
-  import { getCategoriesApi } from '@/api/article'
+  </div>
+</template>
 
-  gsap.registerPlugin(ScrollTrigger)
-  
-  export default {
-    name: 'Categories',
-    components: {
-      Sidebar
-    },
+<script>
+import gsap from 'gsap'
+import ScrollTrigger from 'gsap/ScrollTrigger'
+import Sidebar from '@/components/Sidebar/index.vue'
+import { getCategoriesApi } from '@/api/article'
 
-    data() {
-      return {
-        activeCategory: null,
-        categories:[],
-        loading:false
-      }
+gsap.registerPlugin(ScrollTrigger)
+
+export default {
+  name: 'Categories',
+  components: {
+    Sidebar
+  },
+
+  data() {
+    return {
+      activeCategory: null,
+      categories: [],
+      loading: false
+    }
+  },
+  methods: {
+    formatMonth(date) {
+      return new Date(date).toLocaleString('zh-CN', { month: 'short' })
     },
-    methods: {
-      formatMonth(date) {
-        return new Date(date).toLocaleString('zh-CN', { month: 'short' })
-      },
-      formatDay(date) {
-        return new Date(date).getDate().toString().padStart(2, '0')
-      },
-      goToPost(id) {
-        this.$router.push(`/post/${id}`)
-      },
- 
-      scrollToCategory(categoryName) {
-        this.activeCategory = categoryName
-        const element = this.$refs[categoryName][0]
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      },
-      handleScroll() {
-        const categories = this.categories
-        for (let i = categories.length - 1; i >= 0; i--) {
-          const element = this.$refs[categories[i].name][0]
-          const rect = element.getBoundingClientRect()
-          if (rect.top <= 100) {
-            this.activeCategory = categories[i].name
-            break
-          }
+    formatDay(date) {
+      return new Date(date).getDate().toString().padStart(2, '0')
+    },
+    goToPost(id) {
+      this.$router.push(`/post/${id}`)
+    },
+    scrollToCategory(categoryName) {
+      this.activeCategory = categoryName
+      const element = this.$refs[categoryName][0]
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    },
+    handleScroll() {
+      const categories = this.categories
+      for (let i = categories.length - 1; i >= 0; i--) {
+        const element = this.$refs[categories[i].name][0]
+        const rect = element.getBoundingClientRect()
+        if (rect.top <= 100) {
+          this.activeCategory = categories[i].name
+          break
         }
       }
-    },
-    async created() {
-      const res = await getCategoriesApi()
-      this.categories = res.data
-    },
-    mounted() {
-      // 监听滚动以更新激活的分类
-      window.addEventListener('scroll', this.handleScroll)
-    },
-    beforeUnmount() {
-      window.removeEventListener('scroll', this.handleScroll)
+    }
+  },
+  async created() {
+    const res = await getCategoriesApi()
+    this.categories = res.data
+  },
+  mounted() {
+    // 监听滚动以更新激活的分类
+    window.addEventListener('scroll', this.handleScroll)
+  },
+  beforeUnmount() {
+    window.removeEventListener('scroll', this.handleScroll)
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  分类 · 技术台账
+//
+//  顶部一条可横向滚动的文字索引（当前项下划线），下面是各分类的
+//  文章行：日期 | 标题。分组标题用等宽小字 + 一条实线，不用图标。
+// ════════════════════════════════════════════════════════════════
+
+.categories-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.content-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: clamp(36px, 4vw, 64px);
+  padding: $spacing-lg clamp(20px, 4vw, 48px) $spacing-xl;
+  min-height: calc(100vh - 80px);
+  align-items: start;
+
+  @include responsive(lg) {
+    grid-template-columns: 1fr;
+    padding: $spacing-lg $spacing-md;
+  }
+
+  @include responsive(md) {
+    padding: $spacing-md;
+  }
+}
+
+.main-content {
+  min-width: 0;
+}
+
+.ledger-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: clamp(28px, 4vh, 44px);
+
+  h1 {
+    font-family: $font-serif;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .head-meta {
+    @include ledger-meta;
+  }
+}
+
+// ── 分类索引 ──
+.categories-nav {
+  position: sticky;
+  top: 64px;
+  z-index: 10;
+  display: flex;
+  gap: clamp(14px, 1.6vw, 24px);
+  flex-wrap: wrap;
+  padding: 10px 0 14px;
+  margin-bottom: clamp(24px, 3vh, 36px);
+  background: var(--background);
+  border-bottom: 1px solid var(--rule-strong);
+
+  .category-tab {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding-bottom: 2px;
+    border-bottom: 1px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s ease, border-color 0.2s ease;
+
+    .tab-count {
+      @include ledger-meta;
+      font-size: 0.68rem;
+    }
+
+    &:hover {
+      color: var(--text-primary);
+    }
+
+    &.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent);
+
+      .tab-count {
+        color: var(--accent);
+      }
     }
   }
-  </script>
-  
-  <style lang="scss" scoped>
-  .categories-page {
-    max-width: 1400px;
-    margin: 0 auto;
+}
+
+// ── 分组 ──
+.category-group {
+  margin-bottom: clamp(30px, 4vh, 48px);
+  scroll-margin-top: 120px;
+
+  &:last-child {
+    margin-bottom: 0;
   }
-  
-  .content-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
-    gap: $spacing-xl * 2;
-    padding: $spacing-lg;
-    min-height: calc(100vh - 80px);
-    align-items: start;
-    
-    @include responsive(lg) {
-      grid-template-columns: 1fr;
-      padding: $spacing-lg;
+}
+
+.category-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 2px;
+
+  .category-name {
+    font-family: $font-serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    flex: none;
+  }
+
+  // 分类名右侧拉一条实线到篇数，读作「分类 ——— 篇数」
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+    transform: translateY(-3px);
+  }
+
+  .post-count {
+    @include ledger-meta;
+    flex: none;
+  }
+}
+
+// ── 文章行 ──
+.post-item {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 28px);
+  align-items: baseline;
+  padding: 12px 14px;
+  margin: 0 -14px;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--row-hover);
+
+    .post-title {
+      color: var(--accent);
     }
-    
-    @include responsive(md) {
-      padding: $spacing-md;
-    }
   }
-  
-  .main-content {
-    min-width: 0;
-    height: 100%;
-  }
-  
-  .content-card {
-    background: var(--card-bg);
-    border-radius: $border-radius-lg;
-    box-shadow: $shadow-md;
-    padding: $spacing-lg;
-  }
-  
-  .categories-nav {
-    position: sticky;
-    top: 80px;
-    z-index: 10;
-    background: var(--card-bg);
-    margin: -$spacing-lg;
-    margin-bottom: $spacing-lg;
-    padding: $spacing-md $spacing-lg;
-    border-bottom: 1px solid var(--border-color);
+
+  .post-date {
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.76rem;
+    color: var(--text-tertiary);
     display: flex;
-    gap: $spacing-sm;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .post-title {
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    line-height: 1.5;
+    transition: color 0.2s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.loading-state {
+  padding: $spacing-xl;
+  text-align: center;
+  @include ledger-meta;
+
+  i {
+    margin-right: $spacing-sm;
+  }
+}
+
+@include responsive(md) {
+  .post-item {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 14px;
+    padding: 12px 10px;
+    margin: 0 -10px;
+  }
+
+  .categories-nav {
+    flex-wrap: nowrap;
     overflow-x: auto;
     scrollbar-width: none;
-    -ms-overflow-style: none;
-    border-top-left-radius: $border-radius-lg;
-    border-top-right-radius: $border-radius-lg;
 
     &::-webkit-scrollbar {
       display: none;
     }
-  
-    .category-tab {
-      padding: $spacing-xs $spacing-md;
-      border-radius: $border-radius-lg;
-      background: var(--hover-bg);
-      color: var(--text-secondary);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      white-space: nowrap;
-      display: flex;
-      align-items: center;
-      gap: $spacing-xs;
-      font-size: 0.9em;
-  
-      i {
-        font-size: 0.9em;
-      }
-  
-      &:hover {
-        transform: translateY(-2px);
-      }
-  
-      &.active {
-        background: $primary;
-        color: white;
-      }
-    }
   }
-  
-  .category-group {
-    margin-bottom: $spacing-xl * 2;
-    scroll-margin-top: 100px;
-  
-    &:last-child {
-      margin-bottom: 0;
-    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-tab,
+  .post-item,
+  .post-title {
+    transition: none !important;
   }
-  
-  .category-header {
-    margin-bottom: $spacing-lg;
-    padding-bottom: $spacing-sm;
-    border-bottom: 2px solid rgba($primary, 0.1);
-    position: relative;
-  
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: -2px;
-      left: 0;
-      width: 50px;
-      height: 2px;
-      background: $primary;
-    }
-  
-    .category-name {
-      font-size: 1.5em;
-      color: var(--text-primary);
-      display: flex;
-      align-items: center;
-      gap: $spacing-sm;
-  
-      i {
-        color: $primary;
-        font-size: 1em;
-        width: 24px;
-        text-align: center;
-        opacity: 0.8;
-      }
-  
-      .post-count {
-        font-size: 0.5em;
-        color: var(--text-secondary);
-        margin-left: auto;
-        padding: $spacing-xs $spacing-sm;
-        background: var(--hover-bg);
-        border-radius: $border-radius-lg;
-      }
-    }
-  }
-  
-  .post-item {
-    display: flex;
-    align-items: center;
-    gap: $spacing-xl;
-    padding: $spacing-md;
-    border-radius: $border-radius-md;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  
-    &:hover {
-      background: var(--hover-bg);
-      transform: translateX(10px);
-  
-      .post-date {
-        border-color: $primary;
-        background: rgba($primary, 0.1);
-      }
-    }
-  
-    .post-date {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: $spacing-xs;
-      border: 1px solid var(--border-color);
-      border-radius: $border-radius-sm;
-      transition: all 0.3s ease;
-      min-width: 60px;
-  
-      .month {
-        font-size: 0.9em;
-        color: var(--text-secondary);
-      }
-  
-      .day {
-        font-size: 1.2em;
-        font-weight: 600;
-        color: var(--text-primary);
-      }
-    }
-  
-    .post-info {
-      flex: 1;
-      min-width: 0;
-  
-      .post-title {
-        color: var(--text-primary);
-        font-size: 1em;
-        margin-bottom: 0;
-        transition: color 0.3s ease;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-  
-        &:hover {
-          color: $primary;
-        }
-      }
-    }
-  }
-  
-  .loading-state {
-    text-align: center;
-    padding: $spacing-xl;
-    color: var(--text-secondary);
-    font-size: 1.1em;
-  
-    i {
-      margin-right: $spacing-sm;
-    }
-  }
-  
-  @include responsive(md) {
-    .categories-page {
-      padding: $spacing-lg;
-    }
-  
-    .content-card {
-      padding: $spacing-lg;
-    }
-  
-    .categories-nav {
-      top: 64px;
-      margin: -$spacing-lg;
-      margin-bottom: $spacing-lg;
-      padding: $spacing-sm $spacing-lg;
-    }
-  }
-  
-  @include responsive(sm) {
-    .categories-page {
-      padding: $spacing-md;
-    }
-  
-    .content-card {
-      padding: $spacing-md;
-      border-radius: 0;
-      margin: -$spacing-md;
-    }
-  
-    .post-item {
-      gap: $spacing-md;
-  
-      .post-date {
-        min-width: 50px;
-      }
-    }
-  
-    .categories-nav {
-      margin: -$spacing-md;
-      margin-bottom: $spacing-md;
-      padding: $spacing-sm;
-      
-      .category-tab {
-        padding: $spacing-xs $spacing-sm;
-        font-size: 0.85em;
-      }
-    }
-  }
-  </style> 
-  
+}
+</style>

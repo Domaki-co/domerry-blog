@@ -1111,9 +1111,9 @@ export default {
   color: var(--text-secondary) !important;
 }
 .nav-menu {
-  border-radius: 8px;
-  background: var(--card-bg);
-  border-right: none;
+  border-radius: $border-radius-md;
+  background: var(--surface);
+  border: 1px solid var(--rule);
   margin-top: $spacing-md;
 
 
@@ -1140,8 +1140,9 @@ export default {
 .content-area {
   flex: 1;
   min-width: 0;
-  background: var(--card-bg);
-  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-md;
   padding: 24px;
 }
 
@@ -1307,8 +1308,9 @@ export default {
 .reply-item,
 .like-item,
 .post-item {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
 }
 
 
@@ -1316,7 +1318,7 @@ export default {
   margin-bottom: 24px;
 
   :deep(.el-alert) {
-    border-radius: 8px;
+    border-radius: $border-radius-sm;
 
     .el-alert__title {
       font-size: 15px;
@@ -1354,7 +1356,7 @@ export default {
     .account-icon {
       width: 48px;
       height: 48px;
-      border-radius: 12px;
+      border-radius: $border-radius-sm;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1441,9 +1443,9 @@ export default {
     }
 
     .feedback-reply {
-      background: var(--hover-bg);
+      background: var(--row-hover);
       padding: 12px;
-      border-radius: 8px;
+      border-radius: $border-radius-sm;
 
       .reply-title {
         color: var(--text-secondary);
@@ -1475,9 +1477,9 @@ export default {
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    border-radius: 4px;
-    background: $primary;
-    color: white;
+    border-radius: $border-radius-sm;
+    background: var(--accent);
+    color: #fff;
     text-decoration: none;
     transition: all 0.3s ease;
 
@@ -1513,8 +1515,8 @@ export default {
     align-items: center;
     gap: 8px;
     padding: 8px 24px;
-    border-radius: 4px;
-    background: var(--hover-bg);
+    border-radius: $border-radius-sm;
+    background: var(--row-hover);
     color: var(--text-primary);
     text-decoration: none;
     transition: all 0.3s ease;

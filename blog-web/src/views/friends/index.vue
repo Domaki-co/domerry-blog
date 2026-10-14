@@ -1,14 +1,12 @@
 <template>
   <div class="friends-page">
-    <el-card class="content-card">
-      <div class="page-header">
-        <h1>友链</h1>
-        <div class="header-divider">
-          <span class="line"></span>
-          <i class="fas fa-link"></i>
-          <span class="line"></span>
+    <div class="friends-inner">
+      <header class="page-header">
+        <div class="head-title">
+          <h1>友链</h1>
+          <span class="head-meta">{{ friends.length }} 个伙伴</span>
         </div>
-        <p>与优秀的人同行，分享技术与生活</p>
+        <p class="head-sub">与优秀的人同行，分享技术与生活</p>
         <div class="site-info">
           <div class="site-avatar">
             <div class="avatar-wrapper">
@@ -41,12 +39,11 @@
           <i class="fas fa-plus"></i>
           申请友链
         </button>
-      </div>
+      </header>
 
       <div class="friends-container">
         <div class="section-title">
           <h2>友链列表</h2>
-          <span class="count">{{ friends.length }} 个伙伴</span>
         </div>
         <div class="friends-grid">
           <div v-for="friend in friends" :key="friend.id" class="friend-card" @click="visitFriend(friend.url)">
@@ -129,7 +126,7 @@
           </el-form>
         </div>
       </el-dialog>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -227,273 +224,112 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  友链 · 技术台账
+//
+//  本站信息是一块「名片」：站点 URL 用等宽字，可点即复制。
+//  友链列表是行式台账（头像 | 名称+描述），不用上浮卡片和脉冲动效。
+// ════════════════════════════════════════════════════════════════
 
-:deep(.el-form-item__content){
+:deep(.el-form-item__content) {
   margin-left: 0 !important;
 }
+
 .friends-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: $spacing-lg;
+  padding: clamp(24px, 4vh, 44px) clamp(20px, 4vw, 48px);
   min-height: calc(100vh - 200px);
-  animation: fadeIn 0.8s ease-out;
+
   @include responsive(lg) {
-    padding: $spacing-sm;
+    padding: $spacing-md;
   }
 }
 
-.content-card {
-  padding: $spacing-sm;
-
-}
-
+// ── 页头 ──
 .page-header {
-  text-align: center;
-  margin-bottom: $spacing-xl;
-  position: relative;
+  margin-bottom: clamp(32px, 5vh, 52px);
 
-  h1 {
-    font-family: $font-serif;
-    font-size: 2em;
-    margin-bottom: $spacing-md;
-    font-weight: 600;
-    // 台账取向：墨色衬线，不用渐变裁切文字
-    color: var(--text-primary);
-    letter-spacing: 0.02em;
-  }
-
-  .header-divider {
+  .head-title {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: $spacing-sm;
-    margin-bottom: $spacing-md;
-    opacity: 0.8;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: $spacing-md;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule-strong);
 
-    .line {
-      width: 60px;
-      height: 1px;
-      background: var(--rule-strong);
-    }
-
-    i {
-      color: var(--accent);
-      font-size: 1.4em;
-      transform: rotate(45deg);
-      animation: pulse 2s infinite;
-    }
-  }
-
-  p {
-    color: var(--text-secondary);
-    font-size: 1.2em;
-    margin-bottom: $spacing-lg;
-    font-weight: 300;
-    letter-spacing: 0.5px;
-  }
-}
-
-.friends-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: $spacing-md;
-  padding: $spacing-md;
-}
-
-.friend-card {
-  @include card;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  padding: $spacing-lg;
-  display: flex;
-  align-items: center;
-  gap: $spacing-md;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    // 台账取向：顶部只留一条强调色实线，不用双色渐变
-    background: var(--accent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
-
-  &:hover {
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    border-color: $primary;
-
-    &::before {
-      opacity: 1;
-    }
-
-    .friend-avatar img {
-      transform: scale(1.1) rotate(5deg);
-    }
-  }
-
-  .friend-avatar {
-    position: relative;
-    width: 60px;
-    height: 60px;
-    flex-shrink: 0;
-    border-radius: 50%;
-    padding: 3px;
-
-    img {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      object-fit: cover;
-      transition: transform 0.5s ease;
-      border: 3px solid var(--card-bg);
-    }
-
-    .status {
-      position: absolute;
-      bottom: 5px;
-      right: 5px;
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: #9ca3af;
-      border: 2px solid var(--card-bg);
-      box-shadow: 0 0 0 2px var(--card-bg);
-
-      &.online {
-        background: #10b981;
-        animation: pulse 2s infinite;
-      }
-    }
-  }
-
-  .friend-info {
-    flex: 1;
-    min-width: 0;
-
-    h3 {
-      color: var(--text-primary);
-      font-size: 1.2em;
-      margin-bottom: $spacing-xs;
+    h1 {
+      font-family: $font-serif;
+      font-size: clamp(1.6rem, 3vw, 2.1rem);
       font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      color: var(--text-primary);
+      margin: 0;
     }
 
-    p {
-      color: var(--text-secondary);
-      font-size: 0.95em;
-      line-height: 1.5;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+    .head-meta {
+      @include ledger-meta;
     }
+  }
+
+  .head-sub {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 16px 0 0;
   }
 }
 
+// ── 本站信息名片 ──
 .site-info {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: $border-radius-lg;
-  padding: $spacing-lg;
-  margin: $spacing-lg auto;
-  max-width: 700px;
   display: flex;
   align-items: center;
-  gap: $spacing-lg;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  gap: 20px;
+  margin-top: 24px;
+  padding: 20px;
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-md;
 
-  &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-
-    .site-avatar .avatar {
-      transform: scale(1.05);
-    }
+  @include responsive(sm) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
   }
 
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: var(--accent);
-  }
-
-  .site-avatar {
-    width: 100px;
-    height: 100px;
-    flex-shrink: 0;
+  .avatar-wrapper {
     position: relative;
+    width: 64px;
+    height: 64px;
+    flex: none;
+    cursor: pointer;
 
-    .avatar-wrapper {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      cursor: pointer;
-      border-radius: 50%;
-      overflow: hidden;
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: $border-radius-sm;
+      border: 1px solid var(--rule);
+    }
 
-      .avatar {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid var(--border-color);
-        background: var(--card-bg);
-        transition: transform 0.5s ease;
+    .copy-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: rgba(18, 23, 29, 0.72);
+      color: #fff;
+      font-size: 0.6rem;
+      border-radius: $border-radius-sm;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+
+      i {
+        font-size: 0.9rem;
       }
+    }
 
-      .copy-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        color: white;
-        border-radius: 50%;
-
-        i {
-          font-size: 1.5em;
-          margin-bottom: 5px;
-        }
-
-        span {
-          font-size: 0.8em;
-        }
-      }
-
-      &:hover {
-        .copy-overlay {
-          opacity: 1;
-        }
-
-        .avatar {
-          transform: scale(1.05);
-        }
-      }
+    &:hover .copy-overlay {
+      opacity: 1;
     }
   }
 
@@ -502,49 +338,47 @@ export default {
     min-width: 0;
 
     h2 {
-      color: var(--text-primary);
       font-family: $font-serif;
-      font-size: 1.5em;
-      margin-bottom: $spacing-xs;
+      font-size: 1.25rem;
       font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 4px;
     }
 
     p {
       color: var(--text-secondary);
-      margin-bottom: $spacing-sm;
-      font-size: 1em;
-      line-height: 1.5;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin: 0 0 12px;
     }
 
     .site-url {
       display: flex;
       align-items: center;
-      gap: $spacing-sm;
-      padding: $spacing-sm $spacing-md;
-      background: var(--input-bg);
-      border-radius: $border-radius-lg;
-      border: 1px solid var(--border-color);
-      transition: all 0.3s ease;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid var(--rule);
+      border-radius: $border-radius-sm;
+      transition: border-color 0.2s ease;
 
       &:hover {
-        border-color: $primary;
-        box-shadow: 0 0 0 2px rgba($primary, 0.1);
+        border-color: var(--accent);
       }
 
       i {
-        font-size: 1em;
-        color: $primary;
+        font-size: 0.85rem;
+        color: var(--accent);
       }
 
       input {
-        background: none;
-        border: none;
-        color: var(--text-primary);
-        font-size: 1em;
         flex: 1;
         min-width: 0;
+        background: none;
+        border: none;
+        font-family: $font-mono;
+        font-size: 0.82rem;
+        color: var(--text-primary);
         cursor: pointer;
-        padding: $spacing-xs;
 
         &:focus {
           outline: none;
@@ -554,15 +388,13 @@ export default {
       .copy-btn {
         background: none;
         border: none;
-        color: var(--text-secondary);
+        color: var(--text-tertiary);
         cursor: pointer;
-        padding: $spacing-xs $spacing-sm;
-        transition: all 0.3s ease;
-        border-radius: $border-radius-sm;
+        padding: 2px 4px;
+        transition: color 0.2s ease;
 
         &:hover {
-          color: $primary;
-          background: rgba($primary, 0.1);
+          color: var(--accent);
         }
       }
     }
@@ -572,125 +404,146 @@ export default {
 .copy-tip {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: $spacing-sm;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  margin: $spacing-lg 0;
-  font-size: 1em;
-  padding: $spacing-sm;
-  background: rgba($primary, 0.05);
-  border-radius: $border-radius-lg;
 
   i {
-    color: $primary;
-    animation: bounce 2s infinite;
+    color: var(--text-tertiary);
   }
 
   .tip-highlight {
-    color: $primary;
-    margin-left: $spacing-sm;
-    font-weight: 500;
-  }
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: $spacing-lg;
-  padding-bottom: $spacing-sm;
-  border-bottom: 2px solid var(--border-color);
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    left: 0;
-    width: 100px;
-    height: 2px;
-    background: var(--accent);
-  }
-
-  h2 {
-    color: var(--text-primary);
-    font-size: 1.8em;
-    font-weight: 700;
-  }
-
-  .count {
-    color: var(--text-secondary);
-    font-size: 1.2em;
-    padding: $spacing-xs $spacing-sm;
-    background: rgba($primary, 0.1);
-    border-radius: $border-radius-lg;
-    font-weight: 500;
+    color: var(--text-tertiary);
+    font-family: $font-mono;
+    font-size: 0.78rem;
   }
 }
 
 .apply-btn {
-  padding: $spacing-sm $spacing-lg;
-  // 台账取向：实底强调色 + 近直角，不用双色渐变胶囊
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: $border-radius-sm;
-  font-size: 1em;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: $spacing-sm;
+  @include ledger-button;
+  margin-top: 20px;
 
   i {
-    font-size: 1.1em;
-    transition: transform 0.3s ease;
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba($primary, 0.4);
-
-    i {
-      transform: rotate(180deg);
-    }
-  }
-
-  &:active {
-    transform: translateY(1px);
+    font-size: 0.85rem;
   }
 }
 
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba($primary, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba($primary, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba($primary, 0);
-  }
+// ── 友链列表 ──
+.friends-container {
+  margin-top: clamp(36px, 5vh, 56px);
 }
 
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {
-    transform: translateY(0);
+.section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: 2px;
+
+  h2 {
+    font-family: $font-serif;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    flex: none;
   }
-  40% {
-    transform: translateY(-5px);
-  }
-  60% {
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
     transform: translateY(-3px);
   }
 }
 
+.friends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0 clamp(24px, 4vw, 56px);
+}
+
+.friend-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 2px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--row-hover);
+
+    h3 {
+      color: var(--accent);
+    }
+  }
+
+  .friend-avatar {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex: none;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: $border-radius-sm;
+      border: 1px solid var(--rule);
+      filter: saturate(0.92);
+    }
+
+    .status {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+      border: 2px solid var(--surface);
+
+      &.online {
+        background: var(--accent);
+      }
+    }
+  }
+
+  .friend-info {
+    min-width: 0;
+
+    h3 {
+      font-size: 0.98rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin: 0 0 3px;
+      transition: color 0.2s ease;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 0.84rem;
+      line-height: 1.5;
+      margin: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+// ── 申请表单 ──
 .apply-form {
   .el-form-item {
     margin-bottom: $spacing-md;
-    opacity: 1;
-    transform: none;
 
     &__label {
       font-weight: 500;
@@ -698,21 +551,18 @@ export default {
     }
   }
 
-  .el-input {
-    .el-input__inner {
-      border-radius: $border-radius-md;
-      border: 1px solid var(--border-color);
-      background: var(--input-bg);
-      color: var(--text-primary);
+  .el-input .el-input__inner {
+    border-radius: $border-radius-sm;
+    border: 1px solid var(--rule);
+    background: var(--input-bg);
+    color: var(--text-primary);
 
-      &:focus {
-        border-color: $primary;
-        box-shadow: 0 0 0 2px rgba($primary, 0.1);
-      }
+    &:focus {
+      border-color: var(--accent);
+    }
 
-      &::placeholder {
-        color: var(--text-secondary);
-      }
+    &::placeholder {
+      color: var(--text-tertiary);
     }
   }
 
@@ -722,23 +572,12 @@ export default {
     margin-top: $spacing-lg;
 
     .submit-btn {
-      background: var(--accent);
-      border: none;
-      padding: $spacing-sm $spacing-xl;
-      font-size: 1em;
-      border-radius: $border-radius-sm;
+      @include ledger-button;
+      height: auto;
+      padding: 9px 22px;
 
       i {
-        margin-right: $spacing-xs;
-      }
-
-      &:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba($primary, 0.3);
-      }
-
-      &:active {
-        transform: translateY(1px);
+        margin-right: 2px;
       }
     }
   }
@@ -748,10 +587,12 @@ export default {
   margin-bottom: $spacing-md;
 }
 
-@for $i from 1 through 5 {
-  .form-group:nth-child(#{$i}) {
-    animation: none;
+@media (prefers-reduced-motion: reduce) {
+  .friend-card,
+  .friend-card h3,
+  .site-info .site-url,
+  .copy-overlay {
+    transition: none !important;
   }
 }
-
 </style>

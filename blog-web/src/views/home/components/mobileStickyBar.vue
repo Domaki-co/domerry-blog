@@ -52,8 +52,8 @@ export default {
 .mobile-sticky {
   display: none;
   margin-bottom: $spacing-lg;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border: 1px solid var(--rule);
   border-radius: $border-radius-md;
   overflow: hidden;
 
@@ -117,7 +117,7 @@ export default {
   padding: 8px 10px;
   border-radius: $border-radius-sm;
   text-decoration: none;
-  transition: all 0.3s ease;
+  transition: background 0.2s ease;
 
   & + .sticky-item {
     margin-top: 4px;
@@ -125,8 +125,11 @@ export default {
 
   &:hover,
   &:active {
-    background: var(--hover-bg);
-    transform: translateX(4px);
+    background: var(--row-hover);
+
+    .sticky-title {
+      color: var(--accent);
+    }
   }
 }
 
@@ -153,6 +156,7 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.2s ease;
 }
 
 .sticky-slide-enter-active,

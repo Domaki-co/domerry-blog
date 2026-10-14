@@ -1,477 +1,454 @@
 <template>
-    <div class="hot-search-container">
-      <div class="hot-search">
-        <!-- 搜索框部分 -->
-        <el-card class="search-box">
-          <div class="search-input">
-            <input 
-              v-model="searchText" 
-              :placeholder="`在 ${getCurrentEngine.label} 中搜索...`"
-              @keyup.enter="handleSearch"
+  <div class="hot-search-container">
+    <div class="hot-search">
+      <header class="ledger-head">
+        <h1>热搜</h1>
+        <span class="head-meta">{{ getCurrentEngine.label }} · {{ currentTabLabel }}</span>
+      </header>
+
+      <!-- 搜索 -->
+      <section class="search-panel">
+        <div class="search-input">
+          <input
+            v-model="searchText"
+            :placeholder="`在 ${getCurrentEngine.label} 中搜索…`"
+            @keyup.enter="handleSearch"
+          >
+          <button class="search-btn" @click="handleSearch" aria-label="搜索">
+            <i class="fas fa-search"></i>
+          </button>
+        </div>
+        <div class="search-engines">
+          <button
+            v-for="engine in searchEngines"
+            :key="engine.name"
+            :class="['engine-btn', { active: currentEngine === engine.name }]"
+            @click="currentEngine = engine.name"
+          >
+            <svg-icon :icon-class="engine.icon"></svg-icon>
+            {{ engine.label }}
+          </button>
+        </div>
+      </section>
+
+      <!-- 热搜列表 -->
+      <section class="hot-lists">
+        <div class="hot-tabs">
+          <button
+            v-for="tab in hotTabs"
+            :key="tab.type"
+            :class="['tab-btn', { active: currentTab === tab.type }]"
+            @click="currentTab = tab.type"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
+        <div class="hot-content">
+          <ol class="hot-grid" v-loading="loading">
+            <li
+              v-for="(item, index) in currentHotList"
+              :key="index"
+              class="hot-row"
+              @click="handleHotItemClick(item)"
             >
-            <button class="search-btn" @click="handleSearch">
-              <i class="fas fa-search"></i>
-            </button>
-          </div>
-          <div class="search-engines">
-            <button 
-              v-for="engine in searchEngines" 
-              :key="engine.name"
-              :class="['engine-btn', { active: currentEngine === engine.name }]"
-              @click="currentEngine = engine.name"
-            >
-              <svg-icon :icon-class="engine.icon"></svg-icon>
-              {{ engine.label }}
-            </button>
-          </div>
-        </el-card>
-  
-        <!-- 热搜列表部分 -->
-        <el-card class="hot-lists">
-          <div class="hot-tabs">
-            <button 
-              v-for="tab in hotTabs" 
-              :key="tab.type"
-              :class="['tab-btn', { active: currentTab === tab.type }]"
-              @click="currentTab = tab.type"
-            >
-              <i :class="tab.icon"></i>
-              {{ tab.label }}
-            </button>
-          </div>
-          
-          <div class="hot-content">
-            <div class="hot-grid" v-loading="loading">
-              <div 
-                v-for="(item, index) in currentHotList" 
-                :key="index" 
-                class="hot-card"
-                :class="[currentTab, { 'top-rank': index < 3 }]"
-                @click="handleHotItemClick(item)"
-              >
-                <span class="rank" :class="getRankClass(index)">{{ index + 1 }}</span>
-                <div class="card-content">
-                  <div class="title-wrap">
-                    <a :href="item.url" target="_blank" class="title">{{ item.keyword }}</a>
-                    <span class="hot-tag" v-if="item.tag">{{ item.tag }}</span>
-                  </div>
-                  <div class="card-footer">
-                    <span class="hot-value" v-if="item.hotValue">
-                      <i class="fas fa-fire"></i>
-                      {{ formatHotValue(item.hotValue) }}
-                    </span>
-                    <span class="trend" v-if="item.trend">
-                      <i :class="getTrendIcon(item.trend)"></i>
-                    </span>
-                  </div>
-                </div>
+              <span class="rank" :class="getRankClass(index)">{{ String(index + 1).padStart(2, '0') }}</span>
+              <div class="row-main">
+                <a :href="item.url" target="_blank" class="title" @click.stop>{{ item.keyword }}</a>
+                <span class="row-meta">
+                  <span class="hot-value" v-if="item.hotValue">{{ formatHotValue(item.hotValue) }}</span>
+                  <span class="trend" v-if="item.trend">
+                    <i :class="getTrendIcon(item.trend)"></i>
+                  </span>
+                  <span class="hot-tag" v-if="item.tag">{{ item.tag }}</span>
+                </span>
               </div>
-            </div>
-          </div>
-        </el-card>
-      </div>
+            </li>
+          </ol>
+        </div>
+      </section>
     </div>
-  </template>
-  
-  <script>
-  import { getHotListApi } from '@/api/hot-search'
-  export default {
-    name: 'HotSearch',
-    data() {
-      return {
-        searchText: '',
-        currentEngine: 'baidu',
-        currentTab: 'weibo',
-        loading: false,
-        searchEngines: [
-          { name: 'baidu', label: '百度', icon: 'baidu', url: 'https://www.baidu.com/s?wd=' },
-          { name: 'google', label: '谷歌', icon: 'chrome', url: 'https://www.google.com/search?q=' },
-          { name: 'gitee', label: '码云', icon: 'gitee', url: 'https://search.gitee.com/?q=' },
-          { name: 'github', label: 'GitHub', icon: 'github', url: 'https://github.com/search?q=' }
-        ],
-        hotTabs: [
-          { type: 'weibo', label: '微博热搜', icon: 'fab fa-weibo' },
-          { type: 'zhihu', label: '知乎热榜', icon: 'fab fa-zhihu' },
-          { type: 'toutiao', label: '头条热榜', icon: 'fas fa-fire' },
-          { type: 'baidu', label: '百度热搜', icon: 'fas fa-chart-line' },
-          { type: 'csdn', label: 'CSDN热榜', icon: 'fas fa-code' }
-        ],
-        hotLists: {
-          weibo: [],
-          zhihu: [],
-          toutiao: [],
-          baidu: [],
-          csdn: []
-        }
+  </div>
+</template>
+
+<script>
+import { getHotListApi } from '@/api/hot-search'
+export default {
+  name: 'HotSearch',
+  data() {
+    return {
+      searchText: '',
+      currentEngine: 'baidu',
+      currentTab: 'weibo',
+      loading: false,
+      searchEngines: [
+        { name: 'baidu', label: '百度', icon: 'baidu', url: 'https://www.baidu.com/s?wd=' },
+        { name: 'google', label: '谷歌', icon: 'chrome', url: 'https://www.google.com/search?q=' },
+        { name: 'gitee', label: '码云', icon: 'gitee', url: 'https://search.gitee.com/?q=' },
+        { name: 'github', label: 'GitHub', icon: 'github', url: 'https://github.com/search?q=' }
+      ],
+      hotTabs: [
+        { type: 'weibo', label: '微博热搜', icon: 'fab fa-weibo' },
+        { type: 'zhihu', label: '知乎热榜', icon: 'fab fa-zhihu' },
+        { type: 'toutiao', label: '头条热榜', icon: 'fas fa-fire' },
+        { type: 'baidu', label: '百度热搜', icon: 'fas fa-chart-line' },
+        { type: 'csdn', label: 'CSDN热榜', icon: 'fas fa-code' }
+      ],
+      hotLists: {
+        weibo: [],
+        zhihu: [],
+        toutiao: [],
+        baidu: [],
+        csdn: []
+      }
+    }
+  },
+  computed: {
+    getCurrentEngine() {
+      return this.searchEngines.find(engine => engine.name === this.currentEngine)
+    },
+    currentHotList() {
+      return this.hotLists[this.currentTab] || []
+    },
+    currentTabLabel() {
+      const tab = this.hotTabs.find(item => item.type === this.currentTab)
+      return tab ? tab.label : ''
+    }
+  },
+  methods: {
+    handleSearch() {
+      if (!this.searchText.trim()){
+        this.$message.warning('请输入搜索内容')
+        return
+      }
+      const engine = this.getCurrentEngine
+      window.open(engine.url + encodeURIComponent(this.searchText), '_blank')
+    },
+    getRankClass(index) {
+      if (index < 3) return `rank-${index + 1}`
+      return ''
+    },
+    formatHotValue(value) {
+      if (value >= 10000) {
+        return (value / 10000).toFixed(1) + 'w'
+      }
+      return value
+    },
+    async fetchHotList(type) {
+      this.loading = true
+      try {
+        // 这里替换为实际的API调用
+        const res = await getHotListApi(type)
+        this.hotLists[type] = res.data.data
+      } catch (error) {
+        this.$message.error('获取热搜数据失败')
+      } finally {
+        this.loading = false
       }
     },
-    computed: {
-      getCurrentEngine() {
-        return this.searchEngines.find(engine => engine.name === this.currentEngine)
-      },
-      currentHotList() {
-        return this.hotLists[this.currentTab] || []
+    handleHotItemClick(item) {
+      if (item.url) {
+        window.open(item.url, '_blank')
       }
     },
-    methods: {
-      handleSearch() {
-        if (!this.searchText.trim()){
-          this.$message.warning('请输入搜索内容')
-          return
-        }
-        const engine = this.getCurrentEngine
-        window.open(engine.url + encodeURIComponent(this.searchText), '_blank')
-      },
-      getRankClass(index) {
-        if (index < 3) return `rank-${index + 1}`
-        return ''
-      },
-      formatHotValue(value) {
-        if (value >= 10000) {
-          return (value / 10000).toFixed(1) + 'w'
-        }
-        return value
-      },
-      async fetchHotList(type) {
-        this.loading = true
-        try {
-          // 这里替换为实际的API调用
-          const res = await getHotListApi(type)
-          this.hotLists[type] = res.data.data
-        } catch (error) {
-          this.$message.error('获取热搜数据失败')
-        } finally {
-          this.loading = false
-        }
-      },
-      handleHotItemClick(item) {
-        if (item.url) {
-          window.open(item.url, '_blank')
-        }
-      },
-      getTrendIcon(trend) {
-        if (trend === '上升') return 'fas fa-arrow-up text-success'
-        if (trend === '下降') return 'fas fa-arrow-down text-danger'
-        return 'fas fa-minus text-warning'
-      }
-    },
-    watch: {
-      currentTab: {
-        immediate: true,
-        handler(newTab) {
-          this.fetchHotList(newTab)
-        }
+    getTrendIcon(trend) {
+      if (trend === '上升') return 'fas fa-arrow-up text-success'
+      if (trend === '下降') return 'fas fa-arrow-down text-danger'
+      return 'fas fa-minus text-warning'
+    }
+  },
+  watch: {
+    currentTab: {
+      immediate: true,
+      handler(newTab) {
+        this.fetchHotList(newTab)
       }
     }
   }
-  </script>
-  
-  <style lang="scss" scoped>
-  .hot-search-container {
-    padding: $spacing-lg;
+}
+</script>
+
+<style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  热搜 · 技术台账
+//
+//  搜索框是一条细线输入，搜索引擎是文字切换；热搜是编号台账行，
+//  名次用等宽数字，热度值和趋势并排成一行元信息。
+// ════════════════════════════════════════════════════════════════
+
+.hot-search-container {
+  padding: clamp(24px, 4vh, 44px) clamp(20px, 4vw, 48px);
+}
+
+.hot-search {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.ledger-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: clamp(28px, 4vh, 44px);
+
+  h1 {
+    font-family: $font-serif;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
   }
-  
-  .hot-search {
-    max-width: 1200px;
-    margin: 0 auto;
+
+  .head-meta {
+    @include ledger-meta;
   }
-  
-  
-  .search-box {
-    margin-bottom: $spacing-xl;
-    padding: $spacing-lg;
-  
-    .search-input {
-      position: relative;
-      margin-bottom: $spacing-lg;
-      
-      input {
-        width: 100%;
-        padding: $spacing-md $spacing-md;
-        padding-right: 60px;
-        border-radius: $border-radius-md;
-        border-color: var(--border-color);
-        font-size: 1.1em;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        background-color: var(--card-bg);
-        &:focus {
-          outline: none;
-          border-color: $primary;
-          box-shadow: 0 0 0 4px rgba($primary, 0.1);
-        }
-      }
-  
-      .search-btn {
-        position: absolute;
-        right: $spacing-md;
-        top: 50%;
-        transform: translateY(-50%);
-        background: $primary;
-        border: none;
-        color: var(--card-bg);
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  
-        &:hover {
-          transform: translateY(-50%) scale(1.1);
-          box-shadow: 0 4px 12px rgba($primary, 0.3);
-        }
-      }
+}
+
+// ── 搜索 ──
+.search-panel {
+  margin-bottom: clamp(32px, 5vh, 52px);
+}
+
+.search-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--rule-strong);
+  border-radius: $border-radius-sm;
+  background: var(--surface);
+  padding: 0 6px 0 16px;
+  transition: border-color 0.2s ease;
+
+  &:focus-within {
+    border-color: var(--accent);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 14px 0;
+    border: none;
+    background: none;
+    font-size: 1rem;
+    color: var(--text-primary);
+
+    &::placeholder {
+      color: var(--text-tertiary);
     }
-  
-    .search-engines {
-      display: flex;
-      flex-wrap: wrap;
-      gap: $spacing-sm;
-  
-      .engine-btn {
-        padding: $spacing-sm $spacing-lg;
-        border: none;
-        background: var(--hover-bg);
-        color: var(--text-secondary);
-        border-radius: $border-radius-md;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        align-items: center;
-        gap: $spacing-sm;
-        font-size: 0.95em;
-        font-weight: 500;
-  
-        &.active {
-          background: $primary;
-          color: var(--text-primary);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba($primary, 0.2);
-        }
-  
-        &:hover:not(.active) {
-          color: $primary;
-          background: var(--hover-bg);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-  
-        svg-icon {
-          font-size: 1.2em;
-        }
-      }
+
+    &:focus {
+      outline: none;
     }
   }
-  
-  .hot-lists {
-    padding: $spacing-lg;
-  
-    .hot-tabs {
-      display: flex;
-      gap: $spacing-md;
-      margin-bottom: $spacing-xl;
-      padding: 0 $spacing-md;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-      overflow-x: auto;
-      scrollbar-width: none;
-      
-      &::-webkit-scrollbar {
-        display: none;
-      }
-  
-      .tab-btn {
-        padding: $spacing-md $spacing-xl;
-        border: none;
-        background: none;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        display: flex;
-        align-items: center;
-        gap: $spacing-sm;
-        white-space: nowrap;
-        position: relative;
-        font-size: 1em;
-        font-weight: 500;
-  
-        &::after {
-          content: '';
-          position: absolute;
-          bottom: -1px;
-          left: 50%;
-          width: 0;
-          height: 3px;
-          background: $primary;
-          border-radius: 3px;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-  
-        &.active {
-          color: $primary;
-  
-          &::after {
-            width: 100%;
-            left: 0;
-          }
-        }
-  
-        &:hover:not(.active) {
-          color: $primary;
-        }
-  
-        i {
-          font-size: 1.2em;
-        }
-      }
-    }
-  
-    .hot-content {
-      padding: 0 $spacing-md;
-  
-      .hot-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: $spacing-lg;
-  
-        .hot-card {
-          position: relative;
-          border: 1px solid var(--border-color);
-          border-radius: $border-radius-md;
-          padding: $spacing-md;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          display: flex;
-          gap: $spacing-md;
-          cursor: pointer;
-          
-          &:hover {
-            transform: translateY(-3px);
-            background: var(--hover-bg);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  
-            .title {
-              color: $primary;
-            }
-  
-            .rank {
-              transform: scale(1.1);
-            }
-          }
-  
-   
-  
-          .rank {
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: $border-radius-sm;
-            font-family: $font-mono;
-            font-size: 1em;
-            font-weight: 600;
-            color: var(--text-tertiary);
-            flex-shrink: 0;
-            transition: all 0.3s ease;
-  
-            // 台账取向：名次用等宽数字 + 描边，不用红蓝黄实心渐变块
-            &.rank-1 { color: var(--accent); border: 1px solid var(--accent); }
-            &.rank-2 { border: 1px solid var(--rule-strong); }
-            &.rank-3 { border: 1px solid var(--rule); }
-          }
-  
-          .card-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: $spacing-sm;
-  
-            .title-wrap {
-              display: flex;
-              align-items: flex-start;
-              gap: $spacing-sm;
-            }
-  
-            .title {
-              color: var(--text-primary);
-              text-decoration: none;
-              font-size: 1.1em;
-              line-height: 1.5;
-              font-weight: 500;
-              display: -webkit-box;
-              -webkit-line-clamp: 2;
-              -webkit-box-orient: vertical;
-              overflow: hidden;
-              transition: color 0.3s ease;
-              flex: 1;
-  
-              &:hover {
-                text-decoration: none;
-              }
-            }
-  
-            .hot-tag {
-              padding: 3px 8px;
-              border-radius: 6px;
-              background: rgba($primary, 0.1);
-              color: $primary;
-              font-size: 0.85em;
-              font-weight: 500;
-              white-space: nowrap;
-            }
-  
-            .card-footer {
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              margin-top: auto;
-              font-size: 0.9em;
-  
-              .hot-value {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                font-family: $font-mono;
-                color: var(--accent);
-                font-weight: 500;
-                
-                i {
-                  font-size: 1.1em;
-                }
-              }
-  
-              .trend {
-                i {
-                  font-size: 1.1em;
-                  &.text-success { color: #2ecc71; }
-                  &.text-danger { color: #e74c3c; }
-                  &.text-warning { color: #f1c40f; }
-                }
-              }
-            }
-          }
-        }
-      }
+
+  .search-btn {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: $border-radius-sm;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+
+    &:hover {
+      background: transparent;
+      color: var(--accent);
+      box-shadow: inset 0 0 0 1px var(--accent);
     }
   }
-  
-  @include responsive(sm) {
-    .hot-search-container {
-      padding: $spacing-sm;
+}
+
+.search-engines {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 14px;
+
+  .engine-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 0;
+    border: none;
+    border-bottom: 1px solid transparent;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+
+    svg-icon {
+      font-size: 1.05em;
     }
-  
-    .hot-search {
-      .search-box,
-      .hot-lists {
-        padding: $spacing-md;
-      }
-  
-      .hot-lists {
-        .hot-content {
-          .hot-grid {
-            grid-template-columns: 1fr;
-            gap: $spacing-md;
-          }
-        }
-      }
+
+    &:hover {
+      color: var(--text-primary);
+    }
+
+    &.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent);
     }
   }
-  </style> 
+}
+
+// ── 热搜 ──
+.hot-tabs {
+  display: flex;
+  gap: clamp(14px, 1.6vw, 24px);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-btn {
+    padding: 0 0 2px;
+    border: none;
+    border-bottom: 1px solid transparent;
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+
+    &:hover {
+      color: var(--text-primary);
+    }
+
+    &.active {
+      color: var(--text-primary);
+      border-bottom-color: var(--accent);
+    }
+  }
+}
+
+.hot-content {
+  min-height: 200px;
+}
+
+.hot-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.hot-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+  padding: 13px 12px;
+  margin: 0 -12px;
+  border-bottom: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--row-hover);
+
+    .title {
+      color: var(--accent);
+    }
+  }
+
+  .rank {
+    @include ledger-meta;
+    font-size: 0.82rem;
+    text-align: right;
+
+    &.rank-1 {
+      color: var(--accent);
+    }
+
+    &.rank-2 {
+      color: var(--text-secondary);
+    }
+  }
+
+  .row-main {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .title {
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.98rem;
+    line-height: 1.5;
+    transition: color 0.2s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .row-meta {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 12px;
+    flex: none;
+
+    .hot-value {
+      @include ledger-meta;
+    }
+
+    .trend i {
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+
+      // 趋势是数据：上升/下降用强调色与中性色区分，不用红绿黄三色
+      &.text-success { color: var(--accent); }
+      &.text-danger { color: var(--text-secondary); }
+      &.text-warning { color: var(--text-tertiary); }
+    }
+
+    .hot-tag {
+      @include ledger-meta;
+      padding: 1px 6px;
+      border: 1px solid var(--rule);
+      border-radius: $border-radius-sm;
+      color: var(--text-secondary);
+    }
+  }
+}
+
+@include responsive(md) {
+  .hot-row {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px 8px;
+    margin: 0 -8px;
+  }
+
+  .hot-row .row-meta .hot-tag {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hot-row,
+  .hot-row .title,
+  .tab-btn,
+  .engine-btn,
+  .search-input,
+  .search-btn {
+    transition: none !important;
+  }
+}
+</style>

@@ -19,18 +19,56 @@
   }
 }
 
-@mixin card {
-  background: white;
-  border-radius: $border-radius-lg;
-  box-shadow: $shadow-md;
-  transition: transform 0.3s ease;
-
-  &:hover {
-    transform: translateY(-5px);
-    box-shadow: $shadow-lg;
-  }
-}
-
 @function darken($color, $amount) {
   @return mix(black, $color, $amount);
 } 
+// ── 台账取向的通用件 ──
+// 层次来自 1px 实线和留白，不用阴影、不做位移。
+// 全站次级页面（归档 / 分类 / 标签 / 友链 / 说说 / 相册 …）统一走这几个 mixin，
+// 免得每页各写一套「圆角卡片 + hover 上浮」的默认长相。
+
+// 面板：1px 实线 + 近直角，替代带阴影的卡片
+@mixin ledger-panel {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-md;
+}
+
+// 区块标题：等宽小字，克制、不抢正文
+@mixin ledger-heading {
+  font-family: $font-mono;
+  font-size: 0.72rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+}
+
+// 元信息：等宽数字，对齐成竖线
+@mixin ledger-meta {
+  font-family: $font-mono;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--text-tertiary);
+}
+
+// 台账按钮：近直角实底，不用胶囊、不用渐变
+@mixin ledger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border: 1px solid var(--accent);
+  border-radius: $border-radius-sm;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+  &:hover {
+    background: transparent;
+    color: var(--accent);
+  }
+}

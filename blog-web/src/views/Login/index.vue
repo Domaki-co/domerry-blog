@@ -668,12 +668,10 @@ export default {
 .login-body {
   width: 420px;
   padding: 32px;
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(8px);
-  background: rgba(255, 255, 255, 0.95);
+  // 台账取向：近直角 + 1px 实线，不用大圆角 + 阴影的默认卡片
+  border-radius: $border-radius-md;
+  border: 1px solid var(--rule);
+  background: var(--surface);
   position: relative;
 }
 
@@ -714,11 +712,6 @@ export default {
   &:hover {
     // 旧值 #4f46e5 是靛蓝，改成强调色压暗
     filter: brightness(0.92);
-    transform: translateY(-1px);
-  }
-
-  &:active {
-    transform: translateY(0);
   }
 }
 
@@ -743,7 +736,7 @@ export default {
 .login-icon {
   width: 40px;
   height: 40px;
-  border-radius: 8px;
+  border-radius: $border-radius-sm;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -751,10 +744,6 @@ export default {
   cursor: pointer;
   transition: all 0.2s;
   background: var(--hover-bg);
-
-  &:hover {
-    transform: translateY(-2px);
-  }
 
   // 第三方登录按钮保留各家品牌色（这是品牌识别，不属于本站配色体系）
   &.github {
@@ -810,8 +799,8 @@ export default {
   height: 200px;
   margin: 0 auto 16px;
   padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: $border-radius-md;
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
 
   img {
     width: 100%;
@@ -841,15 +830,16 @@ export default {
 }
 
 .form-title {
-  font-size: 24px;
+  font-family: $font-serif;
+  font-size: 1.5rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin: 0 0 8px;
 }
 
 .form-subtitle {
-  font-size: 14px;
-  color: #666;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -885,19 +875,19 @@ export default {
   right: 16px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: $border-radius-sm;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s ease, color 0.2s ease;
   background: var(--hover-bg);
   border: none;
   color: var(--text-secondary);
 
   &:hover {
     background: var(--rule);
-    transform: rotate(180deg);
+    color: var(--text-primary);
   }
 
   i {
@@ -911,12 +901,12 @@ export default {
   right: 60px;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: $border-radius-sm;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s ease, color 0.2s ease;
   background: var(--hover-bg);
   border: none;
   color: var(--text-secondary);
@@ -924,7 +914,6 @@ export default {
 
   &:hover {
     background: var(--rule);
-    transform: translateX(-4px);
     color: var(--accent);
   }
 

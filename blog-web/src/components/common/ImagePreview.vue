@@ -311,23 +311,22 @@ export default {
     display: flex;
     gap: 10px;
     padding: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 8px;
+    background: rgba(20, 22, 26, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: $border-radius-sm;
     
     .tool-btn {
       width: 40px;
       height: 40px;
       border: none;
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.14);
       color: white;
-      border-radius: 8px;
+      border-radius: $border-radius-sm;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: background 0.2s ease;
       
       &:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.26);
       }
       
       i {

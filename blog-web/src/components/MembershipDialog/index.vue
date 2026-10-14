@@ -318,14 +318,9 @@ export default {
   .benefit-item {
     text-align: center;
     padding: $spacing-lg;
-    background: var(--hover-bg);
-    border-radius: $border-radius-lg;
-    transition: all 0.3s ease;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: $shadow-md;
-    }
+    background: var(--row-hover);
+    border: 1px solid var(--rule);
+    border-radius: $border-radius-sm;
 
     i {
       font-size: 2em;
@@ -365,22 +360,21 @@ export default {
 
   .plan-item {
     padding: $spacing-lg;
-    border: 2px solid var(--border-color);
-    border-radius: $border-radius-lg;
+    border: 1px solid var(--rule);
+    border-radius: $border-radius-sm;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease, background 0.2s ease;
     display: flex;
     flex-direction: column;
 
     &:hover {
-      border-color: rgba($primary, 0.3);
-      transform: translateY(-2px);
+      border-color: var(--rule-strong);
     }
 
     &.active {
-      border-color: $primary;
-      background: rgba($primary, 0.05);
+      border-color: var(--accent);
+      background: var(--accent-soft);
     }
 
     .plan-header {

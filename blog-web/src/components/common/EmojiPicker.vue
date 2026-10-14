@@ -87,10 +87,10 @@ export default {
   position: absolute;
   bottom: calc(100% + 10px);
   left: 0;
-  background: var(--card-bg);
-  border-radius: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color);
+  background: var(--surface);
+  border-radius: $border-radius-md;
+  box-shadow: $shadow-md;
+  border: 1px solid var(--rule);
   padding: 12px;
   z-index: 1000;
   
@@ -99,7 +99,7 @@ export default {
     bottom: 0;
     left: 0;
     right: 0;
-    border-radius: 16px 16px 0 0;
+    border-radius: $border-radius-md $border-radius-md 0 0;
     padding-bottom: calc(12px + env(safe-area-inset-bottom));
     
     &::before {

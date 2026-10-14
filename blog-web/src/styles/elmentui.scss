@@ -1,7 +1,7 @@
 //弹出框
 .el-dialog{
-    background: var(--card-bg) !important;
-    border-radius: $border-radius-lg !important;
+    background: var(--surface) !important;
+    border-radius: $border-radius-md !important;
     .el-dialog__title{
         color: var(--text-secondary)!important; 
     }
@@ -63,19 +63,20 @@
     }
 }
 
-//卡片
+//卡片：台账取向 —— 1px 实线 + 近直角，去掉阴影（阴影是「SaaS 卡片」的默认长相）
 .el-card{
-    background: var(--card-bg)!important;
-    border-radius: $border-radius-lg!important;
-    border: 1px solid var(--border-color)!important;
-    box-shadow: $shadow-sm!important;
+    background: var(--surface)!important;
+    border-radius: $border-radius-md!important;
+    border: 1px solid var(--rule)!important;
+    box-shadow: none!important;
 }
 
 //标签
 .el-tag.el-tag--info {
-    background: var(--card-bg)!important;
-    border: 1px solid var(--border-color)!important;
+    background: transparent!important;
+    border: 1px solid var(--rule)!important;
     color: var(--text-secondary)!important;
+    border-radius: $border-radius-sm!important;
 }
 
 .pagination-box{
@@ -107,20 +108,21 @@
     .btn-next,
     .el-pager li {
         color: var(--text-secondary) !important;
-        border: 1px solid var(--border-color) !important;
-        border-radius: $border-radius-sm * 2.5 !important;
+        border: 1px solid var(--rule) !important;
+        border-radius: $border-radius-sm !important;
         margin: 0 3px !important;
-        min-width: 34px !important;
-        height: 34px !important;
-        line-height: 34px !important;
-        font-size: 14px !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+        min-width: 32px !important;
+        height: 32px !important;
+        line-height: 32px !important;
+        font-family: $font-mono !important;
+        font-size: 13px !important;
+        transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease !important;
+        box-shadow: none !important;
         
         &:hover {
-            color: $primary !important;
-            border-color: $primary !important;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05) !important;
+            color: $accent !important;
+            border-color: $accent !important;
+            background: transparent !important;
         }
     }
 
@@ -128,11 +130,11 @@
         li {
             &.is-active,
             &.active {
-                background-color: $primary !important;
+                background-color: $accent !important;
                 color: #fff !important;
-                border-color: $primary !important;
-                font-weight: bold !important;
-                box-shadow: 0 4px 12px rgba($primary, 0.2) !important;
+                border-color: $accent !important;
+                font-weight: 400 !important;
+                box-shadow: none !important;
 
                 &:hover {
                     color: #fff !important;
@@ -196,8 +198,8 @@
         color: #fff !important;
     }
     &--success {
-        background: #4bcf09 !important;
-        border-color: #67C23A !important;
+        background: $accent !important;
+        border-color: $accent !important;
         .el-message__content {
             color: #fff !important;
         }
@@ -221,8 +223,8 @@
     }
     
     &--info {
-        background:#909399 !important;
-        border-color: #909399 !important;
+        background: $secondary !important;
+        border-color: $secondary !important;
         .el-message__content {
             color: #fff !important;
         }

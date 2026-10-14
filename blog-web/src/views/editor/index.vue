@@ -510,9 +510,9 @@ export default {
     min-width: 0;
 
     .content-card {
-        background: var(--card-bg);
-        border-radius: 8px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: $border-radius-md;
         padding: 24px;
         margin-bottom: 24px;
 
@@ -641,9 +641,9 @@ export default {
     gap: 24px;
 
     .sidebar-section {
-        background: var(--card-bg);
-        border-radius: 8px;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        background: var(--surface);
+        border: 1px solid var(--rule);
+        border-radius: $border-radius-md;
         padding: 24px;
 
         .section-title {
@@ -759,9 +759,9 @@ export default {
 }
 
 .vditor {
-    --border-color: var(--border-color);
-    background: var(--card-bg);
-    border-radius: 4px;
+    --border-color: var(--rule);
+    background: var(--surface);
+    border-radius: $border-radius-sm;
 }
 .vditor-reset {
     color: var(--text-secondary);

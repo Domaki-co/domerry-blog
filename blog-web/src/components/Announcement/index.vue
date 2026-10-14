@@ -49,11 +49,12 @@ export default {
 <style lang="scss" scoped>
 .announcement-container {
   width: 100%;
-  background: $primary;
-  padding: 10px 0;
+  // 台账取向：墨底细条 + 底部一条强调色实线，不用实心色块 + 阴影
+  background: var(--text-primary);
+  padding: 9px 0;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-bottom: 1px solid var(--accent);
 }
 
 .announcement-content {
@@ -75,18 +76,14 @@ export default {
   overflow: hidden;
   max-width: 800px;
   position: relative;
-  backdrop-filter: blur(8px);
-  border-radius: 4px;
 }
 
 .announcement-icon {
   position: absolute;
   left: 30px;
-  font-size: 16px;
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  font-size: 15px;
   z-index: 1;
-  color:#f59e0b;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: var(--accent);
 }
 
 .announcement-text {
@@ -125,33 +122,17 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  border-radius: $border-radius-sm;
+  background: rgba(255, 255, 255, 0.14);
   
   &:hover {
     opacity: 1;
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(90deg);
+    background: rgba(255, 255, 255, 0.24);
   }
 
   i {
     font-size: 14px;
     color: rgba(255, 255, 255, 0.9);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.8;
   }
 }
 

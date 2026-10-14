@@ -1,10 +1,11 @@
 <template>
   <div class="not-found">
     <div class="not-found-content">
-      <h1>404</h1>
-      <p>抱歉，页面不见了 (；′⌒`)</p>
+      <p class="code">404</p>
+      <h1>页面不存在</h1>
+      <p class="hint">这个地址没有对应的内容，也许它已经被移走或改名了。</p>
       <router-link to="/" class="back-home">
-        <i class="fas fa-home"></i>
+        <i class="fas fa-arrow-left"></i>
         返回首页
       </router-link>
     </div>
@@ -12,79 +13,62 @@
 </template>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  404 · 技术台账
+//
+//  大号等宽「404」当版面主体，下面一条实线，再是说明和返回入口。
+//  不用彩色描边、不用胶囊按钮、不做上浮。
+// ════════════════════════════════════════════════════════════════
+
 .not-found {
   min-height: calc(100vh - 140px);
   display: flex;
   align-items: center;
   justify-content: center;
-  text-align: center;
   padding: $spacing-xl;
   background: var(--background);
 }
 
 .not-found-content {
-  max-width: 600px;
   width: 100%;
-  animation: fadeInUp 0.6s ease-out;
+  max-width: 460px;
 
-  h1 {
-    font-size: 120px;
-    color: $primary;
-    margin-bottom: $spacing-lg;
-    font-weight: 700;
+  .code {
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(4.5rem, 14vw, 7.5rem);
     line-height: 1;
-    text-shadow: 4px 4px 0px rgba($primary, 0.2);
+    letter-spacing: 0.02em;
+    color: var(--text-primary);
+    margin: 0 0 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--rule-strong);
   }
 
-  p {
-    font-size: 1.5em;
+  h1 {
+    font-family: $font-serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 10px;
+  }
+
+  .hint {
     color: var(--text-secondary);
-    margin-bottom: $spacing-xl;
+    font-size: 0.92rem;
+    line-height: 1.7;
+    margin: 0 0 28px;
   }
 
   .back-home {
-    display: inline-flex;
-    align-items: center;
-    gap: $spacing-sm;
-    padding: $spacing-md $spacing-xl;
-    background: $primary;
-    color: white;
-    border-radius: 25px;
+    @include ledger-button;
     text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba($primary, 0.3);
-    }
-
-    i {
-      font-size: 1.1em;
-    }
   }
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+@media (prefers-reduced-motion: reduce) {
+  .back-home {
+    transition: none !important;
   }
 }
-
-@include responsive(sm) {
-  .not-found-content {
-    h1 {
-      font-size: 80px;
-    }
-    
-    p {
-      font-size: 1.2em;
-    }
-  }
-}
-</style> 
+</style>

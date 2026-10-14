@@ -6,9 +6,14 @@
       <div class="message-container">
         <h1 class="message-title">留言板</h1>
         <div class="message-input-wrapper">
-          <el-input class="input" v-model="content" placeholder="说点什么吧" @keyup.enter="addToList"
-            @focus="show = true"></el-input>
-          <el-button style="opacity: .6;" class="ml-3" round @click="addToList" v-show="show">发送</el-button>
+          <input
+            class="message-input"
+            v-model="content"
+            placeholder="说点什么吧"
+            @keyup.enter="addToList"
+            @focus="show = true"
+          >
+          <button class="message-send" @click="addToList" v-show="show">发送</button>
         </div>
       </div>
       <!-- 弹幕列表 -->
@@ -119,77 +124,135 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-:deep(.el-input__inner) {
-  border-radius: 50px;
-  opacity: .6;
-}
+// ════════════════════════════════════════════════════════════════
+//  留言板 · 技术台账
+//
+//  全屏留言区：标题走衬线左对齐，输入是一条细线输入 + 近直角发送键；
+//  弹幕条目用近直角墨底，不用胶囊圆角。
+// ════════════════════════════════════════════════════════════════
 
 .message-banner {
+  position: relative;
+  min-height: calc(100vh - 64px);
+  overflow: hidden;
+  background-color: #0b0e12;
+
+  // 背景图之上压一层暗罩，保证白字可读
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(5, 7, 10, 0.72) 0%,
+      rgba(5, 7, 10, 0.52) 45%,
+      rgba(5, 7, 10, 0.82) 100%
+    );
+    pointer-events: none;
+  }
+}
+
+.message-container {
+  position: relative;
+  z-index: 5;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: clamp(72px, 16vh, 160px) clamp(20px, 4vw, 48px) 0;
+  color: #fff;
+
+  .message-title {
+    font-family: $font-serif;
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+  }
+
+  .message-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 520px;
+    margin-top: 28px;
+
+    .message-input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: $border-radius-sm;
+      background: rgba(255, 255, 255, 0.06);
+      color: #fff;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease, background 0.2s ease;
+
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      &:focus {
+        outline: none;
+        border-color: rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .message-send {
+      flex: none;
+      padding: 12px 22px;
+      border: 1px solid var(--accent);
+      border-radius: $border-radius-sm;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease;
+
+      &:hover {
+        background: transparent;
+        color: var(--accent);
+      }
+    }
+  }
+}
+
+.barrage-container {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: $primary;
-  animation: header-effect 1s;
+  width: 100%;
+  z-index: 3;
 
-
-  .message-container {
-    position: absolute;
-    width: 360px;
-    top: 35%;
-    left: 0;
-    right: 0;
-    text-align: center;
-    z-index: 5;
-    margin: 0 auto;
+  .barrage-items {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 4px;
+    margin-top: 10px;
+    background: rgba(5, 7, 10, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: $border-radius-sm;
     color: #fff;
+    font-size: 0.85rem;
 
-    .message-title {
-      color: #eee;
-      animation: title-scale 1s;
-    }
-
-    .message-input-wrapper {
-      display: flex;
-      justify-content: center;
-      height: 2.5rem;
-      margin-top: 2rem;
-
-      .ml-3 {
-        animation: left-in 1s ease;
-
-        @keyframes left-in {
-          0% {
-            transform: translateY(-500%);
-          }
-
-          100% {
-            transform: translateX(0);
-          }
-        }
-      }
+    img {
+      border-radius: $border-radius-sm;
     }
   }
+}
 
-  .barrage-container {
-    position: absolute;
-    top: 80px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-
-    .barrage-items {
-      background: #000;
-      border-radius: 100px;
-      color: #fff;
-      padding: 5px 10px 5px 5px;
-      align-items: center;
-      display: flex;
-      margin-top: 10PX;
-    }
+@include responsive(md) {
+  .message-container {
+    padding-top: 96px;
   }
+}
 
+@media (prefers-reduced-motion: reduce) {
+  .message-input,
+  .message-send {
+    transition: none !important;
+  }
 }
 </style>

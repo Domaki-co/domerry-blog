@@ -315,256 +315,271 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  消息中心 · 技术台账
+//
+//  左侧分类是文字列表，当前项用强调色 + 左侧 2px 竖线标记；
+//  右侧消息是行式列表，未读用一条强调色竖线区分，不用彩色图标底。
+// ════════════════════════════════════════════════════════════════
+
 .notifications-page {
   display: flex;
-  gap: 20px;
+  gap: clamp(28px, 4vw, 56px);
   max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: clamp(24px, 4vh, 44px) clamp(20px, 4vw, 48px);
   min-height: calc(100vh - 64px);
+  align-items: flex-start;
 }
 
+// ── 左侧分类 ──
 .notifications-sidebar {
-  width: 240px;
-  background: var(--card-bg);
-  border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  width: 200px;
   flex-shrink: 0;
-  
+
   .sidebar-header {
-    padding: 16px;
-    border-bottom: 1px solid var(--border-color);
-    
+    padding-bottom: 12px;
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--rule-strong);
+
     h2 {
-      font-size: 1.1em;
-      font-weight: 500;
-      color: var(--text-primary);
+      @include ledger-heading;
       margin: 0;
     }
   }
-  
+
   .category-item {
+    position: relative;
     display: flex;
     align-items: center;
-    padding: 12px 20px;
+    gap: 10px;
+    padding: 9px 0 9px 12px;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    
+    border-left: 2px solid transparent;
+    transition: color 0.2s ease, border-color 0.2s ease;
+
     i {
-      font-size: 1.1em;
-      width: 24px;
-      margin-right: 12px;
-      
-      &.fa-bell { color: #1677ff; }
-      &.fa-cog { color: #52c41a; }
-      &.fa-comment { color: #722ed1; }
-      &.fa-heart { color: #eb2f96; }
-      &.fa-user-plus { color: #13c2c2; }
+      width: 16px;
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-tertiary);
+      transition: color 0.2s ease;
     }
-    
+
     span {
       flex: 1;
-      font-size: 0.9em;
+      font-size: 0.9rem;
     }
-    
+
     &:hover {
-      background: rgba($primary, 0.04);
+      color: var(--text-primary);
     }
-    
+
     &.active {
-      background: rgba($primary, 0.08);
-      color: $primary;
-      
+      color: var(--text-primary);
+      border-left-color: var(--accent);
+
       i {
-        color: $primary;
+        color: var(--accent);
       }
     }
-    
+
     .category-badge {
       margin-left: auto;
-      
+
       :deep(.el-badge__content) {
-        background-color: $primary;
+        background-color: var(--accent);
         border: none;
         padding: 0 6px;
         height: 16px;
         line-height: 16px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: normal;
+        border-radius: $border-radius-sm;
+        font-family: $font-mono;
+        font-size: 11px;
+        font-weight: 400;
       }
     }
   }
 }
 
+// ── 右侧列表 ──
 .notifications-main {
   flex: 1;
   min-width: 0;
-  
+
   .notifications-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-    
+    align-items: baseline;
+    gap: $spacing-md;
+    padding-bottom: 14px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--rule-strong);
+
     h1 {
-      font-size: 1.2em;
-      font-weight: 500;
+      font-family: $font-serif;
+      font-size: 1.35rem;
+      font-weight: 600;
       color: var(--text-primary);
+      margin: 0;
     }
-    
-    .header-actions {
-      .el-button {
-        color: $primary;
-        
-        i {
-          margin-right: 4px;
-        }
+
+    .header-actions .el-button {
+      color: var(--accent);
+
+      i {
+        margin-right: 4px;
       }
     }
   }
 }
 
-.notifications-content {
-  background: var(--card-bg);
-  border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
 .notification-item {
+  position: relative;
   display: flex;
   align-items: flex-start;
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--card-bg);
-  transition: background-color 0.2s ease;
-  
-  &:hover {
-    background: rgba($primary, 0.02);
+  gap: 16px;
+  padding: 16px 4px 16px 16px;
+  border-bottom: 1px solid var(--rule);
+  transition: background 0.2s ease;
+
+  // 未读：左侧一条强调色竖线，不用整块淡色底
+  &.unread::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 16px;
+    bottom: 16px;
+    width: 2px;
+    background: var(--accent);
   }
-  
+
+  &:hover {
+    background: var(--row-hover);
+  }
+
   .notification-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 4px;
-    background: rgba($primary, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 16px;
-    
+    width: 20px;
+    flex-shrink: 0;
+    padding-top: 2px;
+    text-align: center;
+
     i {
-      font-size: 1.1em;
-      
-      &.fa-bell { color: #1677ff; background: rgba(22, 119, 255, 0.1); }
-      &.fa-cog { color: #52c41a; background: rgba(82, 196, 26, 0.1); }
-      &.fa-comment { color: #722ed1; background: rgba(114, 46, 209, 0.1); }
-      &.fa-heart { color: #eb2f96; background: rgba(235, 47, 150, 0.1); }
-      &.fa-user-plus { color: #13c2c2; background: rgba(19, 194, 194, 0.1); }
+      font-size: 0.95rem;
+      color: var(--text-tertiary);
     }
   }
-  
+
+  &.unread .notification-icon i {
+    color: var(--accent);
+  }
+
   .notification-body {
     flex: 1;
     min-width: 0;
-    
+
     .notification-title {
-      font-size: 1em;
+      font-size: 0.95rem;
       color: var(--text-primary);
-      margin-bottom: 6px;
+      margin-bottom: 5px;
       font-weight: 500;
     }
-    
+
     .notification-message {
-      font-size: 0.95em;
+      font-size: 0.9rem;
       color: var(--text-secondary);
       margin-bottom: 6px;
-      line-height: 1.5;
-      .article-title{
-        color: $primary;
+      line-height: 1.6;
+
+      .article-title {
+        color: var(--accent);
         cursor: pointer;
-        &:hover{
+
+        &:hover {
           text-decoration: underline;
         }
       }
     }
-    
+
     .notification-time {
-      font-size: 0.85em;
-      color: var(--text-secondary);
-      margin-top: $spacing-sm;
+      @include ledger-meta;
+      margin-top: 6px;
     }
   }
-  
+
   .notification-actions {
     margin-left: 12px;
     visibility: hidden;
-    
+
     .el-button {
       padding: 4px;
-      
+
       i {
-        font-size: 0.9em;
-        color: var(--text-secondary);
+        font-size: 0.9rem;
+        color: var(--text-tertiary);
       }
-      
+
       &:hover i {
-        color: #ff4d4f;
+        color: var(--accent);
       }
     }
   }
-  
+
   &:hover .notification-actions {
     visibility: visible;
-  }
-  
-  &.unread {
-    background: rgba($primary, 0.04);
-    
-    &:hover {
-      background: rgba($primary, 0.06);
-    }
   }
 }
 
 .empty-state {
-  padding: 40px;
+  padding: 56px 20px;
   text-align: center;
-  color: var(--text-secondary);
-  background: var(--card-bg);
-  border-radius: 8px;
-  
+  color: var(--text-tertiary);
+
   i {
-    font-size: 2em;
+    font-size: 1.6rem;
     margin-bottom: 12px;
+    opacity: 0.6;
   }
-  
+
   p {
-    font-size: 0.95em;
+    @include ledger-meta;
     margin: 0;
   }
 }
 
-// 移动端适配
 @media screen and (max-width: 768px) {
   .notifications-page {
-    padding: 16px;
+    flex-direction: column;
+    gap: $spacing-lg;
+    padding: 20px $spacing-md;
   }
-  
+
   .notifications-sidebar {
     width: 100%;
-  }
-  
-  .category-item {
-    padding: 10px 16px;
-    
-    i {
-      margin-right: 8px;
+
+    .category-list {
+      display: flex;
+      gap: 4px 18px;
+      flex-wrap: wrap;
     }
+
+    .category-item {
+      padding: 8px 0;
+      border-left: none;
+      border-bottom: 2px solid transparent;
+
+      &.active {
+        border-bottom-color: var(--accent);
+      }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-item,
+  .notification-item {
+    transition: none !important;
   }
 }
 </style>

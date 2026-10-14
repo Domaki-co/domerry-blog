@@ -1,18 +1,9 @@
 <template>
   <div class="photos-container">
-    <div class="photos-header">
-      <div class="header-content">
-        <div class="title-group">
-          <h1>相册</h1>
-          <div class="decorative-line"></div>
-        </div>
-        <p class="subtitle">每一张照片都是生活中美好的一次记忆</p>
-      </div>
-      <div class="header-background">
-        <div class="circle circle-1"></div>
-        <div class="circle circle-2"></div>
-      </div>
-    </div>
+    <header class="photos-header">
+      <h1>相册</h1>
+      <span class="head-meta">{{ albums.length }} 个相册</span>
+    </header>
     <div class="photos-grid">
       <div v-for="(album, index) in albums" :key="index" class="album-card" @click="openAlbum(album)">
         <div class="album-cover">
@@ -22,9 +13,11 @@
           </div>
         </div>
         <div class="album-info">
-          <h3>{{ album.name }}</h3>
-          <p>{{ album.description }}</p>
-          <span class="photo-count">{{ album.photoNum }}张照片</span>
+          <div class="album-line">
+            <h3>{{ album.name }}</h3>
+            <span class="photo-count">{{ album.photoNum }} 张</span>
+          </div>
+          <p v-if="album.description">{{ album.description }}</p>
         </div>
       </div>
     </div>
@@ -67,217 +60,136 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  相册 · 技术台账
+//
+//  封面 + 一条 1px 底边，名称与「N 张」等宽数字对齐。
+//  没有上浮、没有阴影、没有装饰圆。
+// ════════════════════════════════════════════════════════════════
+
 .photos-container {
-  padding: 20px;
   max-width: 1200px;
   margin: 0 auto;
+  padding: clamp(24px, 4vh, 44px) clamp(20px, 4vw, 48px);
 }
 
 .photos-header {
-  position: relative;
-  text-align: center;
-  margin-bottom: 60px;
-  padding: 40px 20px;
-  overflow: hidden;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: $spacing-md;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--rule-strong);
+  margin-bottom: clamp(28px, 4vh, 44px);
 
-  .header-content {
-    position: relative;
-    z-index: 2;
-  }
-
-  .title-group {
-    display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-
-  // 台账取向：标题走衬线墨色，不用渐变裁切文字
-  // （渐变字是「SaaS 落地页」的标志，和 1px 实线 + 留白的层次逻辑冲突）
   h1 {
     font-family: $font-serif;
-    font-size: 2.4em;
+    font-size: clamp(1.6rem, 3vw, 2.1rem);
     font-weight: 600;
-    margin-bottom: 15px;
     color: var(--text-primary);
-    letter-spacing: 0.02em;
+    margin: 0;
   }
 
-  .decorative-line {
-    width: 60px;
-    height: 2px;
-    background: var(--accent);
-    margin-top: -5px;
-  }
-
-  .subtitle {
-    font-size: 1.2em;
-    color: var(--text-secondary);
-    font-weight: 500;
-    letter-spacing: 1px;
-    opacity: 0.8;
-  }
-
-  .header-background {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1;
-    overflow: hidden;
-  }
-
-  .circle {
-    position: absolute;
-    border-radius: 50%;
-    opacity: 0.1;
-  }
-
-  // 原来两个圆是紫/靛/粉三色渐变，新设计只有一个强调色
-  .circle-1 {
-    width: 200px;
-    height: 200px;
-    background: var(--accent);
-    top: -100px;
-    left: -50px;
-  }
-
-  .circle-2 {
-    width: 150px;
-    height: 150px;
-    background: var(--accent);
-    bottom: -50px;
-    right: -30px;
+  .head-meta {
+    @include ledger-meta;
   }
 }
 
 .photos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: clamp(24px, 3vw, 40px);
 }
 
 .album-card {
-  background: var(--surface);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s ease;
   cursor: pointer;
 
   &:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-
     .album-cover img {
-      transform: scale(1.05);
+      filter: saturate(1);
+    }
+
+    .album-info h3 {
+      color: var(--accent);
     }
   }
 
   .album-cover {
-    height: 200px;
-    overflow: hidden;
     position: relative;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    border-radius: $border-radius-sm;
+    background: var(--row-hover);
 
     img {
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.3s ease;
+      filter: saturate(0.9);
+      transition: filter 0.3s ease;
     }
 
     .lock-icon {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 32px;
-      height: 32px;
-      background: rgba(0, 0, 0, 0.5);
-      border-radius: 50%;
+      top: 8px;
+      right: 8px;
+      width: 26px;
+      height: 26px;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: rgba(18, 23, 29, 0.6);
       color: #fff;
-      font-size: 14px;
+      font-size: 12px;
+      border-radius: $border-radius-sm;
     }
   }
 
   .album-info {
-    padding: 20px;
+    padding: 12px 2px;
+    border-bottom: 1px solid var(--rule);
+
+    .album-line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+    }
 
     h3 {
-      margin: 0 0 10px;
-      font-size: 1.2em;
+      font-size: 1rem;
+      font-weight: 500;
       color: var(--text-primary);
+      margin: 0;
+      transition: color 0.2s ease;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     p {
       color: var(--text-secondary);
-      margin: 0 0 15px;
-      font-size: 0.9em;
-      line-height: 1.5;
+      font-size: 0.84rem;
+      line-height: 1.55;
+      margin: 6px 0 0;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     .photo-count {
-      display: inline-block;
-      padding: 4px 12px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      border-radius: $border-radius-sm;
-      font-family: $font-mono;
-      font-size: 0.8em;
-      font-weight: 500;
+      @include ledger-meta;
+      flex: none;
     }
   }
 }
 
-@media (max-width: 768px) {
-  .photos-header {
-    padding: 30px 15px;
-    margin-bottom: 40px;
-
-    h1 {
-      font-size: 2.5em;
-    }
-
-    .subtitle {
-      font-size: 1.1em;
-    }
-  }
-
-  .photos-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
-  }
-}
-
-@media (max-width: 480px) {
-  .photos-header {
-    padding: 25px 10px;
-    margin-bottom: 30px;
-
-    h1 {
-      font-size: 2em;
-    }
-
-    .subtitle {
-      font-size: 1em;
-    }
-
-    .circle-1 {
-      width: 150px;
-      height: 150px;
-    }
-
-    .circle-2 {
-      width: 100px;
-      height: 100px;
-    }
-  }
-
-  .photos-grid {
-    grid-template-columns: 1fr;
+@media (prefers-reduced-motion: reduce) {
+  .album-card img,
+  .album-card h3 {
+    transition: none !important;
   }
 }
 </style> 

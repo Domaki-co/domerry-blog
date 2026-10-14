@@ -8,20 +8,14 @@
           <!-- 移动端显示的用户信息 -->
           <div class="mobile-user-info">
             <span class="name">{{ moment.nickname }}</span>
-            <span class="time">
-              <i class="fas fa-clock"></i>
-              {{ formatTime(moment.createTime) }}
-            </span>
+            <span class="time">{{ formatTime(moment.createTime) }}</span>
           </div>
         </div>
         <div class="moment-main">
           <!-- PC端显示的用户信息 -->
           <div class="moment-header">
             <span class="name">{{ moment.nickname }}</span>
-            <span class="time">
-              <i class="fas fa-clock"></i>
-              {{ formatTime(moment.createTime) }}
-            </span>
+            <span class="time">{{ formatTime(moment.createTime) }}</span>
           </div>
           <div class="moment-content-wrapper">
             <div class="moment-content" v-html="$sanitize(moment.content)"></div>
@@ -105,35 +99,46 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+// ════════════════════════════════════════════════════════════════
+//  说说 · 技术台账
+//
+//  头像 | 正文，条目之间一条 1px 线。正文不再套一层不对称圆角卡片，
+//  时间用等宽字，图标去掉。
+// ════════════════════════════════════════════════════════════════
+
 .moments-container {
-  max-width: 800px;
+  max-width: 720px;
   margin: 0 auto;
+  padding: clamp(24px, 4vh, 44px) clamp(20px, 4vw, 32px);
   min-height: calc(100vh - 70px);
 }
 
 .moment-item {
-  border-radius: $border-radius-sm * 3;
-  padding: $spacing-lg;
-  margin-bottom: $spacing-sm;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   display: flex;
   gap: 16px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--rule);
+
+  &:first-child {
+    padding-top: 8px;
+  }
 
   @media screen and (max-width: 768px) {
     flex-direction: column;
     gap: 12px;
-    padding: $spacing-md;
+    padding: 20px 0;
   }
 }
 
 .user-avatar {
   flex-shrink: 0;
-  width: 46px;
+  width: 42px;
 
   .avatar {
-    width: 46px;
-    height: 46px;
-    border-radius: $border-radius-md;
+    width: 42px;
+    height: 42px;
+    border-radius: $border-radius-sm;
+    border: 1px solid var(--rule);
     object-fit: cover;
   }
 
@@ -144,8 +149,8 @@ export default {
     gap: 12px;
 
     .avatar {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
     }
   }
 }
@@ -162,45 +167,30 @@ export default {
 }
 
 .moment-header {
-  margin-bottom: 12px;
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
+  margin-bottom: 10px;
 
   .name {
-    font-size: 15px;
+    font-size: 0.95rem;
     font-weight: 500;
     color: var(--text-primary);
   }
 
   .time {
-    font-size: 13px;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-
-    i {
-      color: $primary;
-    }
+    @include ledger-meta;
   }
 }
 
 .moment-content-wrapper {
-  background: var(--card-bg);
-  padding: 16px;
-  border-radius: 0 $border-radius-lg*2 $border-radius-lg*2 $border-radius-lg*2;
-
-  @media screen and (max-width: 768px) {
-    border-radius: $border-radius-lg;
-  }
-
   .moment-content {
     color: var(--text-primary);
     line-height: 1.8;
-    font-size: 15px;
+    font-size: 0.95rem;
     white-space: pre-wrap;
     word-break: break-word;
+
     :deep(li) {
       margin-left: 30px;
     }
@@ -208,19 +198,16 @@ export default {
 
   .moment-images {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 8px;
-    margin-top: 16px;
-
-    @media screen and (max-width: 768px) {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
+    margin-top: 14px;
 
     img {
       width: 100%;
-      aspect-ratio: 16/9;
+      aspect-ratio: 4 / 3;
       object-fit: cover;
-      border-radius: 8px;
+      border: 1px solid var(--rule);
+      border-radius: $border-radius-sm;
       cursor: zoom-in;
     }
   }
@@ -235,22 +222,14 @@ export default {
   }
 
   .name {
-    font-size: 15px;
+    font-size: 0.95rem;
     font-weight: 500;
     color: var(--text-primary);
   }
 
   .time {
-    font-size: 13px;
-    color: var(--text-secondary);
-    display: flex;
-    align-items: center;
-    gap: 4px;
+    @include ledger-meta;
     margin-top: 2px;
-
-    i {
-      color: $primary;
-    }
   }
 }
 </style>

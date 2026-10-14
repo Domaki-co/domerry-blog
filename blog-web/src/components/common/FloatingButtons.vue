@@ -108,66 +108,49 @@ export default {
 .float-btn {
   width: 40px;
   height: 40px;
-  border: none;
-  border-radius: 50%;
-  background: var(--card-bg);
-  color: var(--text-primary);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
+  background: var(--surface);
+  color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: $shadow-lg;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  opacity: 0.8;
+  box-shadow: $shadow-sm;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 
   &:hover {
-    opacity: 1;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    color: var(--accent);
+    border-color: var(--accent);
   }
 
   // 主题切换按钮：原来用 $primary→$secondary 渐变，新设计不用双色渐变，
   // 改成琥珀实底 + 白图标
   &.theme-btn {
     background: var(--accent);
+    border-color: var(--accent);
     color: #fff;
+
+    &:hover {
+      background: transparent;
+      color: var(--accent);
+    }
   }
   
 
   &.top-btn {
-    transform: translateY(100px);
     opacity: 0;
     visibility: hidden;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
+    transition: opacity 0.25s ease, visibility 0.25s ease;
 
     .show-top & {
-      transform: translateY(0);
-      opacity: 0.8;
+      opacity: 1;
       visibility: visible;
-      animation: bounceIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
     }
   }
 
   i {
     font-size: 1.2em;
-  }
-}
-
-@keyframes bounceIn {
-  0% {
-    transform: translateY(100px) scale(0.3);
-    opacity: 0;
-  }
-  50% {
-    transform: translateY(-10px) scale(1.1);
-  }
-  70% {
-    transform: translateY(5px) scale(0.95);
-  }
-  100% {
-    transform: translateY(0) scale(1);
-    opacity: 0.8;
   }
 }
 

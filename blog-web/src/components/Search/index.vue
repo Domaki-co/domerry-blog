@@ -270,17 +270,15 @@ export default {
   display: flex;
   align-items: center;
   width: 100%;
-  border: 2px solid var(--border-color);
-  border-radius: 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: $border-radius-sm;
   padding: 12px 15px;
   margin-bottom: 20px;
   position: relative;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease;
   
   &:focus-within {
-    border-color: $primary;
-    // 旧值 rgba(202,90,210) 是旧紫主题的残留，改用强调色的极淡底
-    box-shadow: 0 0 0 3px var(--accent-soft);
+    border-color: var(--accent);
   }
   
   .search-icon {
@@ -398,13 +396,12 @@ export default {
   cursor: pointer;
   border-radius: $border-radius-sm;
   margin-bottom: 10px;
-  transition: all 0.3s ease;
-  border: 1px solid var(--border-color);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  border: 1px solid var(--rule);
   
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    border-color: $primary;
+    background: var(--row-hover);
+    border-color: var(--accent);
   }
   
   .result-header {
