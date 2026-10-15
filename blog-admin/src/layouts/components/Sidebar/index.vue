@@ -2,7 +2,7 @@
     <div class="sidebar-container" :class="settingsStore.sidebarStyle">
       <div v-if="settingsStore.showLogo" class="logo-container" :class="{ 'dark': settingsStore.theme === 'dark' }">
         <Logo :size="32" class="logo-icon" :color="settingsStore.themeColor" />
-        <span v-show="!isCollapse" class="logo-text" :class="{ 'light': settingsStore.theme === 'dark' ? false : settingsStore.sidebarStyle === 'light' }">{{ settings.title }}</span>
+        <span v-show="!isCollapse" class="logo-text" :class="{ 'light': settingsStore.theme === 'dark' ? false : settingsStore.sidebarStyle === 'light' }">{{ settingsStore.title || settings.title }}</span>
       </div>
       <el-scrollbar>
         <el-menu style="height: 100%;"

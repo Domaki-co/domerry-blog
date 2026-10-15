@@ -551,18 +551,30 @@ export default {
     }
   }
 
-  .el-input .el-input__inner {
-    border-radius: $border-radius-sm;
-    border: 1px solid var(--rule);
-    background: var(--input-bg);
-    color: var(--text-primary);
+  .el-input {
+    .el-input__wrapper {
+      border-radius: $border-radius-sm;
+      background: var(--input-bg);
+      box-shadow: 0 0 0 1px var(--rule) inset;
 
-    &:focus {
-      border-color: var(--accent);
+      &:hover {
+        box-shadow: 0 0 0 1px var(--rule-strong) inset;
+      }
+
+      &.is-focus {
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
     }
 
-    &::placeholder {
-      color: var(--text-tertiary);
+    .el-input__inner {
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      color: var(--text-primary);
+
+      &::placeholder {
+        color: var(--text-tertiary);
+      }
     }
   }
 

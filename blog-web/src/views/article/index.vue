@@ -273,9 +273,14 @@
             <i class="fas fa-list"></i>
             <span>目录</span>
             </div>
-            <div class="progress-wrapper" :class="{ completed: readProgress === 100 }">
-              <i class="fas fa-book-reader"></i>
-              <span class="progress-text">{{ readProgress }}</span>
+            <div class="header-actions">
+              <div class="progress-wrapper" :class="{ completed: readProgress === 100 }">
+                <i class="fas fa-book-reader"></i>
+                <span class="progress-text">{{ readProgress }}</span>
+              </div>
+              <button class="toc-toggle" type="button" title="收起目录" @click="toggleSidebar">
+                <i class="fas fa-angles-right"></i>
+              </button>
             </div>
           </div>
           <div class="toc-content">
@@ -293,6 +298,18 @@
           </div>
         </div>
       </aside>
+
+      <!-- 目录收起后的展开入口 -->
+      <button
+        v-if="!showSidebar"
+        class="toc-restore desktop-only"
+        type="button"
+        title="展开目录"
+        @click="toggleSidebar"
+      >
+        <i class="fas fa-list"></i>
+        <span>目录</span>
+      </button>
     </div>
     <mj-image-preview ref="imagePreview" />
     <payment-dialog
@@ -1990,6 +2007,12 @@ export default {
         }
       }
 
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+      }
+
       .progress-wrapper {
         font-size: 0.9em;
         color: var(--text-tertiary);
@@ -2012,6 +2035,30 @@ export default {
             margin-left: 2px;
             opacity: 0.7;
           }
+        }
+      }
+
+      .toc-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        border: 1px solid var(--rule);
+        border-radius: $border-radius-sm;
+        background: transparent;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        transition: color 0.2s ease, border-color 0.2s ease;
+
+        i {
+          font-size: 0.85em;
+        }
+
+        &:hover {
+          color: var(--accent);
+          border-color: var(--accent);
         }
       }
     }
@@ -2128,6 +2175,38 @@ export default {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+.toc-restore {
+  position: fixed;
+  top: 96px;
+  right: 24px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-md;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+
+  i {
+    color: $primary;
+    font-size: 0.95em;
+  }
+
+  &:hover {
+    color: var(--text-primary);
+    border-color: var(--accent);
+
+    i {
+      color: var(--accent);
+    }
   }
 }
 

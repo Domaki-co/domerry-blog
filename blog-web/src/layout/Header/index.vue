@@ -76,7 +76,7 @@
 
         <div class="user-info">
           <div v-if="$store.state.userInfo" class="user-section" @mouseleave="showDropdown = false">
-            <div class="avatar" @mouseenter="showDropdown = true">
+            <div class="avatar" @mouseenter="showDropdown = true" @click="showDropdown = !showDropdown">
               <el-avatar :src="$store.state.userInfo.avatar"  />
             </div>
             <!-- 用户下拉菜单 -->
@@ -93,6 +93,19 @@
                 <i class="fas fa-user"></i>
                 个人中心
               </router-link>
+              <!-- 音乐组件开关 -->
+              <div class="dropdown-item dropdown-switch-item" @click.stop>
+                <div class="switch-meta">
+                  <i class="fas fa-music"></i>
+                  <span>音乐组件</span>
+                </div>
+                <el-switch
+                  v-model="musicSwitch"
+                  size="small"
+                  active-color="var(--accent)"
+                  @change="handleMusicToggle"
+                />
+              </div>
               <div class="dropdown-item" @click="handleLogout">
                 <i class="fas fa-sign-out-alt"></i>
                 退出登录
@@ -193,7 +206,7 @@ export default {
             // },
             {
               name: '后台管理',
-              path: import.meta.env.VITE_APP_ADMIN_URL || 'http://localhost:3000',
+              path: import.meta.env.VITE_APP_ADMIN_URL || 'http://localhost:30001',
               icon: 'fas fa-tv',
               external: true
             }
@@ -213,8 +226,23 @@ export default {
         path: item.children ? item.children[0].path : item.path
       }))
     },
+    musicSwitch: {
+      get() {
+        return this.$store.state.musicEnabled
+      },
+      set(val) {
+        this.$store.dispatch('toggleMusicEnabled', val)
+      }
+    }
   },
   methods: {
+    handleMusicToggle(val) {
+      if (val) {
+        this.$message?.success('已开启音乐组件')
+      } else {
+        this.$message?.info('已关闭音乐组件')
+      }
+    },
     handleOpenMobileMenu() {
       this.$store.commit('SET_MOBILE_MENU_VISIBLE', true)
     },
@@ -672,6 +700,21 @@ $header-height: 64px;
           i {
             color: var(--accent);
           }
+        }
+      }
+
+      .dropdown-switch-item {
+        justify-content: space-between;
+        cursor: default;
+
+        .switch-meta {
+          display: flex;
+          align-items: center;
+          gap: $spacing-sm;
+        }
+
+        &:hover {
+          background: var(--row-hover);
         }
       }
     }

@@ -64,4 +64,10 @@ public class UserController {
     public Result<IPage<ArticleListVo>> selectMyArticle(SysArticle article){
         return Result.success(userService.selectMyArticle(article));
     }
+
+    @PutMapping("/settings")
+    @ApiOperation(value = "更新当前登录用户的偏好设置")
+    public Result<java.util.Map<String, Object>> updateSettings(@RequestBody java.util.Map<String, Object> settings) {
+        return Result.success(userService.updateSettings(settings));
+    }
 }

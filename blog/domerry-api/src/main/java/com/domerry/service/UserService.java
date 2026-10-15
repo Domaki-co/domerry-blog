@@ -53,4 +53,11 @@ public interface UserService {
      */
     IPage<ArticleListVo> selectMyArticle(SysArticle article);
 
+    /**
+     * 更新当前登录用户的偏好设置
+     * @param settings 新的个性化偏好键值对
+     * @return 最新的完整个性化偏好
+     */
+    java.util.Map<String, Object> updateSettings(java.util.Map<String, Object> settings);
+
 }

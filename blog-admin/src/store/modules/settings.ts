@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { getWebConfigApi } from '@/api/site/config'
 
 export interface SettingsState {
   theme: 'light' | 'dark'
@@ -14,7 +15,22 @@ export interface SettingsState {
   showFooter: boolean
   title: string
   sidebarStyle: 'dark' | 'light'
+  logo: string
+  favicon: string
+  isWebConfigLoaded: boolean
 }
+
+function readCachedSiteConfig() {
+  try {
+    const raw = localStorage.getItem('domerry_site_config')
+    return raw ? JSON.parse(raw) : null
+  } catch (e) {
+    return null
+  }
+}
+
+const defaultAppLogo = import.meta.env.VITE_APP_LOGO || '/logo.svg'
+const cachedSiteConfig = readCachedSiteConfig()
 
 export const useSettingsStore = defineStore({
   id: 'settings',
@@ -31,8 +47,11 @@ export const useSettingsStore = defineStore({
     dynamicTitle: false,
     greyMode: false,
     showFooter: true,
-    title: 'Domerry 博客管理系统',
-    sidebarStyle: 'dark'
+    title: cachedSiteConfig?.name || 'Domerry 博客管理系统',
+    sidebarStyle: 'dark',
+    logo: cachedSiteConfig?.favicon || cachedSiteConfig?.logo || defaultAppLogo,
+    favicon: cachedSiteConfig?.favicon || defaultAppLogo,
+    isWebConfigLoaded: !!cachedSiteConfig
   }),
 
   actions: {
@@ -184,7 +203,64 @@ export const useSettingsStore = defineStore({
           console.error('Failed to parse saved settings:', error)
         }
       }
+      if (this.favicon) {
+        this.setFavicon(this.favicon)
+      }
+      this.fetchWebConfig()
     },
 
+    // 获取网站配置信息（同步图标与标题）
+    async fetchWebConfig() {
+      try {
+        const res: any = await getWebConfigApi()
+        if (res && res.data) {
+          const config = res.data
+          const defaultLogo = import.meta.env.VITE_APP_LOGO || '/logo.svg'
+          // 优先使用网站配置中的网站图标(favicon)，若无则使用网站Logo，若皆无则兜底使用 /logo.svg
+          const iconUrl = config.favicon || config.logo || defaultLogo
+
+          this.logo = iconUrl
+          this.favicon = config.favicon || defaultLogo
+          if (config.name) {
+            this.title = config.name
+            // 登录页面默认显示网站配置的名称
+            if (window.location.pathname.includes('/login') || !document.title) {
+              document.title = config.name
+            }
+          }
+          this.setFavicon(iconUrl)
+          this.isWebConfigLoaded = true
+
+          try {
+            localStorage.setItem(
+              'domerry_site_config',
+              JSON.stringify({
+                favicon: config.favicon,
+                logo: config.logo,
+                name: config.name
+              })
+            )
+          } catch (e) {
+            // 忽略存储失败
+          }
+        }
+      } catch (error) {
+        console.warn('获取网站配置失败，使用默认配置:', error)
+      }
+    },
+
+    // 动态设置浏览器标签栏图标
+    setFavicon(url: string) {
+      if (!url) return
+      const head = document.head || document.getElementsByTagName('head')[0]
+      const oldLinks = document.querySelectorAll("link[rel*='icon']")
+      oldLinks.forEach((el) => el.remove())
+
+      const link = document.createElement('link')
+      link.type = 'image/x-icon'
+      link.rel = 'shortcut icon'
+      link.href = url
+      head.appendChild(link)
+    }
   }
 }) 

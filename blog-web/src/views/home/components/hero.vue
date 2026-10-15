@@ -158,8 +158,11 @@ $header-offset: 64px;
 }
 
 .hero-copy {
-  // 文字压在纸白上，右侧留出封面竖栏的宽度
-  max-width: min(100%, 62ch);
+  // 文字压在纸白上，右侧留出封面竖栏的宽度。
+  // 注意全局是 border-box：max-width 含 padding，所以这里要把预留的右内边距加回去，
+  // 否则真正留给文字的一列只剩 62ch - 300px ≈ 325px，
+  // 没有 Songti SC 的机器（回退到 SimSun/Georgia，字形更宽）站名就会折成两行。
+  max-width: min(100%, calc(62ch + clamp(0px, 22vw, 300px)));
   padding-right: clamp(0px, 22vw, 300px);
 }
 

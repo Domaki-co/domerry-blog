@@ -128,13 +128,18 @@
           type="button"
           class="cp__btn cp__toggle"
           data-nodrag
+          :title="orderTitle"
           :aria-label="order === 'list' ? '顺序播放' : '随机播放'"
           :aria-pressed="order === 'random' ? 'true' : 'false'"
           @click="cycleOrder"
         >
-          <svg class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
+          <svg v-if="order === 'random'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M16 3h5v5" /><path d="M4 20L21 3" /><path d="M21 16v5h-5" />
             <path d="M15 15l6 6" /><path d="M4 4l5 5" />
+          </svg>
+          <svg v-else class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h9" /><path d="M4 12h9" /><path d="M4 18h9" />
+            <path d="M18.5 5v13" /><path d="M15.5 15l3 3 3-3" />
           </svg>
         </button>
 
@@ -336,6 +341,11 @@ export default {
     capIsLyric() {
       return !this.paused && this.lyricLines.length > 0 && this.activeLine >= 0
     },
+    orderTitle() {
+      return this.order === 'random'
+        ? '随机播放（点击切换为顺序播放）'
+        : '顺序播放（点击切换为随机播放）'
+    },
     loopTitle() {
       return { all: '列表循环', one: '单曲循环', none: '不循环' }[this.loop]
     },
@@ -486,6 +496,15 @@ export default {
       this.volume = this.player.audio.volume
       this.prevVolume = this.volume || 0.7
       this.muted = this.volume === 0
+
+      // APlayer 在构造末尾就会切一次曲目：随机模式下是 randomOrder[0]（不是 0），
+      // 而那次 listswitch 发生在 bindPlayerEvents 之前，我们监听不到，
+      // 镜像的 index 会停在 0 —— 于是标题/封面/队列高亮显示的是第一首，
+      // 实际播放的、歌词面板里滚动的却是随机列表里的另一首。
+      // 引擎状态才是唯一权威，初始化后以它为准对齐一次。
+      if (typeof this.player.list.index === 'number') {
+        this.index = this.player.list.index
+      }
 
       this.patchAudioPlay()
       this.bindPlayerEvents()

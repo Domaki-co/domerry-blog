@@ -111,10 +111,22 @@ public class AuthServiceImpl implements AuthService {
 
         // 返回用户信息
         LoginUserInfo loginUserInfo = BeanCopyUtil.copyObj(user, LoginUserInfo.class);
+        loginUserInfo.setUserSettings(parseUserSettings(user.getUserSettings()));
         loginUserInfo.setToken(tokenValue);
 
         StpUtil.getSession().set(Constants.CURRENT_USER, loginUserInfo);
         return loginUserInfo;
+    }
+
+    private Map<String, Object> parseUserSettings(String settings) {
+        if (settings != null && !settings.trim().isEmpty()) {
+            try {
+                return JSON.parseObject(settings, Map.class);
+            } catch (Exception e) {
+                log.warn("解析用户偏好配置异常: {}", e.getMessage());
+            }
+        }
+        return new HashMap<>();
     }
 
     private static void validateLogin(LoginDTO loginDTO, SysUser user) {
@@ -147,6 +159,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         LoginUserInfo loginUserInfo = BeanCopyUtil.copyObj(user, LoginUserInfo.class);
+        loginUserInfo.setUserSettings(parseUserSettings(user.getUserSettings()));
 
         //获取菜单权限列表
         if (source.equalsIgnoreCase(Constants.ADMIN)) {

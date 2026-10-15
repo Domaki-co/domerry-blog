@@ -8,7 +8,7 @@
     <FloatingButtons />
     <Lantern />
 <!--    <RandomVideo />-->
-    <Player />
+    <Player v-if="$store.state.musicEnabled" />
     <div class="cursor-container"></div>
     <ContextMenu ref="contextMenuRef" />
   </div>

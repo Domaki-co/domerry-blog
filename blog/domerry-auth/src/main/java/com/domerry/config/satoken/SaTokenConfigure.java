@@ -25,6 +25,7 @@ public class SaTokenConfigure implements WebMvcConfigurer {
                         "/favicon.ico",     // openapi接口文档
                         "/swagger-resources",
                         "/api/**",
+                        "/sys/web/config",
                         "/wechat/**",
                         "/localFile/**",
                         "/third/**"

@@ -264,9 +264,11 @@ import UploadImage from '@/components/Upload/Image.vue'
 import { getWebConfigApi, updateWebConfigApi } from '@/api/site/config'
 import { getDictDataByDictTypesApi } from '@/api/system/dict'
 import { uploadApi } from '@/api/file'
+import { useSettingsStore } from '@/store/modules/settings'
 
 import { Editor, Toolbar } from '@wangeditor/editor-for-vue'
 import '@wangeditor/editor/dist/css/style.css'
+const settingsStore = useSettingsStore()
 const editorRef = shallowRef()
 const mode = 'default'
 const toolbarConfig = {}
@@ -344,6 +346,7 @@ const submitForm = async () => {
       form.value.loginTypeList = JSON.stringify(loginTypeList.value)
       updateWebConfigApi(form.value).then(() => {
         ElMessage.success('保存成功')
+        settingsStore.fetchWebConfig()
       })
     }
   })

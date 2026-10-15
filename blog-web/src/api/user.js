@@ -24,6 +24,18 @@ export function updateProfileApi(data) {
 }
 
 /**
+ * 更新当前登录用户的偏好设置（如背景音乐开关、播放偏好等）
+ * @param {*} data 例如 { musicEnabled: true }
+ */
+export function updateUserSettingsApi(data) {
+    return request({
+        url: '/protal/user/settings',
+        method: 'put',
+        data
+    })
+}
+
+/**
  * 修改密码
  */
 export function updatePasswordApi(data) {

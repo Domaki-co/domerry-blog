@@ -1,9 +1,9 @@
 import request from '@/utils/request'
 
-// 获取网站配置信息
+// 获取网站配置信息（公开接口，免鉴权）
 export function getWebConfigApi() {
   return request({
-    url: '/sys/web/config',
+    url: '/api/webConfig',
     method: 'get'
   })
 }

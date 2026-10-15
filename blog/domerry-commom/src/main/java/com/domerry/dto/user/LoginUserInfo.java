@@ -37,4 +37,7 @@ public class LoginUserInfo implements Serializable {
 
     @ApiModelProperty(value = "角色信息")
     private List<String> roles;
+
+    @ApiModelProperty(value = "用户个性化偏好设置")
+    private java.util.Map<String, Object> userSettings;
 }

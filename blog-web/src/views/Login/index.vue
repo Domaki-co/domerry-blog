@@ -128,7 +128,7 @@
             <p class="form-subtitle">欢迎注册,请输入您的账号</p>
           </div>
           <el-form :model="registerForm" :rules="rules" ref="registerForm">
-            <el-form-item lable="昵称" prop="nickname">
+            <el-form-item class="form-item" prop="nickname">
               <el-input
                 prefix-icon="UserFilled"
                 v-model="registerForm.nickname"
@@ -150,7 +150,7 @@
                 v-model="registerForm.code"
                 placeholder="请输入验证码"
               >
-                <template #append">
+                <template #append>
                   <el-button @click="sendRegisterCode" :disabled="codeSending">
                     {{ codeButtonText }}
                   </el-button>
@@ -204,7 +204,7 @@
                 v-model="forgotForm.code"
                 placeholder="请输入验证码"
               >
-                <template #append">
+                <template #append>
                   <el-button
                     @click="sendVerificationCode"
                     :disabled="codeSending"
@@ -682,9 +682,35 @@ export default {
 .form-item {
   margin-bottom: 20px;
 
-  :deep(.el-input__inner) {
+  :deep(.el-input) {
+    --el-input-focus-border-color: var(--accent);
+  }
+
+  :deep(.el-input__wrapper) {
+    min-height: 44px;
     height: 44px;
+    padding: 0 14px;
+    border-radius: $border-radius-sm;
+    background-color: var(--input-bg);
+    box-shadow: 0 0 0 1px var(--rule) inset;
+    transition: box-shadow 0.2s ease;
+
+    &:hover {
+      box-shadow: 0 0 0 1px var(--rule-strong) inset;
+    }
+
+    &.is-focus {
+      box-shadow: 0 0 0 1px var(--accent) inset;
+    }
+  }
+
+  :deep(.el-input__inner) {
+    height: 100% !important;
     font-size: 14px;
+    color: var(--text-primary) !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
 
     &::placeholder {
       color: var(--text-tertiary);
@@ -692,8 +718,35 @@ export default {
   }
 
   :deep(.el-input__prefix) {
-    left: 12px;
     color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    margin-right: 8px;
+  }
+
+  :deep(.el-input-group__append) {
+    background-color: var(--surface);
+    box-shadow: 0 0 0 1px var(--rule) inset;
+    border: none;
+    border-radius: 0 $border-radius-sm $border-radius-sm 0;
+    padding: 0 14px;
+
+    .el-button {
+      border: none;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 500;
+      background: transparent;
+
+      &:hover {
+        opacity: 0.85;
+      }
+
+      &.is-disabled {
+        color: var(--text-tertiary);
+        background: transparent;
+      }
+    }
   }
 }
 

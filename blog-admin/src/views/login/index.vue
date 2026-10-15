@@ -16,7 +16,7 @@
           <div class="logo-wrapper">
             <Logo :size="80" class="floating-logo" :color="logoColor" />
           </div>
-          <h1 class="brand-title">{{ settings.title }}</h1>
+          <h1 class="brand-title">{{ settingsStore.title || settings.title }}</h1>
           <p class="brand-description">
             基于 Vue3 + TypeScript 打造的现代化博客系统
           </p>
@@ -304,6 +304,10 @@ watch(loginType, (newVal) => {
   } else {
     clearInterval(qrCodeTimer);
   }
+});
+
+onMounted(() => {
+  settingsStore.fetchWebConfig();
 });
 
 onUnmounted(() => {

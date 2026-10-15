@@ -6,22 +6,109 @@
         color: var(--text-secondary)!important; 
     }
 }
-//输入框
-.el-input__inner{
-    background: var(--card-bg) !important;
-    border: 1px solid var(--border-color)!important;
-    &:focus{
-        border: 1px solid $primary!important;
+// 输入框（适配 Element Plus 2.x 的 .el-input__wrapper 机制，彻底根治双重边框）
+.el-input {
+    --el-input-bg-color: var(--input-bg);
+    --el-input-text-color: var(--text-primary);
+    --el-input-border-color: var(--rule);
+    --el-input-hover-border-color: var(--rule-strong);
+    --el-input-focus-border-color: var(--accent);
+    --el-input-placeholder-color: var(--text-tertiary);
+    --el-input-border-radius: #{$border-radius-sm};
+
+    .el-input__wrapper {
+        background-color: var(--input-bg) !important;
+        border-radius: $border-radius-sm !important;
+        box-shadow: 0 0 0 1px var(--rule) inset !important;
+        transition: box-shadow 0.2s ease, background-color 0.2s ease;
+
+        &:hover {
+            box-shadow: 0 0 0 1px var(--rule-strong) inset !important;
+        }
+
+        &.is-focus {
+            box-shadow: 0 0 0 1px var(--accent) inset !important;
+        }
+    }
+
+    .el-input__inner {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
+        color: var(--text-primary) !important;
+        font-family: inherit;
+
+        &::placeholder {
+            color: var(--text-tertiary) !important;
+        }
+    }
+
+    .el-input__prefix,
+    .el-input__suffix {
+        color: var(--text-secondary);
     }
 }
 
-//文本域
-.el-textarea__inner{
-    background: var(--card-bg)!important;
-    border: 1px solid var(--border-color)!important;
+// 强制清除任何可能被老旧选择器残留污染的 inner input 边框与背景
+.el-input__inner {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
 
-    &:focus{
-        border: 1px solid $primary!important;
+// 文本域（Element Plus 2.x 无 wrapper，直接作用于 .el-textarea__inner）
+.el-textarea {
+    --el-input-bg-color: var(--input-bg);
+    --el-input-text-color: var(--text-primary);
+    --el-input-border-color: var(--rule);
+    --el-input-hover-border-color: var(--rule-strong);
+    --el-input-focus-border-color: var(--accent);
+    --el-input-placeholder-color: var(--text-tertiary);
+    --el-input-border-radius: #{$border-radius-sm};
+
+    .el-textarea__inner {
+        background-color: var(--input-bg) !important;
+        color: var(--text-primary) !important;
+        border-radius: $border-radius-sm !important;
+        border: none !important;
+        box-shadow: 0 0 0 1px var(--rule) inset !important;
+        transition: box-shadow 0.2s ease, background-color 0.2s ease;
+        font-family: inherit;
+
+        &::placeholder {
+            color: var(--text-tertiary) !important;
+        }
+
+        &:hover {
+            box-shadow: 0 0 0 1px var(--rule-strong) inset !important;
+        }
+
+        &:focus {
+            box-shadow: 0 0 0 1px var(--accent) inset !important;
+            outline: none !important;
+        }
+    }
+}
+
+// 下拉选择器输入外壳
+.el-select {
+    --el-select-input-focus-border-color: var(--accent);
+
+    .el-select__wrapper {
+        background-color: var(--input-bg) !important;
+        border-radius: $border-radius-sm !important;
+        box-shadow: 0 0 0 1px var(--rule) inset !important;
+        transition: box-shadow 0.2s ease;
+
+        &:hover {
+            box-shadow: 0 0 0 1px var(--rule-strong) inset !important;
+        }
+
+        &.is-focused {
+            box-shadow: 0 0 0 1px var(--accent) inset !important;
+        }
     }
 }
 
@@ -164,17 +251,33 @@
         margin: 0 12px !important;
     }
 
-    .el-input__inner {
-        height: 34px !important;
-        line-height: 34px !important;
-        width: 50px !important;
-        padding: 0 8px !important;
-        text-align: center !important;
-        border-radius: $border-radius-sm !important;
-        transition: all 0.3s ease !important;
-        
-        &:focus {
-            box-shadow: 0 0 0 2px rgba($primary, 0.1) !important;
+    .el-pagination__jump {
+        .el-input {
+            width: 50px !important;
+            margin: 0 4px !important;
+
+            .el-input__wrapper {
+                height: 32px !important;
+                padding: 0 4px !important;
+                border-radius: $border-radius-sm !important;
+                box-shadow: 0 0 0 1px var(--rule) inset !important;
+                background: var(--card-bg) !important;
+
+                &.is-focus {
+                    box-shadow: 0 0 0 1px $accent inset !important;
+                }
+            }
+
+            .el-input__inner {
+                height: 32px !important;
+                line-height: 32px !important;
+                text-align: center !important;
+                padding: 0 !important;
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                font-family: $font-mono !important;
+            }
         }
     }
 

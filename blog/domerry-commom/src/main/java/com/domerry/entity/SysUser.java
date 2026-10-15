@@ -79,4 +79,7 @@ public class SysUser implements Serializable {
     @TableField(fill = FieldFill.UPDATE)
     @JsonFormat(pattern = DateUtil.YYYY_MM_DD_HH_MM_SS, timezone = "GMT+8")
     private LocalDateTime updateTime;
+
+    @ApiModelProperty(value = "用户个性化设置(JSON格式)")
+    private String userSettings;
 }

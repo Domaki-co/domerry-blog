@@ -137,7 +137,7 @@ const rules = reactive<FormRules>({
 })
 
 const parseImage = (images: string) => {
-  return images.split(',')
+  return images ? images.split(',') : []
 }
 
 // 获取标签列表
@@ -199,6 +199,8 @@ const handleAdd = () => {
   dialog.title = '新增说说'
   dialog.visible = true
   momentForm.id = undefined
+  momentForm.userId = undefined
+  momentForm.createTime = undefined
   momentForm.content = ''
   momentForm.images = ''
 }
@@ -209,7 +211,7 @@ const handleUpdate = (row: any) => {
   dialog.title = '修改说说'
   dialog.visible = true
   Object.assign(momentForm, row)
-  momentForm.images = momentForm.images.split(',')
+  momentForm.images = row.images ? row.images.split(',') : []
 }
 
 // 富文本编辑器创建完成
@@ -225,14 +227,19 @@ const submitForm = async () => {
     if (valid) {
       submitLoading.value = true
       try {
-        if (momentForm.images && momentForm.images.length > 0) { 
-          momentForm.images = momentForm.images.join(',')
+        // 后端 images 是逗号分隔的字符串，UploadImage 多选时给出数组。
+        // 空数组也必须归一化成空串，否则 Jackson 无法把 [] 反序列化成 String。
+        const payload = {
+          ...momentForm,
+          images: Array.isArray(momentForm.images)
+            ? momentForm.images.filter(Boolean).join(',')
+            : (momentForm.images || '')
         }
         if (dialog.type === 'add') {
-          await addSysMomentApi(momentForm)
+          await addSysMomentApi(payload)
           ElMessage.success('新增成功')
         } else {
-          await updateSysMomentApi(momentForm)
+          await updateSysMomentApi(payload)
           ElMessage.success('修改成功')
         }
         getList()

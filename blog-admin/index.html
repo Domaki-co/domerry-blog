@@ -7,6 +7,29 @@
     <meta name="keywords" content="%VITE_APP_KEYWORDS%" />
     <meta name="description" content="%VITE_APP_DESCRIPTION%" />
     <title>%VITE_APP_TITLE%</title>
+    <script>
+      (function() {
+        try {
+          var raw = localStorage.getItem('domerry_site_config');
+          if (raw) {
+            var conf = JSON.parse(raw);
+            var icon = conf.favicon || conf.logo;
+            if (icon) {
+              var old = document.querySelectorAll("link[rel*='icon']");
+              old.forEach(function(el) { el.remove(); });
+              var link = document.createElement('link');
+              link.type = 'image/x-icon';
+              link.rel = 'shortcut icon';
+              link.href = icon;
+              document.head.appendChild(link);
+            }
+            if (conf.name) {
+              document.title = conf.name;
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

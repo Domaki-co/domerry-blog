@@ -1,5 +1,6 @@
 import { createStore } from 'vuex'
 import { loginApi,logoutApi,getUserInfoApi } from '@/api/auth'
+import { updateUserSettingsApi } from '@/api/user'
 import { getToken, setToken, removeToken } from '@/utils/cookie'
 
 /**
@@ -18,9 +19,22 @@ function readCachedUser() {
   }
 }
 
+function readInitialMusicEnabled() {
+  const user = readCachedUser()
+  if (user && user.userSettings && typeof user.userSettings.musicEnabled === 'boolean') {
+    return user.userSettings.musicEnabled
+  }
+  const guestVal = localStorage.getItem('guest_music_enabled')
+  if (guestVal !== null) {
+    return guestVal !== 'false'
+  }
+  return true
+}
+
 export default createStore({
   state: {
     userInfo: readCachedUser(),
+    musicEnabled: readInitialMusicEnabled(),
     webSiteInfo: {
       showList:[]
     },
@@ -34,6 +48,9 @@ export default createStore({
     isUnread: false
   },
   getters: {
+    musicEnabled(state) {
+      return state.musicEnabled
+    },
     /**
      * 是否管理员（后端 /auth/info 返回 roles 数组）
      */
@@ -56,10 +73,26 @@ export default createStore({
     SET_USER_INFO(state, userInfo) {
       state.userInfo = userInfo || null
       if (userInfo) {
+        if (userInfo.userSettings && typeof userInfo.userSettings.musicEnabled === 'boolean') {
+          state.musicEnabled = userInfo.userSettings.musicEnabled
+        }
         sessionStorage.setItem("user", JSON.stringify(userInfo))
       } else {
         //退出登录时不能往 sessionStorage 里写字符串 "null" 占位，直接删掉 key
         sessionStorage.removeItem("user")
+      }
+    },
+
+    SET_MUSIC_ENABLED(state, enabled) {
+      state.musicEnabled = enabled
+      if (state.userInfo) {
+        if (!state.userInfo.userSettings) {
+          state.userInfo.userSettings = {}
+        }
+        state.userInfo.userSettings.musicEnabled = enabled
+        sessionStorage.setItem("user", JSON.stringify(state.userInfo))
+      } else {
+        localStorage.setItem('guest_music_enabled', String(enabled))
       }
     },
 
@@ -161,6 +194,20 @@ export default createStore({
 
     hideLoading({ commit }) {
       commit('SET_LOADING', false)
+    },
+
+    /**
+     * 切换音乐播放器开启/关闭状态，并自动持久化到数据库（登录用户）或 localStorage（游客）
+     */
+    async toggleMusicEnabled({ commit, state }, enabled) {
+      commit('SET_MUSIC_ENABLED', enabled)
+      if (state.userInfo && getToken()) {
+        try {
+          await updateUserSettingsApi({ musicEnabled: enabled })
+        } catch (e) {
+          console.warn('更新用户偏好配置失败:', e)
+        }
+      }
     }
   }
 })

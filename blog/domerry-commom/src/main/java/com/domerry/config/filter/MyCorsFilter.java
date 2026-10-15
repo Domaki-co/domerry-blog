@@ -19,7 +19,7 @@ import java.io.IOException;
 @Component
 public class MyCorsFilter implements Filter {
 
-    @Value("${cors.allowed-origins:http://localhost:3001,http://localhost:30001,https://your-domain.example,https://admin.your-domain.example}")
+    @Value("${cors.allowed-origins")
     private String allowedOrigins;
 
     @Override
