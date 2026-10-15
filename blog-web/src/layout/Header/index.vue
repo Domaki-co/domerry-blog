@@ -1,10 +1,7 @@
 <template>
   <header
     class="site-header"
-    :class="{
-      'header-hidden': !isHeaderVisible,
-      'header-transparent': headerTransparent
-    }"
+    :class="{ 'header-hidden': !isHeaderVisible }"
   >
     <nav class="navbar">
       <!-- 移动端菜单按钮 -->
@@ -124,10 +121,6 @@ export default {
       showMobileSearch: false,
       lastScrollTop: 0,
       isHeaderVisible: true,
-      // 当前滚动距离，供首页透明顶栏判断何时切回毛玻璃
-      scrollTop: 0,
-      // 首屏大图高度就是视口高度，窗口大小变化时要跟着更新
-      viewportHeight: window.innerHeight,
       menuItems: [
         {
           name: '首页',
@@ -220,16 +213,6 @@ export default {
         path: item.children ? item.children[0].path : item.path
       }))
     },
-    /**
-     * 顶部标签浮在首页整屏大图上（透明 + 白字），滚出首屏后恢复原来的毛玻璃；
-     * 其他页面一律保持现状
-     */
-    headerTransparent() {
-      if (this.$route.path !== '/') return false
-      // 首屏高度就是大图高度，减掉顶栏自身 64px 再切换
-      const heroHeight = Math.max(this.viewportHeight - 64, 0)
-      return this.scrollTop < heroHeight
-    }
   },
   methods: {
     handleOpenMobileMenu() {
@@ -303,7 +286,6 @@ export default {
     },
     handleScroll() {
       const currentScrollTop = window.pageYOffset || document.documentElement.scrollTop
-      this.scrollTop = currentScrollTop
 
       // 如果滚动位置小于 100px，始终显示 header
       if (currentScrollTop < 100) {
@@ -322,16 +304,11 @@ export default {
       }
 
       this.lastScrollTop = currentScrollTop
-    },
-    handleResize() {
-      this.viewportHeight = window.innerHeight
     }
   },
   mounted() {
     // 添加滚动事件监听
     window.addEventListener('scroll', this.handleScroll)
-    // 首屏大图高度随视口变化，窗口缩放时要重新判断顶栏是否透明
-    window.addEventListener('resize', this.handleResize)
 
     // 保留原有的事件监听
     document.addEventListener('click', (e) => {
@@ -344,7 +321,6 @@ export default {
   beforeUnmount() {
     // 移除滚动事件监听
     window.removeEventListener('scroll', this.handleScroll)
-    window.removeEventListener('resize', this.handleResize)
     document.removeEventListener('click', this.closeDropdown)
   }
 }
@@ -880,89 +856,8 @@ $header-height: 64px;
   }
 }
 
-// ── 首屏透明态：悬浮在整屏大图上，文字与图标统一转白 ──
-// 深色模式里 :root[data-theme='dark'] .site-header 带半透明底色（特异度更高），
-// 所以这里必须带上同样的前缀选择器才能压得过它
-.site-header.header-transparent,
-:root[data-theme='dark'] .site-header.header-transparent {
-  background: transparent;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  border-bottom-color: transparent;
-
-  .logo-mark {
-    color: rgba(255, 255, 255, 0.85);
-  }
-
-  .logo-text {
-    color: #fff;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.4);
-  }
-
-  .nav-center .nav-link {
-    color: rgba(255, 255, 255, 0.82);
-
-    i {
-      color: rgba(255, 255, 255, 0.72);
-    }
-
-    &:hover {
-      color: #fff;
-
-      i {
-        color: #fff;
-      }
-    }
-
-    &.active {
-      color: #fff;
-
-      i {
-        color: #fff;
-      }
-
-      &::after {
-        background: #fff;
-      }
-    }
-  }
-
-  .search-btn {
-    color: rgba(255, 255, 255, 0.9);
-    border-color: rgba(255, 255, 255, 0.3);
-
-    &:hover {
-      color: #fff;
-      border-color: rgba(255, 255, 255, 0.6);
-      background: rgba(255, 255, 255, 0.12);
-    }
-  }
-
-  .message-btn {
-    color: rgba(255, 255, 255, 0.9);
-
-    &:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.14);
-    }
-  }
-
-  .avatar {
-    border-color: rgba(255, 255, 255, 0.5);
-
-    &:hover {
-      border-color: #fff;
-    }
-  }
-
-  .menu-btn,
-  .mobile-search-btn {
-    color: #fff;
-  }
-}
-
 // 深色模式下顶栏底色略加深，避免和页面底色糊在一起
-:root[data-theme='dark'] .site-header:not(.header-transparent) {
+:root[data-theme='dark'] .site-header {
   background: color-mix(in srgb, var(--surface) 88%, transparent);
 }
 </style>

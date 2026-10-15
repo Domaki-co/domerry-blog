@@ -12,6 +12,7 @@
     :data-muted="muted ? 'true' : 'false'"
     :data-docked="docked && !open ? 'true' : 'false'"
     :data-sheet="showList ? 'open' : 'closed'"
+    :data-side="side"
     role="region"
     aria-label="音乐播放器"
     @pointerenter="onRootPointerEnter"
@@ -194,7 +195,7 @@
           <h3>Queue</h3>
           <p>{{ queueMeta }}</p>
         </div>
-        <div ref="qList" class="cp__q-list">
+        <div ref="qList" class="cp__q-list" @scroll.passive="onQueueScroll">
           <button
             v-for="(song, i) in audio"
             :key="i"
@@ -238,6 +239,8 @@ const POS_KEY = 'cp-pos'
 const SHUFFLE_KEY = 'cp-shuffle'
 const REPEAT_KEY = 'cp-repeat'
 const VOL_KEY = 'cp-vol'
+const DOCK_DELAY = 2000   // 空闲多久后吸附到侧边（毫秒）
+
 
 function readStore(key) {
   try {
@@ -295,7 +298,7 @@ export default {
       x: 0,
       y: 0,
       k: 1,
-      docked: false,
+      docked: true,
       dragging: false,
       snap: false,
       capLine: ''
@@ -403,10 +406,13 @@ export default {
         item.lrc = ''
         item.lrcLoading = false
         item.coverLoaded = false
+        item.coverLoading = false
         return item
       })
       this.audio = processedData
-      this.preloadCovers()
+      // 这里刻意不预载任何封面：后端封面单张就有几百 KB（首曲实测 868KB），
+      // 而播放器默认是收起的胶囊态、也没在播放，为它拉图纯属浪费首屏带宽。
+      // 收起态用 CSS 生成的黑胶兜底，等用户播放或展开时再按需加载。
 
       this.$nextTick(() => {
         this.initAPlayer()
@@ -419,7 +425,8 @@ export default {
   },
   mounted() {
     this.layout()
-    this.resetIdle()
+    // 首次进入默认吸附在边缘（只露半边），不展开；空闲计时照常启动
+    this.scheduleDock()
     window.addEventListener('resize', this.onResize)
     document.addEventListener('pointerdown', this.onDocPointerDown)
     document.addEventListener('pointerdown', this.onDocPointerDownOutside)
@@ -457,6 +464,11 @@ export default {
         this.player.destroy()
       }
 
+      // APlayer 只当音频引擎和歌词解析器用，界面完全隐藏（.cp__engine 是 1px 的透明盒）。
+      // 但它仍会为当前曲目渲染 <img> 去拉封面，那张图没人看得见却要几百 KB，
+      // 所以喂给它的 audio 里把 cover 抹掉 —— 封面由我们自己的 .cp__art 按需加载。
+      const engineAudio = this.audio.map((song) => ({ ...song, cover: '' }))
+
       this.player = new APlayer({
         container: this.$refs.aplayer,
         lrcType: 1,
@@ -466,7 +478,7 @@ export default {
         order: this.order,
         loop: this.loop,
         volume: this.volume,
-        audio: this.audio
+        audio: engineAudio
       })
 
       this.order = this.player.options.order
@@ -486,6 +498,7 @@ export default {
 
       player.on('play', () => {
         this.paused = false
+        this.loadCover(this.index)
         this.refreshLyric()
         this.loadCurrentLyric()
         this.updateCapLine()
@@ -507,6 +520,7 @@ export default {
         this.activeLine = 0
         this.lyricLines = []
         this._lyricRef = undefined
+        this.loadCover(this.index)
         this.updateCapLine()
         this.$nextTick(() => {
           this.refreshLyric()
@@ -715,18 +729,36 @@ export default {
       const seconds = Math.floor(time % 60)
       return `${minutes}:${String(seconds).padStart(2, '0')}`
     },
-    // 预加载封面：加载完成后才把圆盘切成图片，加载中保持光盘；失败则回退成光盘
-    preloadCovers() {
-      this.audio.forEach((song) => {
-        if (!song.cover) return
-        const img = new Image()
-        img.onload = () => { song.coverLoaded = true }
-        img.onerror = () => {
-          song.cover = ''
-          song.coverLoaded = false
-        }
-        img.src = song.cover
-      })
+    // 封面按需加载：只拉当前曲目和队列里可见的那几行，不再一次性预载整张歌单。
+    // 后端封面存在 MinIO，单张要 1~5s，27 首全预载会占满并发连接、把首屏一起拖慢。
+    // 加载完成后才把圆盘切成图片，加载中保持光盘；失败则回退成光盘。
+    loadCover(i) {
+      const song = this.audio[i]
+      if (!song || !song.cover || song.coverLoaded || song.coverLoading) return
+      song.coverLoading = true
+      const img = new Image()
+      img.onload = () => {
+        song.coverLoading = false
+        song.coverLoaded = true
+      }
+      img.onerror = () => {
+        song.coverLoading = false
+        song.cover = ''
+        song.coverLoaded = false
+      }
+      img.src = song.cover
+    },
+    // 队列展开时只补视口内的封面，滚动时再补新露出来的行
+    loadVisibleQueueCovers() {
+      const box = this.$refs.qList
+      if (!box) return
+      const top = box.scrollTop
+      const bottom = top + box.clientHeight
+      for (let i = 0; i < box.children.length; i++) {
+        const el = box.children[i]
+        if (el.offsetTop + el.offsetHeight < top || el.offsetTop > bottom) continue
+        this.loadCover(i)
+      }
     },
     qArtStyle(song) {
       const style = { '--h': hueFor(song) }
@@ -737,7 +769,15 @@ export default {
     // ── 队列 ──
     toggleList() {
       this.showList = !this.showList
-      if (this.showList) this.$nextTick(() => this.scrollQueue())
+      if (this.showList) {
+        this.$nextTick(() => {
+          this.scrollQueue()
+          this.loadVisibleQueueCovers()
+        })
+      }
+    },
+    onQueueScroll() {
+      this.loadVisibleQueueCovers()
     },
     // 与 APlayer 列表点击一致：点当前曲目切播放/暂停，点其他曲目切歌并播放
     selectTrack(i) {
@@ -791,10 +831,13 @@ export default {
       if (this.docked) this.docked = false
     },
     resetIdle() {
-      clearTimeout(this._idleTimer)
       this.undock()
+      this.scheduleDock()
+    },
+    scheduleDock() {
+      clearTimeout(this._idleTimer)
       if (this.open || this._drag) return
-      this._idleTimer = setTimeout(this.tryDock, 5000)
+      this._idleTimer = setTimeout(this.tryDock, DOCK_DELAY)
     },
     tryDock() {
       if (this.open || this._drag) return
@@ -1085,6 +1128,18 @@ $cd-art:
 .cp[data-state='open'] .cp__cap {
   opacity: 0;
   pointer-events: none;
+}
+
+// 吸附在左侧时把胶囊镜像过来：唱片始终朝外，贴边后露出的仍是半张光盘，
+// 而不是播放按钮。
+.cp[data-side='l'] .cp__cap {
+  flex-direction: row-reverse;
+}
+
+.cp[data-side='l'] .cp__cap-open {
+  flex-direction: row-reverse;
+  padding: 0 1px 0 0;
+  text-align: right;
 }
 
 .cp__cap-open {

@@ -3,9 +3,12 @@
     <main class="app-content">
       <Announcement />
       <!-- 内容 -->
-      <transition name="page" mode="out-in">
-        <router-view :key="$route.fullPath"></router-view>
-      </transition>
+      <!-- vue-router 4 要求用插槽写法包 Transition，否则 dev 下会打印弃用警告 -->
+      <router-view v-slot="{ Component }">
+        <transition name="page" mode="out-in">
+          <component :is="Component" :key="$route.fullPath" />
+        </transition>
+      </router-view>
     </main>
   </div>
 </template>

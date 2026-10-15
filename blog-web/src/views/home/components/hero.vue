@@ -1,35 +1,36 @@
 <template>
   <section class="hero">
-    <!-- 背景轮播：多张封面时自动淡入淡出 -->
-    <div v-if="slides.length" class="hero-media">
-      <div
-        v-for="(slide, index) in slides"
-        :key="slide.key"
-        class="hero-slide"
-        :class="{ 'is-active': index === activeIndex }"
+    <!--
+      首屏大图：只用一张 —— 最新那篇文章的封面。
+      不做轮播：轮播是「每 6 秒换一张装饰图」，既抢首屏带宽，也和「工程笔记」的
+      台账语言不是一路。这张图有明确语义（它是这一篇的封面，和右侧「最新」文案同源），
+      所以留着；但它被压成右侧一条窄栏，左边让给文字。
+    -->
+    <div v-if="cover && !coverFailed" class="hero-media">
+      <img
+        :src="cover"
+        :alt="latest ? latest.title : ''"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        @error="coverFailed = true"
       >
-        <img
-          v-if="!failedIndexes.includes(index)"
-          :src="slide.cover"
-          :alt="slide.title"
-          @error="handleImageError(index)"
-        >
-      </div>
     </div>
 
-    <!-- 文字贴底左对齐，右下角竖排「向下」 -->
     <div class="hero-inner">
-      <h1 class="hero-name reveal">{{ siteName }}</h1>
-      <p v-if="siteSummary" class="hero-tag reveal">{{ siteSummary }}</p>
+      <div class="hero-copy">
+        <h1 class="hero-name reveal">{{ siteName }}</h1>
+        <p v-if="siteSummary" class="hero-tag reveal">{{ siteSummary }}</p>
 
-      <div v-if="latest" class="hero-latest reveal">
-        <div class="line">
-          <time>{{ latest.date }}</time>
-          <span v-if="latest.category" class="cat">{{ latest.category }}</span>
+        <div v-if="latest" class="hero-latest reveal">
+          <div class="line">
+            <time>{{ latest.date }}</time>
+            <span v-if="latest.category" class="cat">{{ latest.category }}</span>
+          </div>
+          <h2>
+            <router-link :to="`/post/${latest.id}`">{{ latest.title }}</router-link>
+          </h2>
         </div>
-        <h2>
-          <router-link :to="`/post/${latest.id}`">{{ latest.title }}</router-link>
-        </h2>
       </div>
     </div>
 
@@ -43,38 +44,21 @@
 export default {
   name: 'HomeHero',
   props: {
+    // 由首页传入的置顶/最新文章列表，这里只取第一条当「最新」
     carousels: {
       type: Array,
       default: () => []
-    },
-    interval: {
-      type: Number,
-      default: 6000
     }
   },
   data() {
     return {
-      activeIndex: 0,
-      timer: null,
-      // 加载失败的封面下标集合。失败就撤掉这张图，露出 .hero 的深色底，
-      // 不再回退到 beijing.jpg —— 那张图是开源清理时生成的 AI 热带插画，
-      // 和这个运维博客完全不搭（详见 docs/新仓库开源交付方案.md）
-      failedIndexes: []
+      // 封面加载失败就撤掉整块图，露出 .hero 的纸白底，不做占位图回退
+      coverFailed: false
     }
   },
   computed: {
-    slides() {
-      return this.carousels
-        .filter(item => item && item.cover)
-        .map(item => ({
-          key: `slide-${item.id}`,
-          id: item.id,
-          title: item.title,
-          cover: item.cover
-        }))
-    },
     /**
-     * 首屏「最近更新」取轮播第一篇文章（后端按置顶+时间返回），无数据时整块不渲染
+     * 首屏「最新」取列表第一条（后端按置顶 + 时间返回），无数据时整块不渲染
      */
     latest() {
       const first = this.carousels.find(item => item && item.id)
@@ -87,6 +71,13 @@ export default {
         category: first.categoryName || ''
       }
     },
+    /**
+     * 首屏大图 = 最新那篇的封面。没有就整块不渲染，走纯排版报头
+     */
+    cover() {
+      const first = this.carousels.find(item => item && item.id && item.cover)
+      return first ? first.cover : ''
+    },
     siteName() {
       const info = this.$store.state.webSiteInfo
       if (info && info.name) return info.name
@@ -98,41 +89,9 @@ export default {
     }
   },
   watch: {
-    carousels() {
-      this.activeIndex = 0
-      this.restart()
-    }
-  },
-  mounted() {
-    this.restart()
-  },
-  beforeUnmount() {
-    this.stop()
-  },
-  methods: {
-    restart() {
-      this.stop()
-      if (this.slides.length <= 1) return
-      this.timer = setInterval(() => {
-        // 切到后台标签页时暂停，回来接着轮播
-        if (document.hidden) return
-        this.activeIndex = (this.activeIndex + 1) % this.slides.length
-      }, this.interval)
-    },
-    stop() {
-      if (this.timer) {
-        clearInterval(this.timer)
-        this.timer = null
-      }
-    },
-    /**
-     * 封面加载失败：记下下标并撤掉这张图，露出 .hero 的深色底。
-     * 不用占位图 —— 占位图本身会变成一块比纯色底更扎眼的异物。
-     */
-    handleImageError(index) {
-      if (!this.failedIndexes.includes(index)) {
-        this.failedIndexes.push(index)
-      }
+    // 换了最新文章就重新给封面一次机会
+    cover() {
+      this.coverFailed = false
     }
   }
 }
@@ -140,12 +99,13 @@ export default {
 
 <style lang="scss" scoped>
 // ════════════════════════════════════════════════════════════════
-//  首屏 · 整屏大图
+//  首屏 · 报头
 //
-//  文字不居中：站名左对齐贴底，下面一条细线接「最近更新」。
-//  这样首屏同时是门面和内容入口，而不是一块纯装饰的图。
-//  全页只有这一处动效（图片收拢 + 文字依次浮起），
-//  prefers-reduced-motion 下全部停掉。
+//  取向上放弃「整屏大图 + 居中标题」那套门户长相，改成一本工程笔记的扉页：
+//  左边站名 + 最新一篇，右边一条窄的封面竖栏，底下一条实线压住统计行。
+//  高度从 100vh 降到 ~64vh —— 纯内容不需要占满一屏，让下面的台账早点露出来。
+//
+//  全页只有一处动效（三段文字依次浮起），prefers-reduced-motion 下停掉。
 // ════════════════════════════════════════════════════════════════
 
 $header-offset: 64px;
@@ -153,71 +113,35 @@ $header-offset: 64px;
 .hero {
   position: relative;
   width: 100%;
-  height: 100vh;
-  height: 100dvh;
-  min-height: 600px;
+  // 不再占满整屏：内容说了算，但给一个下限免得窄内容时太扁
+  min-height: min(64vh, 620px);
   // 顶栏是 fixed 的，#app 又留了 64px padding，这里负边距顶回页面最顶部
   margin-top: -$header-offset;
+  padding-top: $header-offset;
   overflow: hidden;
-  background: #0b0e12;
+  // 纸白底 + 一条底部实线，和全站的台账语言对齐
+  background: var(--background);
+  border-bottom: 1px solid var(--rule);
   display: flex;
   align-items: flex-end;
 }
 
+// ── 右侧封面竖栏 ──
 .hero-media {
   position: absolute;
-  inset: 0;
+  top: $header-offset;
+  right: 0;
+  bottom: 0;
+  width: clamp(180px, 26vw, 380px);
+  overflow: hidden;
 
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-  }
-
-  // 底部压暗保证白字可读，左侧再压一层让贴底的文字更实
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      linear-gradient(
-        to top,
-        rgba(5, 7, 10, 0.94) 0%,
-        rgba(5, 7, 10, 0.62) 26%,
-        rgba(5, 7, 10, 0.14) 58%,
-        rgba(5, 7, 10, 0.34) 100%
-      ),
-      linear-gradient(
-        to right,
-        rgba(5, 7, 10, 0.66) 0%,
-        rgba(5, 7, 10, 0.18) 46%,
-        rgba(5, 7, 10, 0) 78%
-      );
-  }
-}
-
-.hero-slide {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity 1.2s ease;
-
-  img {
-    transform: scale(1.04);
-  }
-
-  &.is-active {
-    opacity: 1;
-
-    img {
-      animation: heroSettle 1.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-  }
-}
-
-@keyframes heroSettle {
-  to {
-    transform: scale(1);
+    // 往左淡出到纸白，避免一条硬边把版面切成两半
+    mask-image: linear-gradient(to left, #000 62%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to left, #000 62%, transparent 100%);
   }
 }
 
@@ -227,31 +151,40 @@ $header-offset: 64px;
   width: 100%;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 clamp(20px, 4vw, 48px) clamp(48px, 7vh, 86px);
-  color: #fff;
+  padding: clamp(40px, 6vh, 72px) clamp(20px, 4vw, 48px) clamp(28px, 4vh, 44px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 4vh, 40px);
+}
+
+.hero-copy {
+  // 文字压在纸白上，右侧留出封面竖栏的宽度
+  max-width: min(100%, 62ch);
+  padding-right: clamp(0px, 22vw, 300px);
 }
 
 .hero-name {
   font-family: $font-serif;
-  font-size: clamp(2.5rem, 6vw, 4.1rem);
-  line-height: 1.06;
+  font-size: clamp(2.1rem, 5vw, 3.5rem);
+  line-height: 1.08;
   letter-spacing: 0.005em;
   font-weight: 600;
-  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.45);
+  color: var(--text-primary);
 }
 
 .hero-tag {
-  margin-top: 14px;
+  margin-top: 12px;
   font-size: clamp(0.86rem, 1.1vw, 0.98rem);
-  color: rgba(255, 255, 255, 0.76);
+  color: var(--text-secondary);
   max-width: 44ch;
 }
 
 .hero-latest {
-  margin-top: clamp(30px, 5vh, 54px);
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.22);
-  max-width: 640px;
+  margin-top: clamp(24px, 4vh, 40px);
+  padding-top: 18px;
+  // 1px 实线，不用卡片阴影
+  border-top: 1px solid var(--rule);
+  max-width: 58ch;
 
   .line {
     display: flex;
@@ -260,23 +193,22 @@ $header-offset: 64px;
     font-family: $font-mono;
     font-size: 0.76rem;
     letter-spacing: 0.04em;
-    // 大图上用亮一档的琥珀，否则 #a86a10 在暗底上发闷
-    color: #e0a94a;
+    color: var(--accent);
 
     .cat {
-      color: rgba(255, 255, 255, 0.6);
+      color: var(--text-tertiary);
     }
   }
 
   h2 {
     margin-top: 9px;
     font-family: $font-serif;
-    font-size: clamp(1.25rem, 2.3vw, 1.75rem);
+    font-size: clamp(1.2rem, 2.2vw, 1.65rem);
     line-height: 1.35;
     font-weight: 600;
 
     a {
-      color: #fff;
+      color: var(--text-primary);
       text-decoration: none;
       // 下划线从左侧展开，不用 border-bottom（会占掉行盒高度）
       background-image: linear-gradient(currentColor, currentColor);
@@ -295,7 +227,7 @@ $header-offset: 64px;
 .hero-scroll {
   position: absolute;
   right: clamp(20px, 4vw, 48px);
-  bottom: clamp(48px, 7vh, 86px);
+  bottom: clamp(28px, 4vh, 44px);
   z-index: 2;
   display: flex;
   align-items: center;
@@ -307,7 +239,7 @@ $header-offset: 64px;
   font-family: $font-mono;
   font-size: 0.72rem;
   letter-spacing: 0.14em;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-tertiary);
   writing-mode: vertical-rl;
   transition: color 0.25s ease;
 
@@ -317,13 +249,13 @@ $header-offset: 64px;
     height: 52px;
     background: linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.5),
-      rgba(255, 255, 255, 0)
+      var(--rule-strong),
+      transparent
     );
   }
 
   &:hover {
-    color: #fff;
+    color: var(--text-primary);
   }
 }
 
@@ -354,18 +286,20 @@ $header-offset: 64px;
 }
 
 @include responsive(lg) {
-  .hero {
-    min-height: 520px;
+  .hero-copy {
+    padding-right: 0;
+    max-width: 100%;
   }
 
-  .hero-latest {
-    max-width: 100%;
+  // 窄屏下封面竖栏会挤掉正文，直接撤掉，退回纯排版报头
+  .hero-media {
+    display: none;
   }
 }
 
 @include responsive(md) {
   .hero {
-    min-height: 480px;
+    min-height: min(56vh, 480px);
   }
 
   // 窄屏下竖排的「向下」会和正文抢空间
@@ -376,19 +310,10 @@ $header-offset: 64px;
 
 // 尊重系统的「减少动态效果」设置
 @media (prefers-reduced-motion: reduce) {
-  .hero-slide,
-  .hero-slide img,
   .reveal {
     animation: none !important;
     transition: none !important;
-  }
-
-  .reveal {
     opacity: 1;
-    transform: none;
-  }
-
-  .hero-slide img {
     transform: none;
   }
 }

@@ -46,16 +46,30 @@ export default {
   },
 
   async created() {
-    await reportApi()
-    const res = await getWebConfigApi()
-    this.setSiteInfo(res.data)
-    this.updateFavicon(res.data.favicon)
-    this.$store.commit('setVisitorAccess', res.extra.visitorCount)
-    this.$store.commit('setSiteAccess', res.extra.blogViewsCount)
-
-    const noticeRes = await getNoticeApi()
-    this.$store.commit('SET_NOTICE', noticeRes.data)
+    // 主题在 index.html 的内联脚本里已经落到 <html> 上，这里只是同步一次内存态，
+    // 不能再排在网络请求后面，否则深色模式要等好几个往返才生效
     initTheme()
+
+    // 埋点上报不参与首屏，失败也不影响页面，直接放走不 await
+    reportApi().catch(() => {})
+
+    // 站点配置和公告互不依赖，并发拉取，别串成两段等待
+    const [configRes, noticeRes] = await Promise.all([
+      getWebConfigApi(),
+      getNoticeApi(),
+    ])
+
+    if (configRes && configRes.data) {
+      this.setSiteInfo(configRes.data)
+      this.updateFavicon(configRes.data.favicon)
+      const extra = configRes.extra || {}
+      this.$store.commit('setVisitorAccess', extra.visitorCount)
+      this.$store.commit('setSiteAccess', extra.blogViewsCount)
+    }
+    if (noticeRes && noticeRes.data) {
+      this.$store.commit('SET_NOTICE', noticeRes.data)
+    }
+
     await this.handleThirdPartyLogin()
     //这里等待第三方登录处理完成在获取用户信息
     await this.getUserInfo();

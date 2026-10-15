@@ -441,6 +441,7 @@ export default {
           document.querySelectorAll('pre code').forEach((block) => {
             hljs.highlightBlock(block)
           })
+          this.addCodeLangLabels()
           this.addCopyButtons()
           this.addLineNumbers()
           this.initImagePreview()
@@ -743,6 +744,24 @@ export default {
       }
     },
     /**
+     * 把代码块语言名写到 pre 的 data-lang 上，供标题栏显示。
+     * 必须在 hljs.highlightBlock 之后调用：语言类名（language-xxx）由它写入，
+     * 之前调用拿不到任何语言信息。
+     */
+    addCodeLangLabels() {
+      const blocks = document.querySelectorAll('.article-content pre code')
+      blocks.forEach((code) => {
+        const pre = code.parentElement
+        // hljs 会把 language-xxx 与 hljs 一起挂在 code 的 class 上
+        const langClass = Array.from(code.classList).find((c) => c.startsWith('language-'))
+        if (!langClass) return
+        const lang = langClass.replace('language-', '')
+        // 无语言或 hljs 未能识别时是 plaintext，标题栏留空即可
+        if (!lang || lang === 'plaintext' || lang === 'nohighlight') return
+        pre.setAttribute('data-lang', lang)
+      })
+    },
+    /**
      * 添加复制按钮
      */
     addCopyButtons() {
@@ -756,6 +775,12 @@ export default {
         // 创建复制按钮容器
         const buttonWrapper = document.createElement('div')
         buttonWrapper.className = 'code-header'
+
+        // 语言名（由 addCodeLangLabels 写在 pre 的 data-lang 上，无则留空占位）
+        const langLabel = document.createElement('span')
+        langLabel.className = 'code-lang'
+        langLabel.textContent = pre.getAttribute('data-lang') || ''
+        buttonWrapper.appendChild(langLabel)
 
         // 创建复制按钮
         const copyButton = document.createElement('button')
@@ -1386,9 +1411,12 @@ export default {
   :deep(pre) {
     margin: $spacing-lg 0;
     position: relative;
-    background: #282c34;
-    border-radius: $border-radius-sm;
-    padding-top: 2.5em;
+    // 深墨灰窗口底，配全站冷灰；比 atom-one-dark 的蓝紫 #282c34 更中性
+    background: #1b1f24;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 10px;
+    // 顶部为仿 macOS 标题栏预留高度
+    padding-top: 2.75em;
     overflow: hidden;
     max-height: 2000px;
     transition: max-height 0.4s ease-in-out;
@@ -1403,7 +1431,7 @@ export default {
         left: 0;
         right: 0;
         height: 60px;
-        background: linear-gradient(transparent, #282c34);
+        background: linear-gradient(transparent, #1b1f24);
         pointer-events: none;
         z-index: 2;
       }
@@ -1413,30 +1441,47 @@ export default {
       }
     }
 
+    // ── 仿 macOS 标题栏 ──
+    // 标题栏底走 ::before（::after 被折叠态的渐变遮罩占用，两者不能共用）
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2.75em;
+      background: rgba(255, 255, 255, 0.035);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      pointer-events: none;
+      z-index: 1;
+    }
+
     .expand-button {
       position: absolute;
       bottom: 15px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 6px 16px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: $border-radius-sm;
-      color: #abb2bf;
+      padding: 7px 18px;
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      color: #c8ced8;
       cursor: pointer;
       z-index: 3;
-      font-size: 0.9em;
+      font-size: 0.85em;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease,
+        transform 0.2s ease, color 0.2s ease;
       white-space: nowrap;
-      backdrop-filter: blur(4px);
+      backdrop-filter: blur(6px) saturate(1.3);
+      -webkit-backdrop-filter: blur(6px) saturate(1.3);
 
       &:hover {
-        background: rgba($primary, 0.25);
+        background: rgba(255, 255, 255, 0.16);
         color: #fff;
-        transform: translateX(-50%) translateY(-2px);
-        border-color: $primary;
+        border-color: rgba(255, 255, 255, 0.3);
+        transform: translateX(-50%) translateY(-1px);
       }
 
       i {
@@ -1444,26 +1489,26 @@ export default {
       }
     }
 
-    /* 添加行号容器样式 */
+    /* 行号列：与代码区同底，只留一条极淡分隔，读成一块完整窗口 */
     .line-numbers {
       position: absolute;
       left: 0;
-      top: 2.5em;
+      top: 2.75em;
       bottom: 0;
       font-size: 14px;
       padding: 1em 0;
       text-align: right;
-      color: #5c6370;
-      border-right: 1px solid #3c4048;
-      background: #2d323b;
+      color: rgba(255, 255, 255, 0.26);
+      border-right: 1px solid rgba(255, 255, 255, 0.06);
+      background: transparent;
       user-select: none;
       z-index: 1;
 
       span {
         display: block;
-        padding: 0 0.6em;
-        min-width: 2.5em;
-        line-height: 1.5;
+        padding: 0 0.7em;
+        min-width: 2.6em;
+        line-height: 1.6;
       }
     }
 
@@ -1471,66 +1516,110 @@ export default {
     code {
       display: block;
       padding: 1em;
-      padding-left: 4em;
+      padding-left: 4.2em;
       margin-left: 0;
       overflow-x: auto;
       font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
       font-size: 14px;
       line-height: 1.6;
       position: relative;
+
+      // hljs 主题（atom-one-dark）自带 #282c34 背景，会盖住窗口底色；
+      // 这里必须清掉，窗口底统一由 pre 提供。
+      &.hljs {
+        background: transparent;
+      }
     }
 
-    /* 代码块顶部一条 1px 分隔线，替代仿 macOS 的红黄绿圆点 */
-    &::before {
-      content: '';
-      position: absolute;
-      top: 2.5em;
-      left: 0;
-      right: 0;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.08);
+    // 用 & 展开成 pre code.hljs，压过主题里的 pre code.hljs{padding:1em}
+    // （那条 specificity 比 code.hljs 高，不这么写行号会压到代码上）
+    & code.hljs {
+      padding: 1em 1em 1em 4.2em;
     }
 
+    // 标题栏：左圆点 + 中语言名 + 右复制键，三者同一行
     .code-header {
       position: absolute;
-      top: 8px;
-      right: 12px;
-      z-index: 2;
-      opacity: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2.75em;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      padding: 0 12px 0 14px;
+      pointer-events: none;
+    }
+
+    // 三个 macOS 圆点：一处伪元素 + 三色 radial-gradient 画，不额外加 DOM
+    .code-header::before {
+      content: '';
+      flex: none;
+      width: 42px;
+      height: 12px;
+      background:
+        radial-gradient(circle at 6px 6px, #ff5f57 5.5px, transparent 6px),
+        radial-gradient(circle at 21px 6px, #febc2e 5.5px, transparent 6px),
+        radial-gradient(circle at 36px 6px, #28c840 5.5px, transparent 6px);
+      opacity: 0.85;
       transition: opacity 0.2s ease;
     }
 
-    &:hover .code-header {
+    &:hover .code-header::before {
       opacity: 1;
     }
 
+    // 语言名：绝对居中，不受左右两侧宽度影响
+    .code-header .code-lang {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: $font-mono;
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      color: rgba(255, 255, 255, 0.42);
+      text-transform: lowercase;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
     .copy-button {
-      padding: 4px 10px;
-      background: rgba(255, 255, 255, 0.1);
-      border: none;
-      border-radius: $border-radius-sm;
-      color: #abb2bf;
+      margin-left: auto;
+      padding: 4px 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 999px;
+      color: #c8ced8;
       cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s ease;
+      font-size: 12px;
+      transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+        opacity 0.2s ease;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
       font-family: inherit;
+      opacity: 0;
+      pointer-events: auto;
 
       i {
-        font-size: 14px;
+        font-size: 12px;
       }
 
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.16);
+        border-color: rgba(255, 255, 255, 0.24);
         color: #fff;
       }
 
       &.copied {
-        background: #98c379;
+        background: rgba(40, 200, 64, 0.9);
+        border-color: transparent;
         color: #fff;
       }
+    }
+
+    &:hover .copy-button {
+      opacity: 1;
     }
   }
 

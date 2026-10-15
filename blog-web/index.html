@@ -10,6 +10,21 @@
       content="%VITE_APP_DESCRIPTION%"
     />
     <title>%VITE_APP_TITLE%</title>
+    <!--
+      主题必须在首屏绘制前落到 <html> 上，否则深色模式会先闪一下浅色底。
+      这段逻辑和 src/utils/theme.js 的 getThemeMode 保持一致，改一处要同步另一处。
+    -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('theme-mode')
+          if (!mode) {
+            mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          }
+          if (mode === 'dark') document.documentElement.setAttribute('data-theme', 'dark')
+        } catch (e) { /* 隐私模式下 localStorage 不可用，按浅色处理 */ }
+      })()
+    </script>
     <script src="/static/js/index.js"></script>
 
 
@@ -17,6 +32,8 @@
       var _hmt = _hmt || [];
       (function() {
         var hm = document.createElement("script");
+        // 统计脚本不参与首屏，显式 async，别让它和主包抢带宽
+        hm.async = true;
         hm.src = "https://hm.baidu.com/hm.js?725f624fdb6a307fa04e422db6d078fd";
         var s = document.getElementsByTagName("script")[0];
         s.parentNode.insertBefore(hm, s);

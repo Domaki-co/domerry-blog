@@ -127,8 +127,11 @@ export default {
 // ════════════════════════════════════════════════════════════════
 //  留言板 · 技术台账
 //
-//  全屏留言区：标题走衬线左对齐，输入是一条细线输入 + 近直角发送键；
-//  弹幕条目用近直角墨底，不用胶囊圆角。
+//  全屏留言区：标题走衬线左对齐，输入是一条细线输入 + 近直角发送键。
+//
+//  弹幕条目是本页唯一的例外：全站台账取向用近直角，但留言是「人」的
+//  痕迹而非数据行，用方框会读成表格单元格。这里改用胶囊（999px）+
+//  玻璃底 + 高光描边，让它读起来像一枚会飘的按钮。
 // ════════════════════════════════════════════════════════════════
 
 .message-banner {
@@ -178,9 +181,9 @@ export default {
     .message-input {
       flex: 1;
       min-width: 0;
-      padding: 12px 14px;
+      padding: 12px 20px;
       border: 1px solid rgba(255, 255, 255, 0.28);
-      border-radius: $border-radius-sm;
+      border-radius: 999px;
       background: rgba(255, 255, 255, 0.06);
       color: #fff;
       font-size: 0.95rem;
@@ -199,18 +202,30 @@ export default {
 
     .message-send {
       flex: none;
-      padding: 12px 22px;
-      border: 1px solid var(--accent);
-      border-radius: $border-radius-sm;
+      padding: 12px 26px;
+      border: 1px solid transparent;
+      border-radius: 999px;
       background: var(--accent);
       color: #fff;
       font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
       cursor: pointer;
-      transition: background 0.2s ease, color 0.2s ease;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24),
+        inset 0 1px 0 rgba(255, 255, 255, 0.22);
+      transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.22s ease, filter 0.22s ease;
 
       &:hover {
-        background: transparent;
-        color: var(--accent);
+        transform: translateY(-1px);
+        filter: brightness(1.08);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.28);
+      }
+
+      &:active {
+        transform: translateY(0);
+        filter: brightness(0.96);
       }
     }
   }
@@ -226,19 +241,42 @@ export default {
   z-index: 3;
 
   .barrage-items {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px 4px 4px;
+    gap: 8px;
+    padding: 5px 16px 5px 5px;
     margin-top: 10px;
-    background: rgba(5, 7, 10, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: $border-radius-sm;
+    border-radius: 999px;
     color: #fff;
     font-size: 0.85rem;
+    line-height: 1.4;
+    white-space: nowrap;
+
+    // 玻璃底 + 顶部高光：让胶囊在任意背景图上都有「浮起来」的实体感
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.16) 0%,
+      rgba(255, 255, 255, 0.06) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(10px) saturate(1.4);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.22s ease, box-shadow 0.22s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.42);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.34),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    }
 
     img {
-      border-radius: $border-radius-sm;
+      flex: none;
+      border-radius: 50%;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
     }
   }
 }
@@ -251,8 +289,14 @@ export default {
 
 @media (prefers-reduced-motion: reduce) {
   .message-input,
-  .message-send {
+  .message-send,
+  .barrage-items {
     transition: none !important;
+  }
+
+  .message-send:hover,
+  .barrage-items:hover {
+    transform: none;
   }
 }
 </style>
