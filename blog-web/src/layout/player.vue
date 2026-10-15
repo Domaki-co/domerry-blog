@@ -1,14 +1,15 @@
 <template>
   <div
-    v-show="audio.length > 0"
+    v-show="isLoading || audio.length > 0"
     ref="root"
     class="cp"
     :class="{ 'is-dragging': dragging, 'is-snap': snap }"
     :style="rootStyle"
     :data-state="open ? 'open' : 'capsule'"
     :data-playing="paused ? 'false' : 'true'"
-    :data-shuffle="order === 'random' ? 'true' : 'false'"
-    :data-repeat="loop === 'one' ? 'one' : loop === 'none' ? 'off' : 'all'"
+    :data-mode="playMode"
+    :data-single="singleLoop ? 'true' : 'false'"
+    :data-loading="busy ? 'true' : 'false'"
     :data-muted="muted ? 'true' : 'false'"
     :data-docked="docked && !open ? 'true' : 'false'"
     :data-sheet="showList ? 'open' : 'closed'"
@@ -31,8 +32,8 @@
       >
         <span class="cp__art cp__disc" :class="{ 'has-img': coverReady }" :style="artStyle" aria-hidden="true"></span>
         <span class="cp__cap-text">
-          <span class="cp__cap-title">{{ currentSong ? currentSong.name : '暂无曲目' }}</span>
-          <span class="cp__cap-artist" :class="{ 'is-lyric': capIsLyric }">{{ capLine }}</span>
+          <span class="cp__cap-title">{{ capTitle }}</span>
+          <span class="cp__cap-artist" :class="{ 'is-lyric': lyricOn }">{{ capArtist }}</span>
         </span>
       </button>
 
@@ -40,14 +41,16 @@
         type="button"
         class="cp__btn cp__ring-btn"
         data-nodrag
-        :aria-label="paused ? '播放' : '暂停'"
+        :title="playToggleTitle"
+        :aria-label="playToggleTitle"
         @click="toggle"
       >
         <svg class="cp__ring" viewBox="0 0 40 40" aria-hidden="true">
           <circle class="cp__ring-track" cx="20" cy="20" r="17" />
           <circle class="cp__ring-prog" cx="20" cy="20" r="17" :style="{ strokeDashoffset: ringOffset }" />
         </svg>
-        <svg v-if="paused" class="cp__ico cp__ico--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+        <svg v-if="busy" class="cp__ico cp__spin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /></svg>
+        <svg v-else-if="paused" class="cp__ico cp__ico--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
         <svg v-else class="cp__ico cp__ico--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
       </button>
     </div>
@@ -77,8 +80,8 @@
 
       <div class="cp__top">
         <span class="cp__art cp__cover" :class="{ 'has-img': coverReady }" :style="artStyle" aria-hidden="true"></span>
-        <h2 class="cp__title" :title="currentSong ? currentSong.name : ''">{{ currentSong ? currentSong.name : '暂无曲目' }}</h2>
-        <p class="cp__artist">{{ currentSong && currentSong.artist ? currentSong.artist : '—' }}</p>
+        <h2 class="cp__title" :title="panelTitle">{{ panelTitle }}</h2>
+        <p class="cp__artist">{{ panelArtist }}</p>
       </div>
 
       <div class="cp__lyrics">
@@ -117,7 +120,7 @@
         max="1000"
         step="1"
         :value="scrubValue"
-        :style="{ '--p': scrubPct }"
+        :style="{ '--p': scrubPct, '--b': bufferedPct }"
         aria-label="播放进度"
         @input="onScrubInput"
         @change="onScrubChange"
@@ -126,20 +129,23 @@
       <div class="cp__ctrl">
         <button
           type="button"
-          class="cp__btn cp__toggle"
+          class="cp__btn cp__toggle cp__mode"
           data-nodrag
-          :title="orderTitle"
-          :aria-label="order === 'list' ? '顺序播放' : '随机播放'"
-          :aria-pressed="order === 'random' ? 'true' : 'false'"
-          @click="cycleOrder"
+          :title="playModeTitle"
+          :aria-label="playModeTitle"
+          @click="cyclePlayMode"
         >
-          <svg v-if="order === 'random'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M16 3h5v5" /><path d="M4 20L21 3" /><path d="M21 16v5h-5" />
-            <path d="M15 15l6 6" /><path d="M4 4l5 5" />
+          <svg v-if="playMode === 'loop'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 3l3 3-3 3" /><path d="M4 11V9a3 3 0 0 1 3-3h13" />
+            <path d="M7 21l-3-3 3-3" /><path d="M20 13v2a3 3 0 0 1-3 3H4" />
           </svg>
-          <svg v-else class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
+          <svg v-else-if="playMode === 'order'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h9" /><path d="M4 12h9" /><path d="M4 18h9" />
             <path d="M18.5 5v13" /><path d="M15.5 15l3 3 3-3" />
+          </svg>
+          <svg v-else class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M16 3h5v5" /><path d="M4 20L21 3" /><path d="M21 16v5h-5" />
+            <path d="M15 15l6 6" /><path d="M4 4l5 5" />
           </svg>
         </button>
 
@@ -147,8 +153,16 @@
           <svg class="cp__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5v14" /><path d="M19 5.8v12.4L9 12z" /></svg>
         </button>
 
-        <button type="button" class="cp__btn cp__big" data-nodrag :aria-label="paused ? '播放' : '暂停'" @click="toggle">
-          <svg v-if="paused" class="cp__ico cp__ico--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+        <button
+          type="button"
+          class="cp__btn cp__big"
+          data-nodrag
+          :title="playToggleTitle"
+          :aria-label="playToggleTitle"
+          @click="toggle"
+        >
+          <svg v-if="busy" class="cp__ico cp__spin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /></svg>
+          <svg v-else-if="paused" class="cp__ico cp__ico--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
           <svg v-else class="cp__ico cp__ico--fill" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z" /></svg>
         </button>
 
@@ -156,14 +170,19 @@
           <svg class="cp__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14" /><path d="M5 5.8v12.4L15 12z" /></svg>
         </button>
 
-        <button type="button" class="cp__btn cp__toggle" data-nodrag :aria-label="loopTitle" @click="cycleLoop">
-          <svg v-if="loop === 'one'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M17 3l3 3-3 3" /><path d="M4 11V9a3 3 0 0 1 3-3h13" />
-            <path d="M7 21l-3-3 3-3" /><path d="M20 13v2a3 3 0 0 1-3 3H4" /><path d="M11 10.2l1.4-.9v5.7" />
-          </svg>
-          <svg v-else class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
+        <button
+          type="button"
+          class="cp__btn cp__toggle cp__single"
+          data-nodrag
+          :title="singleLoopTitle"
+          :aria-label="singleLoopTitle"
+          :aria-pressed="singleLoop ? 'true' : 'false'"
+          @click="toggleSingleLoop"
+        >
+          <svg class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17 3l3 3-3 3" /><path d="M4 11V9a3 3 0 0 1 3-3h13" />
             <path d="M7 21l-3-3 3-3" /><path d="M20 13v2a3 3 0 0 1-3 3H4" />
+            <path d="M11 10.2l1.4-.9v5.7" />
           </svg>
         </button>
       </div>
@@ -201,6 +220,7 @@
           <p>{{ queueMeta }}</p>
         </div>
         <div ref="qList" class="cp__q-list" @scroll.passive="onQueueScroll">
+          <p v-if="!audio.length" class="cp__q-empty">{{ isLoading ? '歌单载入中…' : '暂无曲目' }}</p>
           <button
             v-for="(song, i) in audio"
             :key="i"
@@ -213,7 +233,7 @@
             <span class="cp__art cp__q-art" :class="{ 'has-img': !!song.cover && song.coverLoaded }" :style="qArtStyle(song)" aria-hidden="true"></span>
             <span class="cp__q-text">
               <span class="cp__q-title">{{ song.name }}</span>
-              <span class="cp__q-tag">{{ song.lrcUrl ? '歌词' : '纯音乐' }}</span>
+              <span class="cp__q-artist">{{ song.artist || '—' }}</span>
             </span>
             <span class="cp__q-dur">{{ String(i + 1).padStart(2, '0') }}</span>
             <span class="cp__eq" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -241,8 +261,8 @@ const CAP_H = 56
 const M = 16
 const RING_C = 2 * Math.PI * 17
 const POS_KEY = 'cp-pos'
-const SHUFFLE_KEY = 'cp-shuffle'
-const REPEAT_KEY = 'cp-repeat'
+const PLAY_MODE_KEY = 'cp-play-mode'
+const SINGLE_LOOP_KEY = 'cp-single-loop'
 const VOL_KEY = 'cp-vol'
 const DOCK_DELAY = 2000   // 空闲多久后吸附到侧边（毫秒）
 
@@ -286,11 +306,16 @@ export default {
       paused: true,
       currentTime: 0,
       duration: 0,
+      // 已缓存到的秒数（audio.buffered 在当前位置那一段的终点），只用来画进度条的缓存层
+      buffered: 0,
       volume: 0.7,
       muted: false,
       prevVolume: 0.7,
-      order: 'list',
-      loop: 'all',
+      // 播放模式三态：loop 循环播放 / order 顺序播放 / random 随机播放
+      playMode: 'loop',
+      // 单曲循环独立成开关，和播放模式互不覆盖
+      singleLoop: false,
+      buffering: false,
       lyricLines: [],
       activeLine: 0,
       lyricLoading: false,
@@ -335,24 +360,63 @@ export default {
     scrubPct() {
       return `${(this.progress * 100).toFixed(2)}%`
     },
+    // 缓存层永远不短于已播放层，否则渐变的两段会互相盖住
+    bufferedPct() {
+      if (!this.duration) return '0%'
+      const ratio = Math.max(this.progress, Math.min(1, this.buffered / this.duration))
+      return `${(ratio * 100).toFixed(2)}%`
+    },
     volPct() {
       return `${(this.volume * 100).toFixed(2)}%`
     },
-    capIsLyric() {
+    // 胶囊副行、展开卡片标题都跟着加载态走，别让用户对着空白发呆
+    capTitle() {
+      if (this.currentSong) return this.currentSong.name
+      return this.isLoading ? '曲库载入中…' : '暂无曲目'
+    },
+    capArtist() {
+      if (this.buffering) return '正在缓冲…'
+      if (this.isLoading) return '正在为你准备歌单'
+      return this.capLine || '—'
+    },
+    panelTitle() {
+      if (this.currentSong) return this.currentSong.name
+      return this.isLoading ? '曲库载入中…' : '暂无曲目'
+    },
+    panelArtist() {
+      if (this.currentSong) return this.currentSong.artist || '—'
+      return this.isLoading ? '正在为你准备歌单' : '—'
+    },
+    // 曲库还没来 / 当前曲目在等数据，两种情况都让按钮转圈
+    busy() {
+      return this.isLoading || this.buffering
+    },
+    playToggleTitle() {
+      if (this.isLoading) return '歌单载入中…'
+      if (this.buffering) return '正在缓冲…'
+      return this.paused ? '播放' : '暂停'
+    },
+    lyricOn() {
       return !this.paused && this.lyricLines.length > 0 && this.activeLine >= 0
     },
-    orderTitle() {
-      return this.order === 'random'
-        ? '随机播放（点击切换为顺序播放）'
-        : '顺序播放（点击切换为随机播放）'
+    playModeTitle() {
+      const next = { loop: '顺序播放', order: '随机播放', random: '循环播放' }[this.playMode]
+      // 单曲循环优先级最高，开着的时候这个按钮不生效，提示里要说清楚
+      if (this.singleLoop) {
+        return `${this.playModeMeta}（单曲循环已开启，暂不生效；点击切换为${next}）`
+      }
+      return `${this.playModeMeta}（点击切换为${next}）`
     },
-    loopTitle() {
-      return { all: '列表循环', one: '单曲循环', none: '不循环' }[this.loop]
+    singleLoopTitle() {
+      return this.singleLoop ? '单曲循环（点击关闭）' : '单曲循环（点击开启）'
     },
     queueMeta() {
-      const mode = this.order === 'random' ? '随机播放' : '顺序播放'
-      const repeat = { all: '列表循环', one: '单曲循环', none: '不循环' }[this.loop]
-      return `${mode} · ${repeat} · ${this.audio.length} 首`
+      // 单曲循环开启时播放模式不生效，队列头里就别再并排写着两个模式了
+      const mode = this.singleLoop ? '单曲循环' : this.playModeMeta
+      return `${mode} · ${this.audio.length} 首`
+    },
+    playModeMeta() {
+      return { loop: '循环播放', order: '顺序播放', random: '随机播放' }[this.playMode]
     },
     rootStyle() {
       return {
@@ -379,12 +443,26 @@ export default {
     this._suppress = false
     this._idleTimer = 0
     this._snapTimer = 0
+    // 缓冲检测用：100ms 看一眼播放进度有没有前进（见 watchBuffering）
+    this._bufferTimer = 0
+    this._lastPos = 0
 
-    // 记住的随机 / 循环 / 音量
-    const savedShuffle = readStore(SHUFFLE_KEY)
-    if (savedShuffle !== null) this.order = savedShuffle === '1' ? 'random' : 'list'
-    const savedRepeat = readStore(REPEAT_KEY)
-    if (['all', 'one', 'off'].includes(savedRepeat)) this.loop = savedRepeat
+    // 记住的播放模式 / 单曲循环 / 音量
+    const savedMode = readStore(PLAY_MODE_KEY)
+    if (['loop', 'order', 'random'].includes(savedMode)) {
+      this.playMode = savedMode
+    } else if (readStore('cp-shuffle') === '1') {
+      // 旧版本把「随机」「循环」拆成两个键存，这里读一次做迁移
+      this.playMode = 'random'
+    } else if (readStore('cp-repeat') === 'none') {
+      this.playMode = 'order'
+    }
+    const savedSingle = readStore(SINGLE_LOOP_KEY)
+    if (savedSingle !== null) {
+      this.singleLoop = savedSingle === '1'
+    } else if (readStore('cp-repeat') === 'one') {
+      this.singleLoop = true
+    }
     const savedVol = parseFloat(readStore(VOL_KEY))
     if (Number.isFinite(savedVol)) {
       this.volume = Math.min(1, Math.max(0, savedVol))
@@ -455,6 +533,7 @@ export default {
     window.removeEventListener('pointercancel', this.onWindowPointerUp)
     clearTimeout(this._idleTimer)
     clearTimeout(this._snapTimer)
+    clearInterval(this._bufferTimer)
     if (this.player) {
       const audio = this.player.audio
       if (audio && this.errorHandler) {
@@ -485,14 +564,12 @@ export default {
         autoplay: false,
         theme: '#a86a10',
         listFolded: true,
-        order: this.order,
-        loop: this.loop,
+        order: this.engineOrder(),
+        loop: this.engineLoop(),
         volume: this.volume,
         audio: engineAudio
       })
 
-      this.order = this.player.options.order
-      this.loop = this.player.options.loop
       this.volume = this.player.audio.volume
       this.prevVolume = this.volume || 0.7
       this.muted = this.volume === 0
@@ -509,6 +586,7 @@ export default {
       this.patchAudioPlay()
       this.bindPlayerEvents()
       this.bindPlayerErrorHandler()
+      this.watchBuffering()
       this.refreshLyric()
       this.updateCapLine()
     },
@@ -524,8 +602,17 @@ export default {
       })
       player.on('pause', () => {
         this.paused = true
+        this.buffering = false
         this.updateCapLine()
       })
+      // 缓冲提示：等音频真正开始出声再撤掉，别让用户以为卡死了。
+      // 只在「打算播放」时挂提示，否则初始化时给 audio 赋 src 也会触发 loadstart，
+      // 用户还没点播放就看到「正在缓冲」。
+      player.on('loadstart', () => { if (!this.paused) this.buffering = true })
+      player.on('waiting', () => { if (!this.paused) this.buffering = true })
+      player.on('stalled', () => { if (!this.paused) this.buffering = true })
+      player.on('playing', () => { this.buffering = false })
+      player.on('canplay', () => { this.buffering = false })
       player.on('timeupdate', () => {
         this.duration = player.duration || this.duration
         if (this._seeking) return
@@ -534,11 +621,15 @@ export default {
         this.updateActiveLine()
       })
       player.on('listswitch', (data) => {
+        const sameSong = !!data && typeof data.index === 'number' && data.index === this.index
         if (data && typeof data.index === 'number') this.index = data.index
         this.currentTime = 0
         this.activeLine = 0
-        this.lyricLines = []
-        this._lyricRef = undefined
+        // 单曲循环会反复重切同一首，歌词不必清空重来，否则面板每轮都闪一下"暂无歌词"
+        if (!sameSong) {
+          this.lyricLines = []
+          this._lyricRef = undefined
+        }
         this.loadCover(this.index)
         this.updateCapLine()
         this.$nextTick(() => {
@@ -549,6 +640,47 @@ export default {
       player.on('seeked', () => {
         this.updateActiveLine()
       })
+    },
+    // 缓冲检测：APlayer 原生就是每 100ms 看一次播放进度有没有前进 —— 网络不佳卡住时
+    // 浏览器不保证每次都补发 waiting/stalled，只有「位置不动」最能说明在等数据。
+    // 事件负责即时亮起，这个定时器负责兜底与熄灭。
+    watchBuffering() {
+      clearInterval(this._bufferTimer)
+      this._lastPos = 0
+      this._bufferTimer = setInterval(() => {
+        const audio = this.player && this.player.audio
+        if (!audio) return
+        // 缓存层和播放状态无关，暂停时进度条也该继续长出来
+        this.syncBuffered()
+        // 拖动进度条时 currentTime 会一直变，别拿它判断缓冲
+        if (audio.seeking) return
+        const pos = audio.currentTime || 0
+        if (pos === this._lastPos) {
+          if (!audio.paused) this.buffering = true
+        } else {
+          this.buffering = false
+        }
+        this._lastPos = pos
+      }, 100)
+    },
+    // audio.buffered 可能有多段（跳转过、断过网），只关心当前播放位置所在的那一段
+    syncBuffered() {
+      const audio = this.player && this.player.audio
+      const ranges = audio && audio.buffered
+      if (!ranges || !ranges.length) {
+        if (this.buffered !== 0) this.buffered = 0
+        return
+      }
+      const pos = audio.currentTime || 0
+      let end = 0
+      for (let i = 0; i < ranges.length; i++) {
+        if (ranges.start(i) <= pos && ranges.end(i) >= pos) {
+          end = ranges.end(i)
+          break
+        }
+      }
+      if (!end) end = ranges.end(ranges.length - 1)
+      if (end !== this.buffered) this.buffered = end
     },
     // APlayer 把解析后的歌词放在 lrc.parsed[index]，这里同步到响应式数据
     refreshLyric() {
@@ -582,8 +714,7 @@ export default {
       }
     },
     updateCapLine() {
-      const lyricOn = !this.paused && this.lyricLines.length > 0 && this.activeLine >= 0
-      const text = lyricOn
+      const text = this.lyricOn
         ? this.lyricLines[this.activeLine].text
         : (this.currentSong && this.currentSong.artist ? this.currentSong.artist : '—')
       if (text !== this.capLine) this.capLine = text
@@ -624,6 +755,12 @@ export default {
         song.lrcUrl = ''
         return
       }
+
+      // APlayer 手里的 audio 是 initAPlayer 喂进去的副本（为了剥掉封面），
+      // 它的歌词解析器读的是副本上的 lrc。不写回去，切歌时缓存下来的空串会被当成
+      // 「Not available」，面板永远只剩「暂无歌词」——歌词白请求了一次。
+      const engineSong = player.list.audios[index]
+      if (engineSong) engineSong.lrc = song.lrc
 
       // APlayer 切歌时已把空歌词缓存进 lrc.parsed，这里清掉让它按新歌词重新解析
       if (player.lrc.parsed) {
@@ -666,6 +803,7 @@ export default {
         try {
           event.stopImmediatePropagation()
         } catch (e) { /* ignore */ }
+        this.buffering = false
         if (this.player) {
           this.player.pause()
           this.player.seek(0)
@@ -704,17 +842,31 @@ export default {
       this.updateActiveLine()
       this._seeking = false
     },
-    cycleOrder() {
-      if (!this.player) return
-      this.order = this.order === 'list' ? 'random' : 'list'
-      this.player.options.order = this.order
-      writeStore(SHUFFLE_KEY, this.order === 'random' ? '1' : '0')
+    // 一个按钮管三态：循环播放 → 顺序播放 → 随机播放
+    cyclePlayMode() {
+      this.playMode = { loop: 'order', order: 'random', random: 'loop' }[this.playMode]
+      this.applyPlayMode()
+      writeStore(PLAY_MODE_KEY, this.playMode)
     },
-    cycleLoop() {
-      if (!this.player) return
-      this.loop = { all: 'one', one: 'none', none: 'all' }[this.loop]
-      this.player.options.loop = this.loop
-      writeStore(REPEAT_KEY, this.loop)
+    toggleSingleLoop() {
+      this.singleLoop = !this.singleLoop
+      this.applyPlayMode()
+      writeStore(SINGLE_LOOP_KEY, this.singleLoop ? '1' : '0')
+    },
+    // APlayer 内部只有 order(list/random) + loop(all/one/none) 两个开关，
+    // 这里把「播放模式 + 单曲循环」两个按钮翻译过去
+    engineOrder() {
+      return this.playMode === 'random' ? 'random' : 'list'
+    },
+    engineLoop() {
+      if (this.singleLoop) return 'one'
+      return this.playMode === 'order' ? 'none' : 'all'
+    },
+    applyPlayMode() {
+      const player = this.player
+      if (!player) return
+      player.options.order = this.engineOrder()
+      player.options.loop = this.engineLoop()
     },
     onVolume(e) {
       const value = Number(e.target.value) / 100
@@ -1068,6 +1220,15 @@ export default {
   stroke: none;
 }
 
+// 缓冲转圈：APlayer 原生是一圈未闭合的弧线在转，这里用同一套线稿语言画一条弧，
+// 由根节点 data-loading 驱动，只在「播放/暂停」按钮上扬弃字形换成它。
+.cp__spin {
+  stroke-width: 2;
+  stroke-dasharray: 34 16.3;   // r=8 的周长约 50.27，留 2/3 弧 + 1/3 缺口
+  transform-origin: 50% 50%;
+  animation: cp-spin 0.9s linear infinite;
+}
+
 // ── 唱片 ──
 // 无封面：参考稿的光盘 —— 生成式 CD 渐变（色相来自曲目）+ 白色中心孔 + 黑胶纹路。
 // 有封面：用自己的图，保持干净；图片作为第一层叠在渐变之上，URL 失效也能回退成唱片。
@@ -1126,6 +1287,12 @@ $cd-art:
 .cp[data-playing='true'] .cp__disc,
 .cp[data-playing='true'] .cp__cover {
   animation-play-state: running;
+}
+
+// 加载中让唱片慢慢转起来，告诉用户后面在忙
+.cp[data-loading='true'] .cp__disc {
+  animation-play-state: running;
+  animation-duration: 3s;
 }
 
 @keyframes cp-spin {
@@ -1469,12 +1636,21 @@ $cd-art:
   background: transparent;
   cursor: pointer;
   --p: 0%;
+  --b: 0%;
   --tw: 14px;
+  // 缓冲层：已下载但还没播到的部分，用淡一点的主题色和「已播放」区分开。
+  // color-mix 和 Header 用的是同一套写法，属于本仓库已有基线。
+  --buffered: color-mix(in srgb, var(--accent) 40%, var(--rule));
 
   &::-webkit-slider-runnable-track {
     height: 3px;
     border-radius: 3px;
-    background: linear-gradient(to right, var(--accent) var(--p), var(--rule) var(--p));
+    background: linear-gradient(
+      to right,
+      var(--accent) 0 var(--p),
+      var(--buffered) var(--p) var(--b),
+      var(--rule) var(--b)
+    );
   }
 
   &::-webkit-slider-thumb {
@@ -1488,10 +1664,12 @@ $cd-art:
     transition: transform 0.15s;
   }
 
+  // Firefox 的已播放层由 ::-moz-range-progress 单独画在轨道之上，
+  // 所以轨道本身只负责「缓存层 + 未下载」，别和 accent 撞色
   &::-moz-range-track {
     height: 3px;
     border-radius: 3px;
-    background: var(--rule);
+    background: linear-gradient(to right, var(--buffered) 0 var(--b), var(--rule) var(--b));
   }
 
   &::-moz-range-progress {
@@ -1603,17 +1781,23 @@ $cd-art:
   }
 }
 
-.cp[data-shuffle='true'] .cp__toggle:first-child,
-.cp[data-repeat='one'] .cp__toggle:last-child,
-.cp[data-repeat='all'] .cp__toggle:last-child {
+// 单曲循环优先级最高：开着的时候播放模式暂不生效，按钮也就不该再亮着，
+// 否则两个按钮同时高亮，用户会以为模式还在起作用。
+.cp[data-mode='loop']:not([data-single='true']) .cp__mode,
+.cp[data-mode='random']:not([data-single='true']) .cp__mode,
+.cp[data-single='true'] .cp__single {
   color: var(--accent);
 }
 
-.cp[data-shuffle='true'] .cp__toggle:first-child::after,
-.cp[data-repeat='one'] .cp__toggle:last-child::after,
-.cp[data-repeat='all'] .cp__toggle:last-child::after {
+.cp[data-mode='loop']:not([data-single='true']) .cp__mode::after,
+.cp[data-mode='random']:not([data-single='true']) .cp__mode::after,
+.cp[data-single='true'] .cp__single::after {
   opacity: 1;
   transform: none;
+}
+
+.cp[data-single='true'] .cp__mode {
+  opacity: 0.5;
 }
 
 .cp__rule {
@@ -1701,6 +1885,14 @@ $cd-art:
   scrollbar-width: thin;
 }
 
+.cp__q-empty {
+  margin: 0;
+  padding: 44px 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
 .cp__q-row {
   appearance: none;
   border: 0;
@@ -1750,7 +1942,7 @@ $cd-art:
   text-overflow: ellipsis;
 }
 
-.cp__q-tag {
+.cp__q-artist {
   font-size: 12px;
   color: var(--text-secondary);
 }

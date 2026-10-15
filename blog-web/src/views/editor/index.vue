@@ -8,18 +8,20 @@
                         <div class="title-cover-layout">
                             <div class="title-section">
                                 <el-form-item label="文章标题" prop="title">
-                                    <el-input v-model="articleForm.title" placeholder="请输入文章标题..." />
+                                    <el-input v-model="articleForm.title" placeholder="请输入文章标题..." class="title-input" size="default" />
                                 </el-form-item>
                                 <el-form-item label="文章描述" prop="summary">
                                     <el-input v-model="articleForm.summary" type="textarea" :rows="4"
-                                        placeholder="请输入文章描述..." />
+                                        placeholder="请输入文章描述..." class="summary-input" />
                                 </el-form-item>
                             </div>
                             <div class="cover-section">
                                 <el-form-item label="封面图片" prop="cover">
                                     <div class="cover-area" @click="triggerCoverUpload">
                                         <div v-if="!articleForm.cover" class="cover-placeholder">
-                                            <i class="fas fa-image"></i>
+                                            <div class="cover-icon-wrap">
+                                                <i class="fas fa-image"></i>
+                                            </div>
                                             <span>点击上传封面图</span>
                                         </div>
                                         <div v-else class="cover-preview">
@@ -41,7 +43,7 @@
                     <div class="content-card flex-card">
                         <el-form-item label="文章内容" prop="contentMd" class="mb-20">
                             <div id="vditor-editor"
-                                style="height: 500px; width: 100%">
+                                style="height: 580px; width: 100%">
                             </div>
                         </el-form-item>
                     </div>
@@ -50,7 +52,7 @@
                 <div class="editor-sidebar">
                     <div class="sidebar-section">
                         <h3 class="section-title">
-                            <i class="fas fa-folder"></i>
+                            <span class="title-icon"><i class="fas fa-folder"></i></span>
                             文章分类
                         </h3>
                         <el-form-item prop="categoryName">
@@ -64,7 +66,7 @@
 
                     <div class="sidebar-section">
                         <h3 class="section-title">
-                            <i class="fas fa-tags"></i>
+                            <span class="title-icon"><i class="fas fa-tags"></i></span>
                             文章标签
                         </h3>
                         <el-form-item prop="tags">
@@ -78,7 +80,7 @@
 
                     <div class="sidebar-section">
                         <h3 class="section-title">
-                            <i class="fas fa-cog"></i>
+                            <span class="title-icon"><i class="fas fa-cog"></i></span>
                             文章设置
                         </h3>
                         <div class="setting-item">
@@ -113,34 +115,37 @@
                         </div>
                         <div class="setting-item">
                             <el-button size="small" :type="regenerateAiDescribe ? 'warning' : 'default'"
+                                class="ai-btn"
                                 @click="regenerateAiDescribe = !regenerateAiDescribe">
-                                <i class="fas fa-sync"></i>
+                                <i class="fas fa-magic"></i>
                                 {{ regenerateAiDescribe ? '已选择：保存时生成' : (articleForm.id ? '重新生成 AI 摘要' : '生成 AI 摘要') }}
                             </el-button>
                         </div>
                     </div>
-                    <div class="sidebar-section">
+                    <div class="sidebar-section action-section">
                         <h3 class="section-title">
-                            <i class="fas fa-paper-plane"></i>
+                            <span class="title-icon"><i class="fas fa-paper-plane"></i></span>
                             发布操作
                         </h3>
                         <div class="action-buttons">
-                            <el-button size="small" @click="saveDraft">
-                                <i class="fas fa-save"></i>
-                                保存草稿
-                            </el-button>
-                            <el-button size="small" type="primary" @click="submitReview">
-                                <i class="fas fa-paper-plane"></i>
-                                提交审核
-                            </el-button>
-                            <el-button v-if="isAdmin" size="small" type="success" @click="publishArticle">
+                            <el-button v-if="isAdmin" type="primary" class="primary-action-btn" @click="publishArticle">
                                 <i class="fas fa-check-circle"></i>
                                 直接发布
                             </el-button>
-                            <el-button v-if="isAdmin" size="small" type="warning" @click="savePrivate">
-                                <i class="fas fa-lock"></i>
-                                私密保存
+                            <el-button v-else type="primary" class="primary-action-btn" @click="submitReview">
+                                <i class="fas fa-paper-plane"></i>
+                                提交审核
                             </el-button>
+                            <div class="secondary-actions">
+                                <el-button class="secondary-btn" @click="saveDraft">
+                                    <i class="fas fa-save"></i>
+                                    保存草稿
+                                </el-button>
+                                <el-button v-if="isAdmin" class="secondary-btn" type="warning" plain @click="savePrivate">
+                                    <i class="fas fa-lock"></i>
+                                    私密保存
+                                </el-button>
+                            </div>
                         </div>
                     </div>
 
@@ -489,19 +494,20 @@ export default {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: var(--background);
 }
-
 
 .editor-main {
     flex: 1;
-    max-width: 1400px;
+    max-width: 1440px;
     margin: 0 auto;
-    padding: 24px 40px;
+    padding: 24px 32px 48px;
     width: 100%;
 
     .el-form {
         display: flex;
         gap: 24px;
+        align-items: flex-start;
     }
 }
 
@@ -512,52 +518,106 @@ export default {
     .content-card {
         background: var(--surface);
         border: 1px solid var(--rule);
-        border-radius: $border-radius-md;
-        padding: 24px;
+        border-radius: 12px;
+        padding: 24px 28px;
         margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 8px 24px rgba(0, 0, 0, 0.02);
+        transition: box-shadow 0.25s ease, border-color 0.25s ease;
 
         &:last-child {
             margin-bottom: 0;
         }
 
+        &:hover {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 12px 28px rgba(0, 0, 0, 0.03);
+        }
+
         &.flex-card {
-            flex: 1;
             display: flex;
             flex-direction: column;
+            padding: 20px 24px;
 
             :deep(.el-form-item) {
-                flex: 1;
                 display: flex;
                 flex-direction: column;
                 margin-bottom: 0;
-
-                .el-form-item__content {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: column;
-
-                    .el-textarea {
-                        flex: 1;
-                        display: flex;
-
-                        textarea {
-                            flex: 1;
-                            resize: none;
-                        }
-                    }
-                }
             }
         }
     }
 
     :deep(.el-form-item) {
-        margin-bottom: 0;
+        margin-bottom: 16px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
 
         .el-form-item__label {
-            padding-bottom: 12px;
+            padding-bottom: 8px;
             font-size: 13px;
-            color: #999;
-            font-weight: normal;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+        }
+
+        .el-form-item__label:before {
+            margin-right: 4px;
+        }
+    }
+
+    // 标题输入框专属大字号气度
+    .title-input {
+        :deep(.el-input__wrapper) {
+            min-height: 46px;
+            padding: 0 16px;
+            border-radius: 8px !important;
+            box-shadow: 0 0 0 1px var(--rule-strong) inset;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+            &:hover {
+                box-shadow: 0 0 0 1px var(--text-tertiary) inset;
+            }
+
+            &.is-focus {
+                box-shadow: 0 0 0 1px var(--accent) inset, 0 0 0 3px var(--accent-soft) !important;
+            }
+        }
+
+        :deep(.el-input__inner) {
+            font-size: 16px !important;
+            font-weight: 600 !important;
+            color: var(--text-primary) !important;
+            letter-spacing: -0.01em;
+
+            &::placeholder {
+                font-weight: normal;
+                font-size: 15px;
+                color: var(--text-tertiary);
+            }
+        }
+    }
+
+    // 描述输入框
+    .summary-input {
+        :deep(.el-textarea__inner) {
+            border-radius: 8px !important;
+            border: 1px solid var(--rule-strong) !important;
+            padding: 12px 16px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-primary);
+            resize: vertical;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+            &:hover {
+                border-color: var(--text-tertiary) !important;
+            }
+
+            &:focus {
+                border-color: var(--accent) !important;
+                box-shadow: 0 0 0 3px var(--accent-soft) !important;
+            }
         }
     }
 
@@ -568,27 +628,38 @@ export default {
 
         .title-section {
             flex: 1;
+            min-width: 0;
         }
 
         .cover-section {
-            width: 240px;
+            width: 250px;
             flex-shrink: 0;
         }
     }
 
+    // 封面上传区域微质感
     .cover-area {
         width: 100%;
-        height: 135px;
-        border-radius: 4px;
+        height: 156px;
+        border-radius: 10px;
         overflow: hidden;
         cursor: pointer;
         position: relative;
-        background: var(--card-bg);
-        border: 1px dashed var(--border-color);
-        transition: all 0.15s;
+        background: var(--hover-bg);
+        border: 1.5px dashed var(--rule-strong);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
             border-color: var(--accent);
+            background: var(--surface);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+            transform: translateY(-1px);
+
+            .cover-icon-wrap {
+                transform: scale(1.08);
+                color: var(--accent);
+                background: var(--accent-soft);
+            }
         }
     }
 
@@ -599,71 +670,124 @@ export default {
         align-items: center;
         justify-content: center;
         gap: 8px;
-        color: #999;
+        color: var(--text-secondary);
 
-        i {
-            font-size: 24px;
+        .cover-icon-wrap {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--text-secondary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
         }
 
         span {
             font-size: 13px;
+            font-weight: 500;
         }
     }
 
     .cover-preview {
         height: 100%;
+        width: 100%;
+        position: relative;
 
         img {
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 10px;
         }
 
         .cover-actions {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 10px;
+            right: 10px;
             opacity: 0;
-            transition: all 0.15s;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            transform: scale(0.9);
         }
 
         &:hover .cover-actions {
             opacity: 1;
+            transform: scale(1);
         }
     }
 }
 
+// 侧边栏设计重构
 .editor-sidebar {
     width: 320px;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
 
     .sidebar-section {
         background: var(--surface);
         border: 1px solid var(--rule);
-        border-radius: $border-radius-md;
-        padding: 24px;
+        border-radius: 12px;
+        padding: 20px 22px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 6px 18px rgba(0, 0, 0, 0.02);
+        transition: box-shadow 0.25s ease;
+
+        &:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 22px rgba(0, 0, 0, 0.03);
+        }
 
         .section-title {
-            font-size: 13px;
-            font-weight: 500;
-            color: #999;
-            margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 14px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
 
-            i {
-                font-size: 14px;
+            .title-icon {
+                width: 24px;
+                height: 24px;
+                border-radius: 6px;
+                background: var(--hover-bg);
                 color: var(--accent);
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+            }
+        }
+
+        :deep(.el-form-item) {
+            margin-bottom: 0;
+        }
+
+        :deep(.el-select) {
+            width: 100%;
+
+            .el-select__wrapper {
+                border-radius: 8px !important;
+                min-height: 36px;
+            }
+
+            .el-tag {
+                border-radius: 6px !important;
+            }
+        }
+
+        :deep(.el-input) {
+            .el-input__wrapper {
+                border-radius: 8px !important;
             }
         }
 
         .setting-item {
             padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--rule);
 
             &:last-child {
                 border-bottom: none;
@@ -676,37 +800,123 @@ export default {
 
             .setting-label {
                 font-size: 13px;
-                color: #999;
+                font-weight: 500;
+                color: var(--text-secondary);
                 margin-bottom: 8px;
             }
 
-            :deep(.el-form-item) {
-                margin-bottom: 0;
+            .ai-btn {
+                width: 100%;
+                height: 34px;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                transition: all 0.2s ease;
+
+                i {
+                    font-size: 12px;
+                }
             }
         }
+    }
 
+    // 发布操作模块升级
+    .action-section {
         .action-buttons {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
 
-            :deep(.el-button) {
+            .primary-action-btn {
                 width: 100%;
-                margin-left: 0;
+                height: 40px;
+                border-radius: 8px;
+                font-size: 14px;
+                font-weight: 500;
+                letter-spacing: 0.03em;
+                background: var(--accent);
+                border-color: var(--accent);
+                color: #fff;
+                box-shadow: 0 4px 14px rgba(168, 106, 16, 0.22);
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
                 i {
-                    margin-right: 4px;
+                    margin-right: 6px;
+                }
+
+                &:hover {
+                    filter: brightness(1.08);
+                    box-shadow: 0 6px 18px rgba(168, 106, 16, 0.3);
+                    transform: translateY(-1px);
+                }
+
+                &:active {
+                    filter: brightness(0.95);
+                    transform: translateY(0);
+                }
+            }
+
+            .secondary-actions {
+                display: flex;
+                gap: 10px;
+
+                .secondary-btn {
+                    flex: 1;
+                    height: 36px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    margin-left: 0;
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 4px;
+                    transition: all 0.2s ease;
+
+                    i {
+                        font-size: 12px;
+                    }
+
+                    &:hover {
+                        transform: translateY(-1px);
+                    }
                 }
             }
         }
     }
 }
 
+// Vditor 编辑器容器美化
+.vditor {
+    --border-color: var(--rule);
+    background: var(--surface);
+    border-radius: 10px !important;
+    overflow: hidden;
+    border: 1px solid var(--rule) !important;
+    transition: border-color 0.2s ease;
+
+    :deep(.vditor-toolbar) {
+        background-color: var(--surface) !important;
+        border-bottom: 1px solid var(--rule) !important;
+        padding: 6px 10px;
+    }
+
+    &:focus-within {
+        border-color: var(--rule-strong) !important;
+    }
+}
+
+.vditor-reset {
+    color: var(--text-primary);
+}
+
 @media screen and (max-width: 1200px) {
-
-
     .editor-main {
-        padding: 24px;
+        padding: 20px;
 
         .el-form {
             flex-direction: column;
@@ -715,14 +925,19 @@ export default {
 
     .editor-sidebar {
         width: 100%;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+
+        .action-section {
+            grid-column: 1 / -1;
+        }
     }
 }
 
 @media screen and (max-width: 768px) {
-
-
     .editor-main {
-        padding: 16px;
+        padding: 12px 14px 32px;
 
         .el-form {
             gap: 16px;
@@ -731,20 +946,24 @@ export default {
 
     .editor-content {
         .content-card {
-            padding: 20px;
+            padding: 16px;
             margin-bottom: 16px;
+            border-radius: 10px;
         }
 
         .cover-area {
-            height: 120px;
+            height: 130px;
         }
     }
 
     .editor-sidebar {
-        gap: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
 
         .sidebar-section {
-            padding: 20px;
+            padding: 16px;
+            border-radius: 10px;
         }
     }
 
@@ -756,14 +975,5 @@ export default {
             width: 100%;
         }
     }
-}
-
-.vditor {
-    --border-color: var(--rule);
-    background: var(--surface);
-    border-radius: $border-radius-sm;
-}
-.vditor-reset {
-    color: var(--text-secondary);
 }
 </style>

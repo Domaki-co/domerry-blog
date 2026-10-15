@@ -551,33 +551,6 @@ export default {
     }
   }
 
-  .el-input {
-    .el-input__wrapper {
-      border-radius: $border-radius-sm;
-      background: var(--input-bg);
-      box-shadow: 0 0 0 1px var(--rule) inset;
-
-      &:hover {
-        box-shadow: 0 0 0 1px var(--rule-strong) inset;
-      }
-
-      &.is-focus {
-        box-shadow: 0 0 0 1px var(--accent) inset;
-      }
-    }
-
-    .el-input__inner {
-      border: none !important;
-      background: transparent !important;
-      box-shadow: none !important;
-      color: var(--text-primary);
-
-      &::placeholder {
-        color: var(--text-tertiary);
-      }
-    }
-  }
-
   .form-footer {
     display: flex;
     justify-content: flex-end;

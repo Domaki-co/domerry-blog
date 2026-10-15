@@ -133,6 +133,7 @@
                 prefix-icon="UserFilled"
                 v-model="registerForm.nickname"
                 placeholder="请输入昵称"
+                size="large"
               />
             </el-form-item>
 
@@ -141,6 +142,7 @@
                 prefix-icon="Message"
                 v-model="registerForm.email"
                 placeholder="请输入邮箱"
+                size="large"
               />
             </el-form-item>
 
@@ -149,6 +151,7 @@
                 prefix-icon="Key"
                 v-model="registerForm.code"
                 placeholder="请输入验证码"
+                size="large"
               >
                 <template #append>
                   <el-button @click="sendRegisterCode" :disabled="codeSending">
@@ -164,6 +167,7 @@
                 v-model="registerForm.password"
                 placeholder="请输入密码"
                 show-password
+                size="large"
               />
             </el-form-item>
 
@@ -195,6 +199,7 @@
                 prefix-icon="Message"
                 v-model="forgotForm.email"
                 placeholder="请输入注册邮箱"
+                size="large"
               />
             </el-form-item>
 
@@ -203,6 +208,7 @@
                 prefix-icon="Key"
                 v-model="forgotForm.code"
                 placeholder="请输入验证码"
+                size="large"
               >
                 <template #append>
                   <el-button
@@ -221,6 +227,7 @@
                 v-model="forgotForm.password"
                 placeholder="请输入新密码"
                 show-password
+                size="large"
               />
             </el-form-item>
 
@@ -667,11 +674,12 @@ export default {
 
 .login-body {
   width: 420px;
-  padding: 32px;
-  // 台账取向：近直角 + 1px 实线，不用大圆角 + 阴影的默认卡片
-  border-radius: $border-radius-md;
+  max-width: calc(100vw - 32px);
+  padding: 36px 32px 32px;
+  border-radius: $border-radius-lg;
   border: 1px solid var(--rule);
   background: var(--surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
   position: relative;
 }
 
@@ -681,90 +689,29 @@ export default {
 
 .form-item {
   margin-bottom: 20px;
-
-  :deep(.el-input) {
-    --el-input-focus-border-color: var(--accent);
-  }
-
-  :deep(.el-input__wrapper) {
-    min-height: 44px;
-    height: 44px;
-    padding: 0 14px;
-    border-radius: $border-radius-sm;
-    background-color: var(--input-bg);
-    box-shadow: 0 0 0 1px var(--rule) inset;
-    transition: box-shadow 0.2s ease;
-
-    &:hover {
-      box-shadow: 0 0 0 1px var(--rule-strong) inset;
-    }
-
-    &.is-focus {
-      box-shadow: 0 0 0 1px var(--accent) inset;
-    }
-  }
-
-  :deep(.el-input__inner) {
-    height: 100% !important;
-    font-size: 14px;
-    color: var(--text-primary) !important;
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-
-    &::placeholder {
-      color: var(--text-tertiary);
-    }
-  }
-
-  :deep(.el-input__prefix) {
-    color: var(--text-secondary);
-    display: inline-flex;
-    align-items: center;
-    margin-right: 8px;
-  }
-
-  :deep(.el-input-group__append) {
-    background-color: var(--surface);
-    box-shadow: 0 0 0 1px var(--rule) inset;
-    border: none;
-    border-radius: 0 $border-radius-sm $border-radius-sm 0;
-    padding: 0 14px;
-
-    .el-button {
-      border: none;
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 500;
-      background: transparent;
-
-      &:hover {
-        opacity: 0.85;
-      }
-
-      &.is-disabled {
-        color: var(--text-tertiary);
-        background: transparent;
-      }
-    }
-  }
 }
 
 .submit-btn {
   width: 100%;
-  height: 42px;
+  height: 44px;
   border: none;
-  border-radius: $border-radius-md;
+  border-radius: $border-radius-sm;
   background: var(--accent);
   color: #fff;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
 
   &:hover {
-    // 旧值 #4f46e5 是靛蓝，改成强调色压暗
-    filter: brightness(0.92);
+    filter: brightness(1.08);
+    box-shadow: 0 4px 12px rgba(168, 106, 16, 0.25);
+  }
+
+  &:active {
+    filter: brightness(0.95);
+    transform: translateY(1px);
   }
 }
 
@@ -922,56 +869,40 @@ export default {
   }
 }
 
-.switch-form-btn {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 36px;
-  height: 36px;
-  border-radius: $border-radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
-  background: var(--hover-bg);
-  border: none;
-  color: var(--text-secondary);
-
-  &:hover {
-    background: var(--rule);
-    color: var(--text-primary);
-  }
-
-  i {
-    font-size: 20px;
-  }
-}
-
+.switch-form-btn,
 .back-btn {
   position: absolute;
-  top: 16px;
-  right: 60px;
-  width: 36px;
-  height: 36px;
+  top: 18px;
+  width: 34px;
+  height: 34px;
   border-radius: $border-radius-sm;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: all 0.2s ease;
   background: var(--hover-bg);
-  border: none;
+  border: 1px solid var(--rule);
   color: var(--text-secondary);
-  z-index: 1;
 
   &:hover {
-    background: var(--rule);
+    background: var(--surface);
+    border-color: var(--rule-strong);
     color: var(--accent);
   }
 
-  i {
-    font-size: 20px;
+  i,
+  .el-icon {
+    font-size: 16px;
   }
+}
+
+.switch-form-btn {
+  right: 18px;
+}
+
+.back-btn {
+  right: 58px;
+  z-index: 1;
 }
 </style>

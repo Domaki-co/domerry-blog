@@ -6,109 +6,290 @@
         color: var(--text-secondary)!important; 
     }
 }
-// 输入框（适配 Element Plus 2.x 的 .el-input__wrapper 机制，彻底根治双重边框）
+// ════════════════════════════════════════════════════════════════
+//  输入控件体系（适配 Element Plus 2.x，彻底杜绝内外双框，提升台账视觉质感）
+// ════════════════════════════════════════════════════════════════
+
+// 1. 深度防御：彻底清除单行输入框内部原生 input 的边框与背景，根治双层边框问题
+// ⚠️ 注意：el-textarea 自身没有 wrapper，其外框直接由 .el-textarea__inner 承担，严禁对 textarea 施加 border:0 / box-shadow:none！
+.el-input__inner,
+.el-input__wrapper input,
+.el-select__wrapper input {
+    border: 0 !important;
+    outline: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    appearance: none !important;
+}
+
+// 2. 单行输入框 (el-input)
 .el-input {
     --el-input-bg-color: var(--input-bg);
     --el-input-text-color: var(--text-primary);
-    --el-input-border-color: var(--rule);
-    --el-input-hover-border-color: var(--rule-strong);
+    --el-input-border-color: var(--rule-strong);
+    --el-input-hover-border-color: var(--text-tertiary);
     --el-input-focus-border-color: var(--accent);
     --el-input-placeholder-color: var(--text-tertiary);
     --el-input-border-radius: #{$border-radius-sm};
 
+    // 外层容器：负责真实边框与背景，支持平滑过渡，边界清晰可见
     .el-input__wrapper {
-        background-color: var(--input-bg) !important;
-        border-radius: $border-radius-sm !important;
-        box-shadow: 0 0 0 1px var(--rule) inset !important;
-        transition: box-shadow 0.2s ease, background-color 0.2s ease;
+        background-color: var(--input-bg);
+        border-radius: $border-radius-sm;
+        box-shadow: 0 0 0 1px var(--rule-strong) inset;
+        padding: 0 12px;
+        transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
-            box-shadow: 0 0 0 1px var(--rule-strong) inset !important;
+            box-shadow: 0 0 0 1px var(--text-tertiary) inset;
         }
 
-        &.is-focus {
-            box-shadow: 0 0 0 1px var(--accent) inset !important;
+        &.is-focus,
+        &:focus-within {
+            box-shadow: 0 0 0 1px var(--accent) inset, 0 0 0 3px var(--accent-soft) !important;
         }
     }
 
+    // 禁用态
+    &.is-disabled .el-input__wrapper {
+        background-color: var(--hover-bg) !important;
+        box-shadow: 0 0 0 1px var(--rule) inset !important;
+        cursor: not-allowed;
+
+        .el-input__inner {
+            color: var(--text-tertiary) !important;
+            cursor: not-allowed;
+        }
+    }
+
+    // 尺寸适配
+    &.el-input--large {
+        font-size: 14px;
+        .el-input__wrapper {
+            min-height: 44px;
+            padding: 0 14px;
+        }
+    }
+
+    &.el-input--small {
+        font-size: 13px;
+        .el-input__wrapper {
+            min-height: 30px;
+            padding: 0 8px;
+        }
+    }
+
+    // 内层真实 input 元素
     .el-input__inner {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        outline: none !important;
-        color: var(--text-primary) !important;
+        color: var(--text-primary);
         font-family: inherit;
+        font-size: inherit;
 
         &::placeholder {
-            color: var(--text-tertiary) !important;
+            color: var(--text-tertiary);
         }
     }
 
-    .el-input__prefix,
+    // 前缀与后缀图标微交互
+    .el-input__prefix {
+        color: var(--text-tertiary);
+        margin-right: 8px;
+        display: inline-flex;
+        align-items: center;
+        transition: color 0.2s ease;
+
+        .el-icon {
+            font-size: 16px;
+        }
+    }
+
+    .el-input__wrapper.is-focus .el-input__prefix {
+        color: var(--text-primary);
+    }
+
     .el-input__suffix {
-        color: var(--text-secondary);
+        color: var(--text-tertiary);
+        margin-left: 8px;
+        display: inline-flex;
+        align-items: center;
+
+        .el-input__icon {
+            cursor: pointer;
+            transition: color 0.2s ease;
+
+            &:hover {
+                color: var(--accent);
+            }
+        }
     }
 }
 
-// 强制清除任何可能被老旧选择器残留污染的 inner input 边框与背景
-.el-input__inner {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    outline: none !important;
+// 3. 复合输入框（带 append/prepend 按钮，如验证码输入框）
+.el-input-group {
+    display: inline-flex;
+    width: 100%;
+
+    &.el-input-group--append {
+        > .el-input__wrapper {
+            border-top-right-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            z-index: 1;
+
+            &.is-focus {
+                z-index: 2;
+            }
+        }
+
+        .el-input-group__append {
+            background-color: var(--surface);
+            box-shadow: 0 0 0 1px var(--rule-strong) inset;
+            border: none;
+            border-top-left-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+            border-top-right-radius: $border-radius-sm !important;
+            border-bottom-right-radius: $border-radius-sm !important;
+            padding: 0 14px;
+            margin-left: -1px;
+            z-index: 1;
+            display: inline-flex;
+            align-items: center;
+
+            .el-button {
+                border: none;
+                background: transparent;
+                padding: 0;
+                margin: 0;
+                color: var(--accent);
+                font-size: 13px;
+                font-weight: 500;
+                transition: opacity 0.2s ease, color 0.2s ease;
+
+                &:hover {
+                    opacity: 0.85;
+                }
+
+                &.is-disabled {
+                    color: var(--text-tertiary) !important;
+                    background: transparent !important;
+                    cursor: not-allowed;
+                }
+            }
+        }
+    }
+
+    &.el-input-group--prepend {
+        .el-input-group__prepend {
+            background-color: var(--surface);
+            box-shadow: 0 0 0 1px var(--rule-strong) inset;
+            border: none;
+            border-top-right-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            border-top-left-radius: $border-radius-sm !important;
+            border-bottom-left-radius: $border-radius-sm !important;
+            padding: 0 14px;
+            margin-right: -1px;
+            z-index: 1;
+        }
+
+        > .el-input__wrapper {
+            border-top-left-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+            z-index: 1;
+
+            &.is-focus {
+                z-index: 2;
+            }
+        }
+    }
 }
 
-// 文本域（Element Plus 2.x 无 wrapper，直接作用于 .el-textarea__inner）
+// 4. 表单校验错误状态统一反馈（不被 !important 遮蔽）
+.el-form-item.is-error {
+    .el-input__wrapper,
+    .el-textarea__inner,
+    .el-select__wrapper {
+        border-color: #f56c6c !important;
+        box-shadow: 0 0 0 1px #f56c6c inset !important;
+
+        &.is-focus,
+        &:focus,
+        &.is-focused {
+            border-color: #f56c6c !important;
+            box-shadow: 0 0 0 1px #f56c6c inset, 0 0 0 3px rgba(245, 108, 108, 0.18) !important;
+        }
+    }
+}
+
+// 5. 文本域 (el-textarea，无外层 wrapper，直接由 .el-textarea__inner 承担边框与背景)
 .el-textarea {
     --el-input-bg-color: var(--input-bg);
     --el-input-text-color: var(--text-primary);
-    --el-input-border-color: var(--rule);
-    --el-input-hover-border-color: var(--rule-strong);
+    --el-input-border-color: var(--rule-strong);
+    --el-input-hover-border-color: var(--text-tertiary);
     --el-input-focus-border-color: var(--accent);
     --el-input-placeholder-color: var(--text-tertiary);
     --el-input-border-radius: #{$border-radius-sm};
 
     .el-textarea__inner {
-        background-color: var(--input-bg) !important;
-        color: var(--text-primary) !important;
-        border-radius: $border-radius-sm !important;
-        border: none !important;
-        box-shadow: 0 0 0 1px var(--rule) inset !important;
-        transition: box-shadow 0.2s ease, background-color 0.2s ease;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+        border-radius: $border-radius-sm;
+        border: 1px solid var(--rule-strong);
+        box-shadow: none;
+        padding: 10px 14px;
+        line-height: 1.6;
+        font-size: 14px;
+        transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         font-family: inherit;
 
         &::placeholder {
-            color: var(--text-tertiary) !important;
+            color: var(--text-tertiary);
         }
 
         &:hover {
-            box-shadow: 0 0 0 1px var(--rule-strong) inset !important;
+            border-color: var(--text-tertiary);
         }
 
         &:focus {
-            box-shadow: 0 0 0 1px var(--accent) inset !important;
-            outline: none !important;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft) !important;
+            outline: none;
         }
+    }
+
+    &.is-disabled .el-textarea__inner {
+        background-color: var(--hover-bg) !important;
+        border-color: var(--rule) !important;
+        cursor: not-allowed;
+        color: var(--text-tertiary);
     }
 }
 
-// 下拉选择器输入外壳
+// 6. 下拉选择器 (el-select)
 .el-select {
     --el-select-input-focus-border-color: var(--accent);
 
     .el-select__wrapper {
-        background-color: var(--input-bg) !important;
-        border-radius: $border-radius-sm !important;
-        box-shadow: 0 0 0 1px var(--rule) inset !important;
-        transition: box-shadow 0.2s ease;
+        background-color: var(--input-bg);
+        border-radius: $border-radius-sm;
+        box-shadow: 0 0 0 1px var(--rule-strong) inset;
+        padding: 4px 12px;
+        transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
         &:hover {
-            box-shadow: 0 0 0 1px var(--rule-strong) inset !important;
+            box-shadow: 0 0 0 1px var(--text-tertiary) inset;
         }
 
         &.is-focused {
-            box-shadow: 0 0 0 1px var(--accent) inset !important;
+            box-shadow: 0 0 0 1px var(--accent) inset, 0 0 0 3px var(--accent-soft) !important;
         }
+    }
+
+    &.is-disabled .el-select__wrapper {
+        background-color: var(--hover-bg) !important;
+        box-shadow: 0 0 0 1px var(--rule) inset !important;
+        cursor: not-allowed;
     }
 }
 

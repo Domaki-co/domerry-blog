@@ -50,8 +50,6 @@ export default defineConfig(({ command, mode }) => {
                 additionalData: `
                   @import "@/styles/variables.scss";
                   @import "@/styles/mixins.scss";
-                  @import "@/styles/global.scss";
-                  @import "@/styles/elmentui.scss";
                 `
               }
             }

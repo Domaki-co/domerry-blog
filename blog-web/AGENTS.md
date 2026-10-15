@@ -38,8 +38,9 @@ npm run preview
 ## 音乐功能
 
 - `/resources` 路由（`views/resources/`）是音乐页：网易云歌曲搜索、歌单链接导入、播放队列。
-- 全站底部播放器在 `layout/player.vue`，歌单来自后端 `/third/getSongList`（`src/api/file.js`），歌词解码用 `src/utils/encoding.js` 的字符集探测。
+- 全站常驻播放器在 `layout/player.vue`（贴边胶囊态 ↔ 340×560 展开卡片），歌单来自后端 `/third/getSongList`（`src/api/file.js`），歌词解码用 `src/utils/encoding.js` 的字符集探测。
 - 后端对应实现在 `blog/mojian-file`（ThirdPartyController 等），改歌曲相关接口时两边同步。
+
 
 ## 编码约定
 

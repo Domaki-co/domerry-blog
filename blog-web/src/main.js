@@ -11,6 +11,8 @@ gsap.registerPlugin(ScrollTrigger)
 
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import '@/styles/global.scss'
+import '@/styles/elmentui.scss'
 
 // Element Plus 不再提供 element-ui 的 el-icon-* 字体图标（theme-chalk 里没有这套字体），
 // 因此把本项目实际用到的图标按 SVG 组件注册到全局：
