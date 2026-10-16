@@ -118,7 +118,7 @@
     </el-card>
 
     <!-- 添加或修改对话框 -->
-    <el-dialog :title="dialog.title" v-model="dialog.visible" width="1400px" top="3vh" :close-on-click-modal="false">
+    <el-dialog :title="dialog.title" v-model="dialog.visible" width="min(1400px, 96%)" top="3vh" :close-on-click-modal="false">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="文章标题" prop="title">
           <el-input v-model="form.title" placeholder="请输入文章标题" />
@@ -308,7 +308,7 @@
     </el-dialog>
 
     <!-- 爬取文章对话框 -->
-    <el-dialog title="爬取文章" v-model="reptileDialog.visible" width="800px">
+    <el-dialog title="爬取文章" v-model="reptileDialog.visible" width="min(800px, 92%)">
       <el-form ref="reptileFormRef" :model="reptileForm" :rules="rules" label-width="100px">
         <el-form-item label="来源类型" prop="type">
           <el-select v-model="reptileForm.type" style="width: 100%">
@@ -337,7 +337,7 @@
     </el-dialog>
 
     <!-- 插入视频对话框 -->
-    <el-dialog center title="插入视频" v-model="dialogVisible" width="40%">
+    <el-dialog center title="插入视频" v-model="dialogVisible" width="min(640px, 92%)">
       <div class="video-upload-row">
         <el-upload style="display: inline-block" :show-file-list="false" name="filedatas" action=""
           :http-request="uploadVideo">

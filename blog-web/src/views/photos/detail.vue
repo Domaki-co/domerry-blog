@@ -295,11 +295,11 @@ export default {
         align-items: center;
         gap: 8px;
         padding: 10px 22px;
-        border-radius: $border-radius-sm;
+        border-radius: $border-radius-md;
         font-size: 0.95em;
         font-weight: 500;
         cursor: pointer;
-        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         background: transparent;
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -311,15 +311,23 @@ export default {
         &:hover {
           background: rgba(255, 255, 255, 0.12);
           border-color: rgba(255, 255, 255, 0.34);
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0);
         }
 
         &.share-btn {
           background: var(--accent);
           border-color: var(--accent);
+          box-shadow: 0 4px 14px rgba(168, 106, 16, 0.25);
 
           &:hover {
-            background: transparent;
-            color: var(--accent);
+            background: var(--accent);
+            filter: brightness(1.08);
+            box-shadow: 0 6px 18px rgba(168, 106, 16, 0.35);
+            color: #fff;
           }
         }
       }

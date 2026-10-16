@@ -131,7 +131,7 @@
     <el-dialog
       :title="dialog.title"
       v-model="dialog.visible"
-      width="600px"
+      width="min(600px, 92%)"
       append-to-body
       destroy-on-close
       class="custom-dialog"
@@ -248,7 +248,7 @@
     <el-dialog
       title="重置密码"
       v-model="resetPwdDialog.visible"
-      width="500px"
+      width="min(500px, 92%)"
       append-to-body
       destroy-on-close
       class="custom-dialog"

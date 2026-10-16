@@ -39,11 +39,8 @@
             <!-- 数据表格 -->
             <el-table v-loading="loading" :data="dataList" row-key="id" @selection-change="handleSelectionChange">
                 <el-table-column type="selection" width="55" align="center" />
-                <el-table-column label="内容" align="left" width="800" prop="content" show-overflow-tooltip>
-                    <template #default="scope">
-                        <div v-html="scope.row.content"></div>
-                    </template>
-                </el-table-column>
+                <el-table-column label="内容" align="left" prop="content" min-width="200" show-overflow-tooltip
+                    :formatter="formatContent" />
                 <el-table-column label="是否展示" align="center" prop="isShow">
                     <template #default="scope">
                         <el-switch v-model="scope.row.isShow" @change="handleChange(scope.row)"
@@ -61,7 +58,7 @@
                     </template>
                 </el-table-column>
                 <el-table-column label="创建时间" align="center" prop="createTime" width="180"/>
-                <el-table-column label="操作" align="center" width="150">
+                <el-table-column label="操作" align="center" width="150" fixed="right">
                     <template #default="scope">
                         <el-button type="primary" link icon="Edit"  v-permission="['sys:notice:update']" @click="handleUpdate(scope.row)">修改
                         </el-button>
@@ -80,12 +77,12 @@
             </div>
 
             <!-- 添加或修改对话框 -->
-            <el-dialog v-model="open" :title="title" width="500px" append-to-body>
+            <el-dialog v-model="open" :title="title" width="min(1100px, 92%)" top="5vh" append-to-body>
                 <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
                     <el-form-item label="公告内容" prop="content">
-                        <div style="border: 1px solid #ccc">
-                            <Toolbar style="border-bottom: 1px solid #ccc" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
-                            <Editor style="height: 300px; overflow-y: hidden;" v-model="form.content" :defaultConfig="editorConfig" :mode="mode"
+                        <div class="notice-editor">
+                            <Toolbar class="notice-editor__toolbar" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
+                            <Editor class="notice-editor__body" style="height: 300px; overflow-y: hidden;" v-model="form.content" :defaultConfig="editorConfig" :mode="mode"
                             @onCreated="handleCreated"/>
                         </div>
 
@@ -174,6 +171,14 @@ const formRef = ref()
 
 // 字典数据
 const positionOptions = ref<any[]>([])
+
+/** 公告内容存的是富文本 HTML，表格里只展示纯文本，交给 el-table 的 show-overflow-tooltip 省略 */
+const formatContent = (row: any) => {
+    const html = row.content ?? ''
+    const div = document.createElement('div')
+    div.innerHTML = html
+    return (div.textContent || '').trim()
+}
 
 /** 查询列表 */
 const getList = () => {
@@ -330,3 +335,20 @@ onMounted(() => {
     getDicts()
 })
 </script>
+
+<style scoped lang="scss">
+.notice-editor {
+    width: 100%;
+    border: 1px solid var(--el-border-color);
+    border-radius: var(--el-border-radius-base);
+    overflow: hidden;
+
+    &__toolbar {
+        border-bottom: 1px solid var(--el-border-color);
+    }
+
+    &__body {
+        width: 100%;
+    }
+}
+</style>

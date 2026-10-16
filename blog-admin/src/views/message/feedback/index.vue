@@ -88,7 +88,7 @@
             </div>
 
             <!-- 添加或修改对话框 -->
-            <el-dialog v-model="open" :title="title" width="500px" append-to-body>
+            <el-dialog v-model="open" :title="title" width="min(500px, 92%)" append-to-body>
                 <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
                     <el-form-item label="回复内容" prop="replyContent">
                         <el-input type="textarea" :rows="5" v-model="form.replyContent" placeholder="请输入回复内容" />

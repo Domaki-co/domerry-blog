@@ -695,23 +695,25 @@ export default {
   width: 100%;
   height: 44px;
   border: none;
-  border-radius: $border-radius-sm;
+  border-radius: $border-radius-md;
   background: var(--accent);
   color: #fff;
   font-size: 15px;
   font-weight: 500;
   letter-spacing: 0.05em;
+  box-shadow: 0 4px 14px rgba(168, 106, 16, 0.22);
   cursor: pointer;
-  transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     filter: brightness(1.08);
-    box-shadow: 0 4px 12px rgba(168, 106, 16, 0.25);
+    box-shadow: 0 6px 18px rgba(168, 106, 16, 0.3);
+    transform: translateY(-1px);
   }
 
   &:active {
     filter: brightness(0.95);
-    transform: translateY(1px);
+    transform: translateY(0);
   }
 }
 
@@ -736,7 +738,7 @@ export default {
 .login-icon {
   width: 40px;
   height: 40px;
-  border-radius: $border-radius-sm;
+  border-radius: $border-radius-md;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -875,7 +877,7 @@ export default {
   top: 18px;
   width: 34px;
   height: 34px;
-  border-radius: $border-radius-sm;
+  border-radius: $border-radius-md;
   display: inline-flex;
   align-items: center;
   justify-content: center;

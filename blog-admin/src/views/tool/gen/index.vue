@@ -140,7 +140,7 @@
       <el-dialog
         v-model="import_visible"
         :title="import_title"
-        width="800px"
+        width="min(800px, 92%)"
         top="5vh"
       >
         <!-- 添加搜索框 -->

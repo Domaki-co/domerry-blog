@@ -98,7 +98,7 @@
     <el-dialog
       :title="dialog.title"
       v-model="dialog.visible"
-      width="580px"
+      width="min(580px, 92%)"
       append-to-body
       destroy-on-close
     >
@@ -131,7 +131,7 @@
     <el-dialog
       title="分配权限"
       v-model="permissionDialog.visible"
-      width="600px"
+      width="min(600px, 92%)"
       append-to-body
       destroy-on-close
       top="5vh"

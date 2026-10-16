@@ -109,31 +109,35 @@ export default {
   width: 40px;
   height: 40px;
   border: 1px solid var(--rule);
-  border-radius: $border-radius-sm;
+  border-radius: 10px;
   background: var(--surface);
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: $shadow-sm;
-  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
   &:hover {
     color: var(--accent);
     border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
   }
 
-  // 主题切换按钮：原来用 $primary→$secondary 渐变，新设计不用双色渐变，
-  // 改成琥珀实底 + 白图标
+  // 主题切换按钮：实底 + 白图标
   &.theme-btn {
     background: var(--accent);
     border-color: var(--accent);
     color: #fff;
+    box-shadow: 0 4px 14px rgba(168, 106, 16, 0.25);
 
     &:hover {
-      background: transparent;
-      color: var(--accent);
+      background: var(--accent);
+      filter: brightness(1.08);
+      box-shadow: 0 6px 18px rgba(168, 106, 16, 0.35);
+      color: #fff;
     }
   }
   

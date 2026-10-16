@@ -54,7 +54,7 @@
         </el-card>
 
         <!-- 添加或修改对话框 -->
-        <el-dialog :title="dialog.title" v-model="dialog.visible" width="600px" append-to-body destroy-on-close
+        <el-dialog :title="dialog.title" v-model="dialog.visible" width="min(600px, 92%)" append-to-body destroy-on-close
             class="custom-dialog">
             <el-form ref="albumFormRef" :model="albumForm" :rules="rules" label-width="80px" class="custom-form">
                 <el-form-item label="封面" prop="cover">

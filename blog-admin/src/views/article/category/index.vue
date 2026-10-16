@@ -90,7 +90,7 @@
       <el-dialog
         :title="dialog.title"
         v-model="dialog.visible"
-        width="600px"
+        width="min(600px, 92%)"
         append-to-body
         destroy-on-close
         class="custom-dialog"

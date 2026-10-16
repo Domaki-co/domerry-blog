@@ -78,10 +78,10 @@
                 </el-form-item>
               </el-col>
             </el-row>
-                <el-form-item label="关于我" prop="aboutMe">
-                  <div style="border: 1px solid #ccc;">
-                      <Toolbar style="border-bottom: 1px solid #ccc;width: 1200px;" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
-                      <Editor style=" overflow-y: hidden;width: 1200px" v-model="form.aboutMe" :defaultConfig="editorConfig" :mode="mode"
+                <el-form-item label="关于我" prop="aboutMe" class="is-full-width">
+                  <div class="about-editor">
+                      <Toolbar class="about-editor__toolbar" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
+                      <Editor class="about-editor__body" style="overflow-y: hidden;" v-model="form.aboutMe" :defaultConfig="editorConfig" :mode="mode"
                       @onCreated="handleCreated"/>
                   </div>
                 </el-form-item>
@@ -415,5 +415,24 @@ onMounted(() => {
 
 .el-form-item {
   max-width: 600px;
+
+  &.is-full-width {
+    max-width: none;
+  }
+}
+
+.about-editor {
+  width: 100%;
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--el-border-radius-base);
+  overflow: hidden;
+
+  &__toolbar {
+    border-bottom: 1px solid var(--el-border-color);
+  }
+
+  &__body {
+    width: 100%;
+  }
 }
 </style>

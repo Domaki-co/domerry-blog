@@ -22,8 +22,12 @@
         <i class="fas fa-times"></i>
       </div>
       <span class="enter-tip">
-        <i class="fas fa-level-down-alt fa-rotate-90"></i>
-        按回车搜索
+        <kbd class="keycap">⏎</kbd>
+        搜索
+        <span class="esc-hint">
+          <kbd class="keycap">esc</kbd>
+          关闭
+        </span>
       </span>
     </div>
 
@@ -230,6 +234,12 @@ export default {
     handleKeydown(e) {
       if (e.key === 'Escape') {
         this.close()
+        return
+      }
+      // ⌘K / Ctrl+K 开搜索（Esc 关），Header 上那枚键帽就是这个快捷键的提示
+      if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 'k') {
+        e.preventDefault()
+        this.$store.commit('SET_SEARCH_VISIBLE', true)
       }
     },
     /**
@@ -317,12 +327,32 @@ export default {
     font-size: 12px;
     display: flex;
     align-items: center;
+    gap: 6px;
+    white-space: nowrap;
     opacity: 0.6;
     pointer-events: none;
-    
-    i {
-      font-size: 14px;
-      margin-right: 4px;
+
+    // 键帽：和 Header 搜索按钮上那枚同一套画法
+    .keycap {
+      padding: 1px 5px 2px;
+      border-radius: $border-radius-sm;
+      background: var(--row-hover);
+      border: 1px solid var(--rule);
+      box-shadow: 0 1px 0 var(--rule-strong);
+      font-family: $font-mono;
+      font-size: 0.68rem;
+      line-height: 1.35;
+      color: var(--text-secondary);
+    }
+
+    // 两个快捷键之间用一条发丝线隔开，不靠间距硬撑
+    .esc-hint {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 4px;
+      padding-left: 10px;
+      border-left: 1px solid var(--rule);
     }
   }
   
@@ -338,6 +368,13 @@ export default {
     opacity: 0;
     transform: translateX(10px);
     transition: all 0.3s ease;
+  }
+}
+
+// 窄屏的搜索框放不下两组提示，只留「回车」
+@include responsive(md) {
+  .search-input-wrapper .enter-tip .esc-hint {
+    display: none;
   }
 }
 

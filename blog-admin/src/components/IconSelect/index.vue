@@ -2,7 +2,7 @@
   <el-dialog
     v-model="dialogVisible"
     title="选择图标"
-    width="800px"
+    width="min(800px, 92%)"
     append-to-body
     top="5vh"
   >

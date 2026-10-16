@@ -166,49 +166,102 @@ export default {
 
 <style lang="scss" scoped>
 // ════════════════════════════════════════════════════════════════
-//  文章台账
+//  文章列表 · macOS 风格行卡片体系
 //
-//  三列：日期（年小/月日大）| 标题+摘要+元信息 | 118px 缩略图。
-//  hover 只做底色变化和标题下划线展开，不位移 —— 位移会让整列
-//  文字在鼠标扫过时抖动，台账要的是稳。
+//  三列：日期（年等宽/月日）| 标题+摘要+元信息胶囊 | 120px 视网膜缩略图。
+//  交互用 Finder 的行选中语汇：悬浮浮出「温润冷灰 / 微透青灰」高光底、
+//  整行右移 4px，缩略图在裁切框内缓慢放大。行与行之间平时靠 1px 底线分隔，
+//  hover 时底线隐去、由高光底接管层次。
 // ════════════════════════════════════════════════════════════════
 
 .ledger {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .entry {
-  border-bottom: 1px solid var(--rule);
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+
+  // 未 hover 时的轻柔底线，macOS 优雅分隔
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 18px;
+    right: 18px;
+    height: 1px;
+    background: var(--rule);
+    transition: opacity 0.24s ease;
+  }
+
+  &:hover {
+    // 走 Finder 的行选中逻辑：靠「温润冷灰」高光底，而不是白卡 + 外投影
+    background: var(--row-hover-strong);
+    border-color: var(--rule);
+    // 整行右移 4px 做反馈；右侧是容器 padding，顶不出横向滚动条
+    transform: translateX(4px);
+
+    &::after {
+      opacity: 0;
+    }
+
+    .entry-thumb img {
+      transform: scale(1.03);
+      filter: saturate(1.05);
+    }
+
+    .entry-title a {
+      color: var(--accent);
+    }
+  }
+}
+
+// 遵循系统「减弱动态效果」：位移与缩放属于纯装饰，高光底反馈保留
+@media (prefers-reduced-motion: reduce) {
+  .entry:hover {
+    transform: none;
+
+    .entry-thumb img {
+      transform: none;
+    }
+  }
+}
+
+// 深色模式下的行卡片悬浮：微透青灰高光 + 顶边内发光
+:root[data-theme='dark'] .entry {
+  &:hover {
+    background: var(--row-hover-strong);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+    .entry-title a {
+      color: var(--text-primary);
+    }
+  }
 }
 
 .entry-link {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr) 118px;
+  grid-template-columns: 74px minmax(0, 1fr) 120px;
   gap: clamp(16px, 2vw, 28px);
   align-items: start;
-  padding: 24px 18px;
-  margin: 0 -18px;
-  transition: background 0.22s ease;
-
-  &:hover {
-    background: var(--row-hover);
-
-    .entry-title a {
-      background-size: 100% 1px;
-    }
-
-    .entry-thumb img {
-      filter: saturate(1);
-    }
-  }
+  padding: 22px 18px;
 }
 
 .entry-date {
   font-family: $font-mono;
   font-variant-numeric: tabular-nums;
-  padding-top: 3px;
+  padding-top: 4px;
 
   .y {
     display: block;
@@ -220,6 +273,7 @@ export default {
   .md {
     display: block;
     font-size: 0.95rem;
+    font-weight: 500;
     color: var(--text-secondary);
     letter-spacing: -0.01em;
   }
@@ -235,7 +289,7 @@ export default {
   line-height: 1.45;
   font-weight: 600;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 9px;
   flex-wrap: wrap;
   margin: 0;
@@ -243,31 +297,56 @@ export default {
   a {
     color: var(--text-primary);
     text-decoration: none;
-    // 下划线从左侧展开
-    background-image: linear-gradient(currentColor, currentColor);
-    background-size: 0% 1px;
-    background-repeat: no-repeat;
-    background-position: 0 100%;
-    transition: background-size 0.32s ease;
+    transition: color 0.22s ease;
   }
 }
 
-// 置顶 / 私密：描边小标签，不用实心色块
+// 置顶 / 私密：macOS 状态胶囊
 .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-family: $font-mono;
-  font-size: 0.63rem;
-  letter-spacing: 0.06em;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
   line-height: 1;
-  padding: 3px 6px;
-  border: 1px solid var(--accent);
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(168, 106, 16, 0.3);
+  background: rgba(168, 106, 16, 0.08);
   color: var(--accent);
-  border-radius: $border-radius-sm;
   flex: none;
   transform: translateY(-1px);
+  box-shadow: 0 1px 3px rgba(168, 106, 16, 0.08);
+
+  &::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 
   &.muted {
     border-color: var(--rule-strong);
+    background: rgba(0, 0, 0, 0.04);
     color: var(--text-tertiary);
+    box-shadow: none;
+
+    &::before {
+      display: none;
+    }
+  }
+}
+
+:root[data-theme='dark'] .badge {
+  border-color: rgba(217, 154, 61, 0.4);
+  background: rgba(217, 154, 61, 0.12);
+
+  &.muted {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
   }
 }
 
@@ -287,46 +366,65 @@ export default {
   margin-top: 12px;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
   font-family: $font-mono;
   font-size: 0.72rem;
   color: var(--text-tertiary);
   letter-spacing: 0.02em;
 
+  // macOS Finder 风格分类标签胶囊
   .cat {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.04);
     color: var(--text-secondary);
+    font-size: 0.7rem;
+    transition: background 0.2s ease, color 0.2s ease;
   }
 }
 
+:root[data-theme='dark'] .entry-meta .cat {
+  background: rgba(255, 255, 255, 0.06);
+}
+
 .entry-thumb {
-  width: 118px;
+  width: 120px;
   aspect-ratio: 16 / 10;
   overflow: hidden;
+  // 视网膜内圆角：比行卡片(10px)大一号，缩略图看起来才是独立的浮层
+  border-radius: 12px;
   border: 1px solid var(--rule);
   background: var(--row-hover);
   display: block;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.28s ease, border-color 0.28s ease;
 
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: saturate(0.9);
-    transition: filter 0.3s ease;
+    filter: saturate(0.92);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
   }
-
 }
 
-// 管理员置顶按钮：融进元信息行，不额外占位
+:root[data-theme='dark'] .entry-thumb {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+// 管理员置顶按钮：macOS 微胶囊按钮
 .stick-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 7px;
+  padding: 2px 8px;
   font-family: $font-mono;
   font-size: 0.68rem;
   letter-spacing: 0.02em;
-  border-radius: $border-radius-sm;
+  border-radius: 999px;
   border: 1px solid var(--rule);
   background: transparent;
   color: var(--text-tertiary);
@@ -356,16 +454,18 @@ export default {
 
 .pagination-box {
   margin-top: $spacing-xl;
+  display: flex;
+  justify-content: center;
 }
 
-// 列表进场：轻微上浮，不做大幅位移
+// 列表进场动效
 .post-list-enter-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
+  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
   transition-delay: calc(0.04s * var(--index, 0));
 }
 
 .post-list-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.25s ease;
 }
 
 .post-list-enter,
@@ -378,8 +478,7 @@ export default {
   .entry-link {
     grid-template-columns: 64px minmax(0, 1fr) 108px;
     gap: 16px;
-    padding: 20px 14px;
-    margin: 0 -14px;
+    padding: 18px 14px;
   }
 
   .entry-thumb {
@@ -391,11 +490,9 @@ export default {
   .entry-link {
     grid-template-columns: 64px minmax(0, 1fr);
     gap: 14px;
-    padding: 20px 12px;
-    margin: 0 -12px;
+    padding: 18px 12px;
   }
 
-  // 窄屏优先保住标题和摘要，缩略图让位
   .entry-thumb {
     display: none;
   }

@@ -33,7 +33,7 @@
             }"
             @mouseenter="handleMouseEnter(item)"
           >
-            <i :class="item.icon"></i>
+            <i v-if="item.icon" :class="item.icon"></i>
             {{ item.name }}
             <i v-if="item.children" class="fas fa-chevron-down dropdown-icon"></i>
           </router-link>
@@ -58,19 +58,35 @@
       </div>
 
       <div class="nav-right">
-        <a href="javascript:void(0)" class="search-btn" @click="handleSearch">
+        <a
+          href="javascript:void(0)"
+          class="search-btn"
+          aria-keyshortcuts="Meta+K Control+K"
+          @click="handleSearch"
+        >
           <i class="fas fa-search"></i>
           <span class="search-text">搜索</span>
+          <!-- 这枚键帽是真话：⌘K/Ctrl+K 已绑在 components/Search/index.vue 的 keydown 里 -->
+          <kbd class="search-kbd" aria-hidden="true">{{ isMac ? '⌘K' : 'Ctrl K' }}</kbd>
         </a>
 
         <!-- 修改消息按钮的跳转路径 -->
-        <router-link to="/notifications" class="message-btn">
+        <router-link to="/notifications" class="message-btn" title="消息通知">
           <i class="far fa-bell"></i>
           <span class="message-count" v-if="showBage()" />
         </router-link>
 
+        <!-- 一键深浅色主题切换按钮 -->
+        <button
+          class="theme-toggle-btn"
+          :title="isDark ? '切换浅色模式' : '切换深色模式'"
+          @click="toggleTheme"
+        >
+          <i :class="['fas', isDark ? 'fa-sun' : 'fa-moon']"></i>
+        </button>
+
         <!-- 移动端搜索按钮 -->
-        <button class="mobile-search-btn" @click="handleSearch">
+        <button class="mobile-search-btn" @click="handleSearch" title="搜索">
           <i class="fas fa-search"></i>
         </button>
 
@@ -124,11 +140,16 @@
 </template>
 
 <script>
+import { getThemeMode, setThemeMode } from '@/utils/theme'
 
 export default {
   name: 'TheHeader',
   data() {
     return {
+      isDark: false,
+      // 键帽按平台换字：Mac 写 ⌘K，其它平台写 Ctrl K
+      isMac: typeof navigator !== 'undefined' &&
+        /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent || ''),
       searchQuery: '',
       showSearchPanel: false,
       showMobileSearch: false,
@@ -173,37 +194,29 @@ export default {
           icon: 'fas fa-music'
         },
         {
-          name: '相册',
-          path: '/photos',
-          icon: 'fas fa-images'
-        },
-        {
           name: '留言板',
           path: '/messages',
           icon: 'fas fa-envelope'
         },
         {
-          name: '友链',
-          path: '/friends',
-          icon: 'fas fa-users'
-        },
-        {
           name: '更多',
           path: '/about',
-          icon: 'fas fa-info-circle',
           children: [
+            {
+              name: '相册',
+              path: '/photos',
+              icon: 'fas fa-images'
+            },
+            {
+              name: '友链',
+              path: '/friends',
+              icon: 'fas fa-users'
+            },
             {
               name: '关于我',
               path: '/about',
               icon: 'fas fa-user'
             },
-            // {
-            //   name: '网站源码',
-            //   path: 'https://gitee.com/Domaki/shiyi-blog',
-            //   icon: 'fab fa-github',
-            //   colorClass: 'github-link',
-            //   external: true
-            // },
             {
               name: '后台管理',
               path: import.meta.env.VITE_APP_ADMIN_URL || 'http://localhost:30001',
@@ -308,6 +321,10 @@ export default {
         }
       }, 300)
     },
+    toggleTheme() {
+      this.isDark = !this.isDark
+      setThemeMode(this.isDark ? 'dark' : 'light')
+    },
     showBage() {
       console.log(this.$store.state.isUnread)
      return this.$store.state.isUnread
@@ -335,21 +352,37 @@ export default {
     }
   },
   mounted() {
+    this.isDark = getThemeMode() === 'dark'
+    // 监听全局 data-theme 变更（与 FloatingButtons/右键菜单状态双向同步）
+    this.themeObserver = new MutationObserver(() => {
+      this.isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+    })
+    this.themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme']
+    })
+
     // 添加滚动事件监听
     window.addEventListener('scroll', this.handleScroll)
 
-    // 保留原有的事件监听
-    document.addEventListener('click', (e) => {
+    // 点击空白处收起用户下拉菜单
+    this.handleDocumentClick = (e) => {
       const userSection = this.$el.querySelector('.user-section')
       if (userSection && !userSection.contains(e.target)) {
         this.showDropdown = false
       }
-    })
+    }
+    document.addEventListener('click', this.handleDocumentClick)
   },
   beforeUnmount() {
-    // 移除滚动事件监听
+    if (this.themeObserver) {
+      this.themeObserver.disconnect()
+    }
+    // 移除滚动和点击事件监听
     window.removeEventListener('scroll', this.handleScroll)
-    document.removeEventListener('click', this.closeDropdown)
+    if (this.handleDocumentClick) {
+      document.removeEventListener('click', this.handleDocumentClick)
+    }
   }
 }
 </script>
@@ -369,32 +402,50 @@ $header-height: 64px;
   top: 0;
   left: 0;
   right: 0;
+  height: $header-height;
   z-index: 1000;
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  backdrop-filter: saturate(180%) blur(12px);
-  -webkit-backdrop-filter: saturate(180%) blur(12px);
-  border-bottom: 1px solid var(--rule);
-  transition: background 0.3s ease, border-color 0.3s ease, transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  pointer-events: none; // 让两侧透明留白区域不遮挡页面下方点击
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   transform: translateY(0);
 
   &.header-hidden {
-    transform: translateY(-100%);
+    transform: translateY(-120%);
   }
 }
 
 .navbar {
-  padding: 0 $spacing-xl;
+  pointer-events: auto;
+  width: 100%;
+  max-width: 1180px;
+  height: 50px;
+  border-radius: 9999px;
   display: flex;
-  justify-content: flex-start;
   align-items: center;
-  height: $header-height;
+  justify-content: space-between;
+  padding: 0 14px 0 18px;
   position: relative;
-  gap: $spacing-lg;
+  gap: 12px;
+
+  // 磨砂玻璃胶囊质感
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--rule);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), 0 0 1px 1px rgba(255, 255, 255, 0.7) inset;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 // ── 左：站标 ──
 .nav-left {
-  flex-shrink: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 0;
 
   .logo {
     display: flex;
@@ -431,13 +482,13 @@ $header-height: 64px;
   }
 }
 
-// ── 中：菜单（整体靠右，紧挨右侧操作区）──
+// ── 中：菜单（完美居中显示）──
 .nav-center {
+  flex: 0 0 auto;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
-  flex: 1;
-  gap: 2px;
+  gap: 8px;
   font-size: 1em;
 
   .nav-item {
@@ -462,12 +513,12 @@ $header-height: 64px;
     color: var(--text-secondary);
     text-decoration: none;
     font-weight: 500;
-    transition: color 0.2s ease;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 10px;
-    border-radius: $border-radius-sm;
+    padding: 6px 14px;
+    border-radius: 9999px;
     font-size: 0.9rem;
     position: relative;
     white-space: nowrap;
@@ -478,9 +529,20 @@ $header-height: 64px;
       transition: color 0.2s ease;
     }
 
-    // 当前页：琥珀色 + 一条下划线，不用背景块
+    &:hover {
+      color: var(--text-primary);
+      background: var(--row-hover);
+
+      i {
+        color: var(--accent);
+      }
+    }
+
+    // 当前页：高亮文字 + 底部细指示条
     &.active {
       color: var(--text-primary);
+      background: var(--row-hover);
+      font-weight: 600;
 
       i {
         color: var(--accent);
@@ -489,20 +551,13 @@ $header-height: 64px;
       &::after {
         content: '';
         position: absolute;
-        left: 10px;
-        right: 10px;
-        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 3px;
+        width: 16px;
         height: 2px;
         background: var(--accent);
-        border-radius: 1px;
-      }
-    }
-
-    &:hover {
-      color: var(--text-primary);
-
-      i {
-        color: var(--accent);
+        border-radius: 2px;
       }
     }
 
@@ -519,20 +574,22 @@ $header-height: 64px;
   }
 }
 
-// ── 右：搜索 / 消息 / 头像 ──
+// ── 右：搜索 / 消息 / 主题切换 / 头像 ──
 .nav-right {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: $spacing-sm;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  min-width: 0;
+  gap: 6px;
 
   .search-btn {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    background: transparent;
-    border-radius: $border-radius-sm;
+    padding: 5px 12px;
+    background: var(--row-hover);
+    border-radius: 9999px;
     color: var(--text-secondary);
     text-decoration: none;
     transition: all 0.2s ease;
@@ -543,13 +600,26 @@ $header-height: 64px;
     }
 
     .search-text {
-      font-size: 0.85rem;
+      font-size: 0.84rem;
+    }
+
+    // 键帽：底色比周围略深一档就够（浅色下白底白帽会糊掉），加一条底部实边当厚度
+    .search-kbd {
+      padding: 1px 5px 2px;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      box-shadow: 0 1px 0 var(--rule-strong);
+      font-family: $font-mono;
+      font-size: 0.68rem;
+      line-height: 1.35;
+      color: var(--text-tertiary);
     }
 
     &:hover {
       color: var(--text-primary);
       border-color: var(--rule-strong);
-      background: var(--row-hover);
+      background: var(--hover-bg);
     }
   }
 
@@ -557,14 +627,16 @@ $header-height: 64px;
     position: relative;
     display: flex;
     align-items: center;
-    padding: 7px;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
     color: var(--text-secondary);
     text-decoration: none;
-    transition: color 0.2s ease;
-    border-radius: $border-radius-sm;
+    transition: all 0.2s ease;
+    border-radius: 50%;
 
     i {
-      font-size: 1rem;
+      font-size: 0.95rem;
     }
 
     &:hover {
@@ -574,13 +646,35 @@ $header-height: 64px;
 
     .message-count {
       position: absolute;
-      top: 4px;
-      right: 4px;
+      top: 3px;
+      right: 3px;
       background: var(--accent);
       width: 7px;
       height: 7px;
       border-radius: 50%;
       padding: 0;
+    }
+  }
+
+  .theme-toggle-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.92rem;
+    transition: all 0.25s ease;
+
+    &:hover {
+      background: var(--row-hover);
+      border-color: var(--rule-strong);
+      color: var(--accent);
+      transform: rotate(18deg);
     }
   }
 
@@ -594,8 +688,6 @@ $header-height: 64px;
         top: 100%;
         left: 0;
         width: 100%;
-        // 要盖住 .user-dropdown 的 `top: calc(100% + 10px)`，少 1px 就会留出
-        // 鼠标划过去时触发 mouseleave、把菜单关掉的死区
         height: 10px;
         background: transparent;
       }
@@ -611,10 +703,11 @@ $header-height: 64px;
       align-items: center;
       justify-content: center;
       border: 1px solid var(--rule);
-      transition: border-color 0.2s ease;
+      transition: all 0.2s ease;
 
       &:hover {
         border-color: var(--accent);
+        transform: scale(1.04);
       }
 
       .avatar-icon {
@@ -623,7 +716,6 @@ $header-height: 64px;
         object-fit: cover;
       }
     }
-
     .user-dropdown {
       position: absolute;
       top: calc(100% + 10px);
@@ -819,47 +911,22 @@ $header-height: 64px;
 }
 
 // ── 响应式 ──
-@media screen and (max-width: 1400px) {
-  .nav-center .nav-link {
-    font-size: 0.84rem;
-    padding: 6px 8px;
-    gap: 5px;
-
-    &.active::after {
-      left: 8px;
-      right: 8px;
-    }
-  }
-}
-
 @media screen and (max-width: 1200px) {
   .navbar {
-    padding: 0 $spacing-lg;
+    padding: 0 12px 0 16px;
   }
 
   .nav-center .nav-link {
-    font-size: 0.8rem;
-    padding: 6px 6px;
-
-    i {
-      display: none;
-    }
-
-    &.has-dropdown {
-      padding-right: 18px;
-
-      .dropdown-icon {
-        display: block;
-      }
-    }
-
-    &.active::after {
-      left: 6px;
-      right: 6px;
-    }
+    font-size: 0.86rem;
+    padding: 6px 10px;
   }
 
   .nav-right .search-btn .search-text {
+    display: none;
+  }
+
+  // 文字收掉时键帽一起收，只留放大镜图标
+  .nav-right .search-btn .search-kbd {
     display: none;
   }
 }
@@ -871,19 +938,34 @@ $header-height: 64px;
 }
 
 @include responsive(md) {
+  .site-header {
+    padding: 0 10px;
+  }
+
   .navbar {
-    padding: 0 $spacing-md;
+    padding: 0 12px;
+    height: 46px;
   }
 
   .menu-btn,
   .mobile-search-btn {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .nav-right .search-btn,
   .nav-right .message-btn,
   .nav-right .user-info {
     display: none;
+  }
+
+  // 移动端右侧保留主题切换按钮
+  .nav-right .theme-toggle-btn {
+    display: flex;
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
   }
 
   // 移动端站标居中
@@ -893,14 +975,15 @@ $header-height: 64px;
     transform: translateX(-50%);
 
     .logo .logo-text {
-      max-width: 150px;
-      font-size: 1rem;
+      max-width: 140px;
+      font-size: 0.96rem;
     }
   }
 }
 
-// 深色模式下顶栏底色略加深，避免和页面底色糊在一起
-:root[data-theme='dark'] .site-header {
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+// 深色模式下胶囊底色与通透微投影
+:root[data-theme='dark'] .navbar {
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.5), 0 0 1px 1px rgba(255, 255, 255, 0.05) inset;
 }
 </style>

@@ -121,7 +121,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogType === 'add' ? '新增字典' : '修改字典'"
-      width="500px"
+      width="min(500px, 92%)"
       append-to-body
     >
       <el-form
@@ -162,7 +162,7 @@
     <el-dialog
       v-model="dataDialogVisible"
       :title="`字典数据 - ${currentDict?.name}`"
-      width="800px"
+      width="min(800px, 92%)"
       append-to-body
       :close-on-click-modal="false"
     >

@@ -134,7 +134,7 @@
       <el-dialog
         :title="title"
         v-model="open"
-        width="700px"
+        width="min(700px, 92%)"
         append-to-body
       >
         <el-form ref="jobFormRef" :model="form" :rules="rules" label-width="120px">
@@ -222,7 +222,7 @@
       </el-dialog>
 
       <!-- Cron表达式生成器 -->
-      <el-dialog top="5vh" title="Cron表达式生成器" v-model="cronVisible" width="700px" append-to-body>
+      <el-dialog top="5vh" title="Cron表达式生成器" v-model="cronVisible" width="min(700px, 92%)" append-to-body>
         <CronTab
           v-model="form.cronExpression"
           :visible="cronVisible"

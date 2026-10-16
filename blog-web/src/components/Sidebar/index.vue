@@ -1,6 +1,6 @@
 <template>
   <aside class="sidebar">
-    <!-- 作者块：头像 + 昵称 + 签名，然后是等宽的数据行 -->
+    <!-- 作者块：头像 + 昵称 + 签名，然后是仪表小格与社交方块 -->
     <section class="block author-block">
       <div class="author">
         <img
@@ -15,16 +15,18 @@
         </div>
       </div>
 
-      <!-- 台账取向的「版记」：数字等宽，对齐成两列 -->
-      <div class="colophon">
-        <div><b>{{ postCount }}</b> 篇文章　<b>{{ tagCount }}</b> 个标签</div>
-        <div><b>{{ visitorCount }}</b> 位访客　<b>{{ viewCount }}</b> 次浏览</div>
+      <!-- macOS 仪表小格：2×2，数字衬线等宽、标签在数字下方居中 -->
+      <div class="metrics">
+        <div class="metric"><b>{{ visitorCount }}</b><span>访客</span></div>
+        <div class="metric"><b>{{ viewCount }}</b><span>浏览</span></div>
+        <div class="metric"><b>{{ postCount }}</b><span>文章</span></div>
+        <div class="metric"><b>{{ tagCount }}</b><span>标签</span></div>
       </div>
       <div class="social-links">
         <div v-for="item in socialLinksWithData" :key="item.type">
           <!-- v-if 必须挂在 el-tooltip 上：Element Plus 的 ElOnlyChild 要求默认插槽里存在真实元素，
                写在 <a> 上时插槽只剩注释节点，每次渲染都会报 ElementPlusError: [ElOnlyChild] no valid child node found -->
-          <el-tooltip v-if="$store.state.webSiteInfo.showList.indexOf(item.type) !== -1"
+          <el-tooltip v-if="($store.state.webSiteInfo.showList || []).indexOf(item.type) !== -1"
             placement="top" :content="item.content">
             <a href="javascript:void(0)"
                 :title="item.title" class="social-btn" @click="copyToClipboard(item)">
@@ -35,9 +37,15 @@
       </div>
     </section>
 
-    <!-- 公告 -->
-    <section class="block" v-if="announcements.length">
-      <h4>公告</h4>
+    <!--
+      公告：macOS 便签质感。/api/getNotice 只返回 content、没有时间字段，
+      所以头部是图钉图标 + 「公告」，别照搬系统通知横幅右上角的时间戳位
+    -->
+    <section class="block note-block" v-if="announcements.length">
+      <div class="note-head">
+        <i class="fas fa-thumbtack" aria-hidden="true"></i>
+        <span>公告</span>
+      </div>
       <div class="announcement-content">
         <div class="announcement-item" v-for="(item, index) in announcements" :key="index">
           <span v-html="$sanitize(item.content)"></span>
@@ -76,15 +84,15 @@
 
       <section class="block">
         <h4>标签</h4>
+        <!-- 等高气泡胶囊：字号不再按文章数分档，权重改由胶囊内的计数表达 -->
         <div class="cloud">
           <a
             v-for="tag in visibleTags"
             :key="tag.id"
             href="javascript:void(0)"
-            :class="weightClass(tag.articleNum)"
             @click="goToTag(tag)"
           >
-            {{ tag.name }}
+            {{ tag.name }}<b class="n">{{ tag.articleNum }}</b>
           </a>
         </div>
       </section>
@@ -175,7 +183,7 @@ export default {
       })
     },
     /**
-     * 版记数字：文章总数由 /api/article/list 的 total 提供，
+     * 仪表小格：文章总数由 /api/article/list 的 total 提供，
      * 标签数用已拉到的标签列表长度，访客/浏览量来自 store
      */
     postCount() {
@@ -186,7 +194,7 @@ export default {
     },
     /**
      * 侧边栏标签云：丢掉没有文章的标签，按文章数倒序，再按数量上限截断
-     * （规则见 src/utils/tags.js）。版记里的 tagCount 仍是全量总数。
+     * （规则见 src/utils/tags.js）。仪表小格里的 tagCount 仍是全量总数。
      */
     visibleTags() {
       return pickDisplayTags(this.tags)
@@ -236,22 +244,15 @@ export default {
       const day = String(date.getDate()).padStart(2, '0')
       return `${month}-${day}`
     },
-    /**
-     * 标签云按文章数分 5 级字号
-     */
-    weightClass(articleNum) {
-      const n = Number(articleNum) || 0
-      if (n >= 5) return 'w5'
-      if (n >= 4) return 'w4'
-      if (n >= 3) return 'w3'
-      if (n >= 2) return 'w2'
-      return 'w1'
-    },
     goToTag(tag) {
       this.$router.push({ path: '/tags', query: { tagId: tag.id, tagName: tag.name } })
     },
     handleAvatarError(e) {
-      e.target.style.visibility = 'hidden'
+      if (this.$store.state.webSiteInfo.touristAvatar && e.target.src !== this.$store.state.webSiteInfo.touristAvatar) {
+        e.target.src = this.$store.state.webSiteInfo.touristAvatar
+      } else {
+        e.target.style.visibility = 'hidden'
+      }
     },
     /**
      * 复制到剪贴板
@@ -271,7 +272,7 @@ export default {
 }
 
 /**
- * 大数字加千分位，避免版记里出现一长串数字把列撑开
+ * 大数字加千分位，避免仪表小格里出现一长串数字把格子撑开
  */
 function formatCount(value) {
   const n = Number(value)
@@ -282,10 +283,14 @@ function formatCount(value) {
 
 <style lang="scss" scoped>
 // ════════════════════════════════════════════════════════════════
-//  侧栏 · 技术台账
+//  侧栏 · macOS 小组件群
 //
-//  没有卡片、没有阴影、没有彩色图标。作者块 + 版记（等宽数字）+
-//  近期 + 标签云，块与块之间靠留白和一条 1px 线分隔。
+//  作者名片（仪表小格 + 毛玻璃方块）、便签式公告、置顶/近期列表、
+//  等高标签胶囊。每块都是一张卡片 —— --card-bg 底、1px 发丝边、12px 圆角，
+//  块间距取小组件之间的 16px 排水槽。
+//
+//  滚动区 .sidebar-scroll 的 overflow 会裁掉卡片投影的边缘几像素，
+//  所以卡片的立体感靠边框而不是投影，别把它加到一眼看得出被切的厚度。
 // ════════════════════════════════════════════════════════════════
 
 .sidebar {
@@ -321,11 +326,17 @@ function formatCount(value) {
   }
 }
 
+// ── 卡片：整个侧栏就是一组 macOS 小组件 ──
 .block {
-  margin-bottom: 34px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--card-bg);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-lg;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 
   h4 {
-    margin: 0 0 14px;
+    margin: 0 0 12px;
     font-family: $font-mono;
     font-size: 0.7rem;
     font-weight: 400;
@@ -340,13 +351,18 @@ function formatCount(value) {
   gap: 13px;
   align-items: center;
 
+  // 头像光环：2px 底色留缝 + 一圈琥珀软光，极慢呼吸（对标 macOS 登录头像外圈）
   .avatar {
-    width: 52px;
-    height: 52px;
+    width: 56px;
+    height: 56px;
+    padding: 2px;
     border-radius: 50%;
     object-fit: cover;
+    background: var(--card-bg);
     border: 1px solid var(--rule);
     flex: none;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    animation: avatar-breathe 4.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
   }
 
   .who {
@@ -367,49 +383,117 @@ function formatCount(value) {
   }
 }
 
-.colophon {
+// ── 仪表小格：2×2，格子之间靠容器底色透出 1px 发丝线 ──
+.metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
   margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--rule);
-  font-family: $font-mono;
-  font-size: 0.73rem;
-  color: var(--text-tertiary);
-  line-height: 2;
-  font-variant-numeric: tabular-nums;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: $border-radius-md;
+  overflow: hidden;
 
-  b {
-    font-weight: 400;
-    color: var(--text-secondary);
-  }
-}
-
-.social-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 14px;
-
-  .social-btn {
-    width: 30px;
-    height: 30px;
+  .metric {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    border-radius: $border-radius-sm;
-    font-size: 0.95rem;
-    // 图标统一单色，hover 才点亮成琥珀
-    color: var(--text-tertiary);
-    transition: color 0.2s ease, background 0.2s ease;
-    text-decoration: none;
+    gap: 1px;
+    padding: 9px 4px 8px;
+    background: var(--card-bg);
+    transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
     &:hover {
-      color: var(--accent);
       background: var(--row-hover);
+    }
+
+    // 衬线大字 + 等宽数字位：位数变化时格子不跟着抖
+    b {
+      font-family: $font-serif;
+      font-size: 1.12rem;
+      font-weight: 400;
+      line-height: 1.25;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      font-family: $font-mono;
+      font-size: 0.66rem;
+      color: var(--text-tertiary);
     }
   }
 }
 
-// ── 公告 ──
+// ── 社交：macOS 控制中心那种方形毛玻璃块 ──
+.social-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+
+  .social-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: $border-radius-sm;
+    font-size: 0.9rem;
+    // 图标统一单色，hover 才点亮成琥珀
+    color: var(--text-secondary);
+    background: var(--row-hover);
+    border: 1px solid var(--rule);
+    backdrop-filter: blur(12px) saturate(160%);
+    -webkit-backdrop-filter: blur(12px) saturate(160%);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+      border-color: rgba($accent, 0.3);
+      box-shadow: 0 2px 6px var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+}
+
+// ── 公告：便签。接口没有时间字段，头部是图钉 + 「公告」，不是通知横幅的时间戳位 ──
+.note-block {
+  background: var(--accent-soft);
+  border-color: rgba($accent, 0.22);
+  box-shadow: 0 1px 3px rgba(168, 106, 16, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.note-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-family: $font-mono;
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+
+  i {
+    font-size: 0.68rem;
+  }
+}
+
 .announcement-content {
   font-size: 0.85rem;
   line-height: 1.75;
@@ -437,13 +521,21 @@ function formatCount(value) {
   a {
     display: flex;
     gap: 11px;
-    padding: 10px 0;
+    padding: 10px 4px;
     align-items: baseline;
     text-decoration: none;
-    transition: color 0.2s ease;
+    border-radius: $border-radius-sm;
+    transition: color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 
-    &:hover .t {
-      color: var(--accent);
+    &:hover {
+      background: var(--row-hover);
+      transform: translateX(3px);
+
+      .t {
+        color: var(--accent);
+      }
     }
   }
 
@@ -464,30 +556,119 @@ function formatCount(value) {
   }
 }
 
-// ── 标签云：按权重分 5 级字号 ──
+// ── 标签：等高气泡胶囊（不再按文章数分字号，权重放胶囊里的计数）──
 .cloud {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 14px;
-  align-items: baseline;
+  gap: 7px;
 
   a {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 27px;
+    padding: 0 11px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    font-size: 0.8rem;
+    line-height: 1;
     color: var(--text-secondary);
     text-decoration: none;
-    transition: color 0.2s ease;
+    transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                background 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 
     &:hover {
       color: var(--accent);
+      background: var(--accent-soft);
+      border-color: rgba($accent, 0.3);
+      box-shadow: 0 2px 6px var(--accent-soft);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    .n {
+      font-family: $font-mono;
+      font-size: 0.68rem;
+      font-weight: 400;
+      color: var(--text-tertiary);
+      font-variant-numeric: tabular-nums;
     }
   }
+}
 
-  .w5 { font-size: 1.02rem; }
-  .w4 { font-size: 0.94rem; }
-  .w3 { font-size: 0.87rem; }
-  .w2 { font-size: 0.82rem; }
-  .w1 {
-    font-size: 0.78rem;
-    color: var(--text-tertiary);
+// 呼吸光环：只动半径、不动透明度，避免整块头像忽明忽暗
+@keyframes avatar-breathe {
+  0%, 100% { box-shadow: 0 0 0 3px var(--accent-soft); }
+  50%      { box-shadow: 0 0 0 5px var(--accent-soft); }
+}
+
+// 深色模式适配
+:root[data-theme='dark'] {
+  .sidebar {
+    .block {
+      background: var(--card-bg);
+      border-color: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .note-block {
+      background: rgba(217, 154, 61, 0.08);
+      border-color: rgba(217, 154, 61, 0.25);
+      box-shadow: inset 0 1px 0 rgba(217, 154, 61, 0.12);
+    }
+
+    .metrics {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.08);
+
+      .metric {
+        background: var(--card-bg);
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.04);
+        }
+      }
+    }
+
+    .social-links .social-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.1);
+
+      &:hover {
+        background: rgba(217, 154, 61, 0.2);
+        border-color: rgba(217, 154, 61, 0.4);
+        box-shadow: 0 2px 6px rgba(217, 154, 61, 0.2);
+      }
+    }
+
+    .cloud a {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.08);
+
+      &:hover {
+        background: rgba(217, 154, 61, 0.18);
+        border-color: rgba(217, 154, 61, 0.4);
+        box-shadow: 0 2px 6px rgba(217, 154, 61, 0.2);
+      }
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .author .avatar {
+    animation: none;
+  }
+
+  .social-links .social-btn:hover,
+  .cloud a:hover,
+  .recent a:hover {
+    transform: none;
   }
 }
 

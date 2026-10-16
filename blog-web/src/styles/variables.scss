@@ -27,6 +27,8 @@ $text-tertiary: #8b949f;
 $rule: #e0e4e8;
 $rule-strong: #c9cfd6;
 $row-hover: rgba(18, 23, 29, 0.035);
+// 列表整行悬浮时的「温润冷灰」高光底（比 $row-hover 明显一档，仍不抢正文）
+$row-hover-strong: rgba(18, 23, 29, 0.055);
 // 旧的六段彩虹渐变背景，换成纯纸白
 $background: $paper;
 $loading-bg: rgba(244, 246, 248, 0.9);
@@ -43,6 +45,8 @@ $dark: (
   border: #242a31,
   rule-strong: #333b44,
   hover-bg: rgba(255, 255, 255, 0.04),
+  // 深色下的「微透青灰」整行高光底
+  hover-bg-strong: rgba(163, 202, 217, 0.08),
   input-bg: rgba(255, 255, 255, 0.04),
   accent: #d99a3d
 );
@@ -72,10 +76,11 @@ $spacing-lg: $spacing-base * 6;
 $spacing-xl: $spacing-base * 8;
 
 // ── 圆角 ──
-// 台账取向：接近直角。旧值 4/8/10 太圆，是「SaaS 卡片」的默认长相
-$border-radius-sm: 2px;
-$border-radius-md: 4px;
-$border-radius-lg: 6px;
+// 统一现代微质感圆角（对齐文章编辑界面的 macOS / Modern UI 标准质感）
+$border-radius-sm: 6px;   // 微型元素、徽章、内嵌标签
+$border-radius-md: 8px;   // 统一按钮、表单输入框、选择器标准圆角
+$border-radius-lg: 12px;  // 卡片容器、弹窗面板圆角
+$btn-border-radius: $border-radius-md; // 8px 按钮基准圆角
 
 // ── 阴影 ──
 // 设计里几乎不用阴影，层次交给 1px 实线。这里保留极轻的版本，

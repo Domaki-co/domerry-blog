@@ -252,16 +252,22 @@ export default {
     align-items: center;
     justify-content: center;
     border: none;
-    border-radius: $border-radius-sm;
+    border-radius: $border-radius-md;
     background: var(--accent);
     color: #fff;
     cursor: pointer;
-    transition: background 0.2s ease, color 0.2s ease;
+    box-shadow: 0 4px 14px rgba(168, 106, 16, 0.2);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
     &:hover {
-      background: transparent;
-      color: var(--accent);
-      box-shadow: inset 0 0 0 1px var(--accent);
+      filter: brightness(1.08);
+      box-shadow: 0 6px 18px rgba(168, 106, 16, 0.28);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      filter: brightness(0.95);
+      transform: translateY(0);
     }
   }
 }

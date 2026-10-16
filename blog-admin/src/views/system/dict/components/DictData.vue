@@ -68,7 +68,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogType === 'add' ? '新增字典数据' : '修改字典数据'"
-      width="500px"
+      width="min(500px, 92%)"
       append-to-body
     >
       <el-form

@@ -140,7 +140,7 @@
       <!-- 滑块验证 -->
       <el-dialog
         title="请拖动滑块完成拼图"
-        width="360px"
+        width="min(360px, 92%)"
         v-model="showSliderVerify"
         :close-on-click-modal="false"
         @closed="refresh"

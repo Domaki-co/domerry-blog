@@ -147,7 +147,7 @@
       </div>
 
       <!-- 添加或修改对话框 -->
-      <el-dialog v-model="open" :title="title" width="500px" append-to-body>
+      <el-dialog v-model="open" :title="title" width="min(500px, 92%)" append-to-body>
         <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
           <el-form-item label="资源名" prop="name">
             <el-input v-model="form.name" placeholder="请输入资源名" />

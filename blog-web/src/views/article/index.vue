@@ -1862,17 +1862,27 @@ export default {
       gap: 7px;
       padding: 8px 20px;
       border: 1px solid var(--rule);
-      border-radius: $border-radius-sm;
+      border-radius: $border-radius-md;
       background: transparent;
       color: var(--text-secondary);
       font-size: 0.9rem;
+      font-weight: 500;
       cursor: pointer;
-      transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+      &:hover {
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: translateY(0);
+      }
 
       &.like {
         &.active {
           border-color: var(--accent);
           color: var(--accent);
+          background: var(--accent-soft);
         }
 
         &:hover {
@@ -1885,10 +1895,17 @@ export default {
         background: var(--accent);
         border-color: var(--accent);
         color: #fff;
+        box-shadow: 0 4px 14px rgba(168, 106, 16, 0.2);
 
         &:hover {
-          background: transparent;
-          color: var(--accent);
+          background: var(--accent);
+          filter: brightness(1.08);
+          box-shadow: 0 6px 18px rgba(168, 106, 16, 0.28);
+          color: #fff;
+        }
+
+        &:active {
+          filter: brightness(0.95);
         }
       }
     }

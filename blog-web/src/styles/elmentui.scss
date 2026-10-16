@@ -1,7 +1,7 @@
 //弹出框
 .el-dialog{
     background: var(--surface) !important;
-    border-radius: $border-radius-md !important;
+    border-radius: $border-radius-lg !important;
     .el-dialog__title{
         color: var(--text-secondary)!important; 
     }
@@ -31,12 +31,12 @@
     --el-input-hover-border-color: var(--text-tertiary);
     --el-input-focus-border-color: var(--accent);
     --el-input-placeholder-color: var(--text-tertiary);
-    --el-input-border-radius: #{$border-radius-sm};
+    --el-input-border-radius: #{$border-radius-md};
 
     // 外层容器：负责真实边框与背景，支持平滑过渡，边界清晰可见
     .el-input__wrapper {
         background-color: var(--input-bg);
-        border-radius: $border-radius-sm;
+        border-radius: $border-radius-md;
         box-shadow: 0 0 0 1px var(--rule-strong) inset;
         padding: 0 12px;
         transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -147,8 +147,8 @@
             border: none;
             border-top-left-radius: 0 !important;
             border-bottom-left-radius: 0 !important;
-            border-top-right-radius: $border-radius-sm !important;
-            border-bottom-right-radius: $border-radius-sm !important;
+            border-top-right-radius: $border-radius-md !important;
+            border-bottom-right-radius: $border-radius-md !important;
             padding: 0 14px;
             margin-left: -1px;
             z-index: 1;
@@ -185,8 +185,8 @@
             border: none;
             border-top-right-radius: 0 !important;
             border-bottom-right-radius: 0 !important;
-            border-top-left-radius: $border-radius-sm !important;
-            border-bottom-left-radius: $border-radius-sm !important;
+            border-top-left-radius: $border-radius-md !important;
+            border-bottom-left-radius: $border-radius-md !important;
             padding: 0 14px;
             margin-right: -1px;
             z-index: 1;
@@ -229,12 +229,12 @@
     --el-input-hover-border-color: var(--text-tertiary);
     --el-input-focus-border-color: var(--accent);
     --el-input-placeholder-color: var(--text-tertiary);
-    --el-input-border-radius: #{$border-radius-sm};
+    --el-input-border-radius: #{$border-radius-md};
 
     .el-textarea__inner {
         background-color: var(--input-bg);
         color: var(--text-primary);
-        border-radius: $border-radius-sm;
+        border-radius: $border-radius-md;
         border: 1px solid var(--rule-strong);
         box-shadow: none;
         padding: 10px 14px;
@@ -272,7 +272,7 @@
 
     .el-select__wrapper {
         background-color: var(--input-bg);
-        border-radius: $border-radius-sm;
+        border-radius: $border-radius-md;
         box-shadow: 0 0 0 1px var(--rule-strong) inset;
         padding: 4px 12px;
         transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -331,10 +331,86 @@
     }
 }
 
-//卡片：台账取向 —— 1px 实线 + 近直角，去掉阴影（阴影是「SaaS 卡片」的默认长相）
+// ════════════════════════════════════════════════════════════════
+//  按钮体系（对齐文章编辑界面：统一 8px 圆角与微质感）
+// ════════════════════════════════════════════════════════════════
+.el-button {
+    border-radius: $border-radius-md;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:not(.is-disabled):not(.is-link):not(.is-text):hover {
+        transform: translateY(-1px);
+    }
+
+    &:not(.is-disabled):not(.is-link):not(.is-text):active {
+        transform: translateY(0);
+    }
+
+    // 主要操作按钮（Primary）
+    &--primary:not(.is-link):not(.is-text):not(.is-plain) {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+        box-shadow: 0 4px 14px rgba(168, 106, 16, 0.2);
+
+        &:hover, &:focus {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+            filter: brightness(1.08);
+            box-shadow: 0 6px 18px rgba(168, 106, 16, 0.28);
+        }
+
+        &:active {
+            filter: brightness(0.95);
+        }
+    }
+
+    // 默认/次级按钮（Default）
+    &--default:not(.is-link):not(.is-text) {
+        border-radius: $border-radius-md;
+        border-color: var(--rule-strong);
+        color: var(--text-primary);
+        background: var(--surface);
+
+        &:hover, &:focus {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: var(--surface);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+    }
+
+    // 预警、危险、成功等功能色按钮
+    &--warning:not(.is-link):not(.is-text),
+    &--danger:not(.is-link):not(.is-text),
+    &--success:not(.is-link):not(.is-text),
+    &--info:not(.is-link):not(.is-text) {
+        border-radius: $border-radius-md;
+    }
+
+    // 圆形按钮保持圆形
+    &.is-circle {
+        border-radius: 50% !important;
+    }
+
+    // 胶囊按钮保持胶囊形态
+    &.is-round {
+        border-radius: 999px !important;
+    }
+
+    // 链接/文字按钮不添加外边框和位移
+    &.is-link, &.is-text {
+        border-radius: 4px;
+        transform: none !important;
+    }
+}
+
+//卡片：1px 实线 + 12px 优雅圆角
 .el-card{
     background: var(--surface)!important;
-    border-radius: $border-radius-md!important;
+    border-radius: $border-radius-lg!important;
     border: 1px solid var(--rule)!important;
     box-shadow: none!important;
 }

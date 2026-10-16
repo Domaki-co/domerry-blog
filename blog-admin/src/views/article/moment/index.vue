@@ -43,15 +43,15 @@
     </el-card>
 
     <!-- 添加或修改对话框 -->
-    <el-dialog :title="dialog.title" v-model="dialog.visible" width="600px" append-to-body destroy-on-close
-      class="custom-dialog">
+    <el-dialog :title="dialog.title" v-model="dialog.visible" width="min(1100px, 92%)" top="5vh" append-to-body
+      destroy-on-close>
       <el-form ref="momentFormRef" :model="momentForm" :rules="rules" label-width="80px" class="custom-form">
         <el-form-item label="内容" prop="content">
-            <div style="border: 1px solid #ccc;">
-                <Toolbar style="border-bottom: 1px solid #ccc;" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
-                <Editor style=" overflow-y: hidden;min-height: 300px;" v-model="momentForm.content" :defaultConfig="editorConfig" :mode="mode"
-                @onCreated="handleCreated"/>
-            </div>
+          <div class="moment-editor">
+            <Toolbar class="moment-editor__toolbar" :editor="editorRef" :defaultConfig="toolbarConfig" :mode="mode" />
+            <Editor class="moment-editor__body" v-model="momentForm.content" :defaultConfig="editorConfig" :mode="mode"
+              @onCreated="handleCreated" />
+          </div>
         </el-form-item>
         <el-form-item label="图片" prop="images">
           <UploadImage v-model="momentForm.images" :source="'moment'" :limit="9" :multiple="true" />
@@ -275,3 +275,21 @@ onMounted(() => {
   getList()
 })
 </script>
+
+<style scoped lang="scss">
+.moment-editor {
+  width: 100%;
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--el-border-radius-base);
+  overflow: hidden;
+
+  &__toolbar {
+    border-bottom: 1px solid var(--el-border-color);
+  }
+
+  &__body {
+    min-height: 300px;
+    overflow-y: hidden;
+  }
+}
+</style>

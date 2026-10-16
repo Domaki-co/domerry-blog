@@ -67,7 +67,7 @@
     <el-dialog
       v-model="dialogVisible"
       :title="dialogType === 'add' ? '新增菜单' : '修改菜单'"
-      width="700px"
+      width="min(700px, 92%)"
       append-to-body
     >
       <el-form

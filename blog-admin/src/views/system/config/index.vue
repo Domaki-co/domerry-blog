@@ -113,7 +113,7 @@
       </div>
 
       <!-- 添加或修改对话框 -->
-      <el-dialog v-model="open" :title="title" width="500px" append-to-body>
+      <el-dialog v-model="open" :title="title" width="min(500px, 92%)" append-to-body>
         <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
           <el-form-item label="参数名称" prop="configName">
             <el-input v-model="form.configName" placeholder="请输入参数名称" />

@@ -193,6 +193,7 @@
   --loading-bg: #{$loading-bg};
   --hover-bg: #{$row-hover};
   --row-hover: #{$row-hover};
+  --row-hover-strong: #{$row-hover-strong};
   --input-bg: #{$surface};
   --accent: #{$accent};
   --accent-soft: #{rgba($accent, 0.12)};
@@ -222,6 +223,7 @@
   --card-bg: #{map-get($dark, 'card-bg')};
   --hover-bg: #{map-get($dark, 'hover-bg')};
   --row-hover: #{map-get($dark, 'hover-bg')};
+  --row-hover-strong: #{map-get($dark, 'hover-bg-strong')};
   --input-bg: #{map-get($dark, 'input-bg')};
   --loading-bg: #{map-get($dark, 'loading-bg')};
   --accent: #{map-get($dark, 'accent')};

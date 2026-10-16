@@ -13,7 +13,7 @@
     <el-dialog
       v-model="dialogVisible"
       title=" "
-      width="560px"
+      width="min(560px, 92%)"
       :show-close="false"
       :close-on-click-modal="true"
       :close-on-press-escape="true"

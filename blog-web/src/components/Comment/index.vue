@@ -616,18 +616,28 @@ export default {
           background: var(--accent);
           color: #fff;
           border: 1px solid var(--accent);
-          border-radius: $border-radius-sm;
+          border-radius: $border-radius-md;
+          font-weight: 500;
+          box-shadow: 0 4px 14px rgba(168, 106, 16, 0.2);
           cursor: pointer;
-          transition: background 0.2s ease, color 0.2s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 
           &:disabled {
             opacity: 0.6;
             cursor: not-allowed;
+            box-shadow: none;
+            transform: none;
           }
 
           &:not(:disabled):hover {
-            background: transparent;
-            color: var(--accent);
+            filter: brightness(1.08);
+            box-shadow: 0 6px 18px rgba(168, 106, 16, 0.28);
+            transform: translateY(-1px);
+          }
+
+          &:not(:disabled):active {
+            filter: brightness(0.95);
+            transform: translateY(0);
           }
         }
       }
@@ -942,13 +952,22 @@ export default {
         gap: $spacing-sm;
 
         button {
-          padding: 5px 16px;
+          padding: 6px 16px;
           border: 1px solid var(--rule);
-          border-radius: $border-radius-sm;
+          border-radius: $border-radius-md;
           background: transparent;
+          font-weight: 500;
           cursor: pointer;
-          transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           font-size: 0.9em;
+
+          &:hover {
+            transform: translateY(-1px);
+          }
+
+          &:active {
+            transform: translateY(0);
+          }
 
           &.cancel-btn {
             color: var(--text-secondary);
@@ -956,6 +975,7 @@ export default {
             &:hover {
               color: var(--text-primary);
               border-color: var(--rule-strong);
+              background: var(--hover-bg);
             }
           }
 
@@ -963,15 +983,24 @@ export default {
             background: var(--accent);
             border-color: var(--accent);
             color: #fff;
+            box-shadow: 0 4px 14px rgba(168, 106, 16, 0.2);
 
             &:disabled {
               opacity: 0.6;
               cursor: not-allowed;
+              box-shadow: none;
+              transform: none;
             }
 
             &:not(:disabled):hover {
-              background: transparent;
-              color: var(--accent);
+              background: var(--accent);
+              filter: brightness(1.08);
+              box-shadow: 0 6px 18px rgba(168, 106, 16, 0.28);
+              color: #fff;
+            }
+
+            &:not(:disabled):active {
+              filter: brightness(0.95);
             }
           }
         }
