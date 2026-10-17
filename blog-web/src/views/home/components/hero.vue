@@ -8,7 +8,7 @@
     <div class="hero-cover" aria-hidden="true">
       <img
         v-if="showCover"
-        :src="HERO_COVER"
+        :src="heroCover"
         alt=""
         loading="eager"
         fetchpriority="high"
@@ -46,9 +46,9 @@
 </template>
 
 <script>
-// 首屏封面：换图只改这一行，或直接替换 public/static/img/ 下的文件；置空则退回纯墨色首屏
-// const HERO_COVER = '/static/img/beijing.jpg'
-const HERO_COVER = '/static/img/book.png'
+// 首屏封面的「内置回退图」：图的正常来源是后台配置（store 的 webSiteInfo.homeCover，
+// 见 computed heroCover）；后台没配（空串 / undefined / null）时回退到这张。
+const HERO_COVER = '/static/img/234.jpg'
 
 export default {
   name: 'HomeHero',
@@ -62,8 +62,6 @@ export default {
   emits: ['scroll-to-posts'],
   data() {
     return {
-      // 交给模板用（Options API 的模板只能读实例属性），保持常量的书写形式便于对照
-      HERO_COVER,
       // 封面加载失败就撤掉 img，露出 .hero 的墨底，不做占位图回退
       coverFailed: false
     }
@@ -90,12 +88,28 @@ export default {
       return this.$store.state.webSiteInfo.summary || ''
     },
     /**
+     * 首屏封面：优先后台配置的 webSiteInfo.homeCover，没配（空串 / undefined / null）时回退内置图
+     */
+    heroCover() {
+      const info = this.$store.state.webSiteInfo
+      return (info && info.homeCover) || HERO_COVER
+    },
+    /**
      * 有图且没加载失败才渲染 img；否则整屏退回墨色，白字照样立得住
      */
     showCover() {
-      return !!HERO_COVER && !this.coverFailed
+      return !!this.heroCover && !this.coverFailed
     }
   },
+  watch: {
+    /**
+     * 换图时清掉上一次的失败标记：coverFailed 一旦置 true 就再没有复位的机会，
+     * 不清的话后台改好的新图会被 v-if 挡在门外，首屏永久停在墨底
+     */
+    heroCover() {
+      this.coverFailed = false
+    }
+  }
 }
 </script>
 
@@ -131,7 +145,7 @@ $header-offset: 64px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  // 常驻墨底。写死理由：它要保证「图没解码完」「图加载失败」「HERO_COVER 置空」
+  // 常驻墨底。写死理由：它要保证「图没解码完」「图加载失败」「后台没配封面图」
   // 三种状态下白字都有底，而它不是主题色 —— 跟着 data-theme 翻转的话深色档下会
   // 变得更亮，白字反而消失，所以不去动 variables.scss。
   background: #12161c;

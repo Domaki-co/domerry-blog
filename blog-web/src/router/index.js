@@ -1,21 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '@/views/home/index.vue'
-import Layout from '@/layout/index.vue'
-import NotFound from '@/views/404/404.vue'
-import Article from '@/views/article/index.vue'
-import Archive from '@/views/archives/index.vue'
-import Categories from '@/views/categories/index.vue'
-import Tags from '@/views/tags/index.vue'
-import Messages from '@/views/messages/index.vue'
-import About from '@/views/about/index.vue'
-import Photos from '@/views/photos/index.vue'
+// 所有页面组件一律走动态 import：静态 import 会把文章详情页的 highlight.js、
+// 相册、编辑器等全部并入首屏模块图（dev 下首屏 JS 解压体积 8MB 主要来自这里）。
 import store from '@/store';
 
 const routes = [
 
     {
         path: "/",
-        component: Layout,
+        component: () => import('@/layout/index.vue'),
         meta: {
             title: "doma's blog - 一个专注于技术分享的博客平台",
             loading: true
@@ -24,7 +16,7 @@ const routes = [
             {
                 path: '/',
                 name: 'Home',
-                component: Home,
+                component: () => import('@/views/home/index.vue'),
                 meta: {
                     title: '首页',
                     transition: 'fade',
@@ -35,7 +27,7 @@ const routes = [
               {
                 path: '/archive',
                 name: 'Archive',
-                component: Archive,
+                component: () => import('@/views/archives/index.vue'),
                 meta: {
                   transition: 'fade',
                   title: "归档 - doma's blog",
@@ -45,7 +37,7 @@ const routes = [
               {
                 path: '/categories',
                 name: 'Categories',
-                component: Categories,
+                component: () => import('@/views/categories/index.vue'),
                 meta: {
                     transition: 'fade',
                     title: "分类 - doma's blog",
@@ -55,7 +47,7 @@ const routes = [
               {
                 path: '/tags',
                 name: 'Tags',
-                component: Tags,
+                component: () => import('@/views/tags/index.vue'),
                 meta: {
                     transition: 'fade',
                     title: "标签 - doma's blog",
@@ -74,7 +66,7 @@ const routes = [
               {
                 path: '/photos',
                 name: 'Photos',
-                component: Photos,
+                component: () => import('@/views/photos/index.vue'),
                 meta: {
                     transition: 'fade',
                     title: "相册 - doma's blog",
@@ -116,7 +108,7 @@ const routes = [
               {
                 path: '/messages',
                 name: 'Messages',
-                component: Messages,
+                component: () => import('@/views/messages/index.vue'),
                 meta: {
                   transition: 'fade',
                   title: "留言板 - doma's blog",
@@ -136,7 +128,7 @@ const routes = [
               {
                 path: '/about',
                 name: 'About',
-                component: About,
+                component: () => import('@/views/about/index.vue'),
                 meta: {
                   transition: 'fade',
                   title: "关于本站 - doma's blog",
@@ -146,7 +138,7 @@ const routes = [
               {
                 path: '/post/:id',
                 name: 'Post',
-                component: Article,
+                component: () => import('@/views/article/index.vue'),
                 props: true,
                 meta: {
                   hidden: true
@@ -196,7 +188,7 @@ const routes = [
               {
                 path: '/:pathMatch(.*)*',
                 name: 'NotFound',
-                component: NotFound,
+                component: () => import('@/views/404/404.vue'),
                 meta: {
                   hidden: true
                 }

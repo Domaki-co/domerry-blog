@@ -73,7 +73,7 @@
             </div>
           </div>
 
-          <!-- 缩略图：加载中显示 lazy 占位图，无封面或加载失败回退到 book -->
+          <!-- 缩略图：加载中显示 lazy 占位图，无封面或加载失败回退到 book-thumb -->
           <router-link :to="`/post/${post.id}`" class="entry-thumb">
             <img
               v-lazy="{ src: post.cover || defaultCover, loading: lazyPlaceholder, error: defaultCover }"
@@ -108,7 +108,9 @@
 <script>
 import { updateArticleStatusApi } from '@/api/article'
 
-const DEFAULT_COVER = '/static/img/book.png'
+// 缩略图兜底用 360×236 的小图：首页 6 个 180×118 的位图位若都指向 960×960 的
+// book.png，一张就要解码 3.5MB（大图留给 hero，见 home/components/hero.vue）
+const DEFAULT_COVER = '/static/img/book-thumb.png'
 const LAZY_PLACEHOLDER = '/static/img/lazy.gif'
 
 export default {

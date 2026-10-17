@@ -351,8 +351,83 @@
 
 <script>
 import { getArticleDetailApi, likeArticleApi } from '@/api/article'
-import hljs from 'highlight.js'
+// highlight.js 全量包解压后 1.6MB（384 种语言），换成 core + 按需注册博客里会出现的语言。
+// 未注册的语言 hljs 会自动退回纯文本，样式不变；需要新语言在 LANGUAGES 里加一行即可。
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+import typescript from 'highlight.js/lib/languages/typescript'
+import java from 'highlight.js/lib/languages/java'
+import kotlin from 'highlight.js/lib/languages/kotlin'
+import groovy from 'highlight.js/lib/languages/groovy'
+import scala from 'highlight.js/lib/languages/scala'
+import xml from 'highlight.js/lib/languages/xml'
+import css from 'highlight.js/lib/languages/css'
+import scss from 'highlight.js/lib/languages/scss'
+import less from 'highlight.js/lib/languages/less'
+import json from 'highlight.js/lib/languages/json'
+import yaml from 'highlight.js/lib/languages/yaml'
+import ini from 'highlight.js/lib/languages/ini'
+import bash from 'highlight.js/lib/languages/bash'
+import shell from 'highlight.js/lib/languages/shell'
+import powershell from 'highlight.js/lib/languages/powershell'
+import dockerfile from 'highlight.js/lib/languages/dockerfile'
+import nginx from 'highlight.js/lib/languages/nginx'
+import sql from 'highlight.js/lib/languages/sql'
+import python from 'highlight.js/lib/languages/python'
+import go from 'highlight.js/lib/languages/go'
+import rust from 'highlight.js/lib/languages/rust'
+import c from 'highlight.js/lib/languages/c'
+import cpp from 'highlight.js/lib/languages/cpp'
+import csharp from 'highlight.js/lib/languages/csharp'
+import php from 'highlight.js/lib/languages/php'
+import ruby from 'highlight.js/lib/languages/ruby'
+import swift from 'highlight.js/lib/languages/swift'
+import dart from 'highlight.js/lib/languages/dart'
+import lua from 'highlight.js/lib/languages/lua'
+import diff from 'highlight.js/lib/languages/diff'
+import markdown from 'highlight.js/lib/languages/markdown'
+import plaintext from 'highlight.js/lib/languages/plaintext'
 import 'highlight.js/styles/atom-one-dark.css'
+
+const LANGUAGES = {
+  javascript,
+  typescript,
+  java,
+  kotlin,
+  groovy,
+  scala,
+  xml,
+  css,
+  scss,
+  less,
+  json,
+  yaml,
+  ini,
+  bash,
+  shell,
+  powershell,
+  dockerfile,
+  nginx,
+  sql,
+  python,
+  go,
+  rust,
+  c,
+  cpp,
+  csharp,
+  php,
+  ruby,
+  swift,
+  dart,
+  lua,
+  diff,
+  markdown,
+  plaintext
+}
+
+Object.keys(LANGUAGES).forEach((name) => {
+  hljs.registerLanguage(name, LANGUAGES[name])
+})
 import Comment from '@/components/Comment/index.vue'
 import PaymentDialog from '@/components/PaymentDialog/index.vue'
 import MembershipDialog from '@/components/MembershipDialog/index.vue'
@@ -456,7 +531,7 @@ export default {
         setTimeout(() => {
           this.generateToc()
           document.querySelectorAll('pre code').forEach((block) => {
-            hljs.highlightBlock(block)
+            hljs.highlightElement(block)
           })
           this.addCodeLangLabels()
           this.addCopyButtons()
@@ -762,7 +837,7 @@ export default {
     },
     /**
      * 把代码块语言名写到 pre 的 data-lang 上，供标题栏显示。
-     * 必须在 hljs.highlightBlock 之后调用：语言类名（language-xxx）由它写入，
+     * 必须在 hljs.highlightElement 之后调用：语言类名（language-xxx）由它写入，
      * 之前调用拿不到任何语言信息。
      */
     addCodeLangLabels() {

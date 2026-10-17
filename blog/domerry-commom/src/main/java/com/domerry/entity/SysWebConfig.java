@@ -27,6 +27,9 @@ public class SysWebConfig implements Serializable {
     @ApiModelProperty(value = "浏览器标签栏图标favicon")
     private String favicon;
 
+    @ApiModelProperty(value = "首页首屏封面")
+    private String homeCover;
+
     @ApiModelProperty(value = "网站名称")
     private String name;
 

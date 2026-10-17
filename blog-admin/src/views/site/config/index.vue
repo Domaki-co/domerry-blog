@@ -25,6 +25,13 @@
             </el-row>
             <el-row :gutter="20">
               <el-col :span="12">
+                <el-form-item label="首页首屏封面" prop="homeCover">
+                  <upload-image v-model="form.homeCover" :limit="1" />
+                </el-form-item>
+              </el-col>
+            </el-row>
+            <el-row :gutter="20">
+              <el-col :span="12">
                 <el-form-item label="网站名称" prop="name">
                   <el-input v-model="form.name" placeholder="请输入网站名称" />
                 </el-form-item>
@@ -299,6 +306,7 @@ const formRef = ref<FormInstance>()
 const form = ref({
   logo: '',
   favicon: '',
+  homeCover: '',
   name: '',
   summary: '',
   recordNum: '',
