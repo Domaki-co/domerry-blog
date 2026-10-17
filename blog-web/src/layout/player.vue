@@ -3,7 +3,7 @@
     v-show="isLoading || audio.length > 0"
     ref="root"
     class="cp"
-    :class="{ 'is-dragging': dragging, 'is-snap': snap }"
+    :class="{ 'is-dragging': dragging, 'is-snap': snap, 'is-initial': !mountedReady }"
     :style="rootStyle"
     :data-state="open ? 'open' : 'capsule'"
     :data-playing="paused ? 'false' : 'true'"
@@ -325,12 +325,13 @@ export default {
       // 拖拽 / 吸附
       side: 'r',
       by: 28,
-      x: 0,
-      y: 0,
+      x: typeof window !== 'undefined' ? Math.max(M, window.innerWidth - CAP_W - M) : 0,
+      y: typeof window !== 'undefined' ? Math.max(M, window.innerHeight - 28 - CAP_H) : 0,
       k: 1,
       docked: true,
       dragging: false,
       snap: false,
+      mountedReady: false,
       capLine: ''
     }
   },
@@ -478,6 +479,11 @@ export default {
       }
     } catch (error) { /* 忽略损坏的本地记录 */ }
 
+    // 初始布局计算：在首屏渲染前根据当前视口与吸附侧对齐坐标，避免以 (0, 0) 渲染
+    if (typeof window !== 'undefined') {
+      this.layout()
+    }
+
     try {
       const resp = await getSongList()
       if (!resp.data || resp.data.length === 0) {
@@ -522,6 +528,13 @@ export default {
     window.addEventListener('pointermove', this.onWindowPointerMove)
     window.addEventListener('pointerup', this.onWindowPointerUp)
     window.addEventListener('pointercancel', this.onWindowPointerUp)
+
+    // 等待初次渲染就位后，在下两帧启用平滑动画过渡，彻底消除刷新时从左上飞向右边的动效
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        this.mountedReady = true
+      })
+    })
   },
   beforeUnmount() {
     window.removeEventListener('resize', this.onResize)
@@ -1171,6 +1184,10 @@ export default {
       height 0.45s cubic-bezier(0.3, 0.8, 0.25, 1),
       border-radius 0.45s cubic-bezier(0.3, 0.8, 0.25, 1),
       transform 0.5s cubic-bezier(0.3, 0.8, 0.25, 1);
+  }
+
+  &.is-initial {
+    transition: none !important;
   }
 
   &.is-dragging {

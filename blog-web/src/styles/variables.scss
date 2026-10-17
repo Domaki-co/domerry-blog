@@ -37,7 +37,9 @@ $loading-bg: rgba(244, 246, 248, 0.9);
 $dark: (
   text-primary: #e9ecf0,
   text-secondary: #a2acb8,
-  text-tertiary: #6f7986,
+  // #6f7986 在 #161a20 上只有 3.95:1，达不到 WCAG AA 正文的 4.5:1。
+  // 提到 #858f9c 后是 5.33:1，仍明显暗于 text-secondary（7.59:1），层级不塌
+  text-tertiary: #858f9c,
   background: #101317,
   surface: #161a20,
   card-bg: #161a20,
@@ -66,6 +68,14 @@ $breakpoint-sm: 640px;
 $breakpoint-md: 768px;
 $breakpoint-lg: 1024px;
 $breakpoint-xl: 1280px;
+
+// ── 版心 ──
+// 全站唯一的居中容器。导航胶囊、公告条、首屏、列表、侧栏共用同一条左右边界。
+// 注意全局是 border-box：max-width 含 padding，所以「内容列」= $container-max - 2 * $container-gutter。
+$container-max: 1280px;
+$container-gutter: clamp(20px, 4vw, 48px);
+// 首页右栏（侧栏）列宽。首屏封面窗口取同一宽度，使其左缘与侧栏左缘在任何视口下都成一条竖线。
+$sidebar-w: 300px;
 
 // ── 间距 ──
 $spacing-base: 4px;

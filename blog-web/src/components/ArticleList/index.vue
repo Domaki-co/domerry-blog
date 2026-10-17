@@ -1,7 +1,43 @@
 <template>
-  <div class="article-list-component" v-loading="loading">
-    <!-- 台账式列表：日期 | 标题+摘要+元信息 | 缩略图 -->
-    <transition-group name="post-list" tag="ol" class="ledger">
+  <div
+    class="article-list-component"
+    :style="containerStyle"
+    ref="listContainer"
+  >
+    <!-- 1. 骨架屏：请求进入加载态时平滑淡入，结构精准对应台账式布局 -->
+    <div
+      v-if="showSkeleton"
+      class="skeleton-ledger"
+      aria-busy="true"
+      aria-label="正在加载文章列表"
+    >
+      <div v-for="i in skeletonCount" :key="`skeleton-${i}`" class="skeleton-entry">
+        <div class="skeleton-date">
+          <div class="skeleton-box sk-y"></div>
+          <div class="skeleton-box sk-md"></div>
+        </div>
+
+        <div class="skeleton-main">
+          <div class="skeleton-box sk-title"></div>
+          <div class="skeleton-box sk-sum-1"></div>
+          <div class="skeleton-box sk-sum-2"></div>
+          <div class="skeleton-meta">
+            <div class="skeleton-box sk-tag"></div>
+            <div class="skeleton-box sk-tag"></div>
+            <div class="skeleton-box sk-tag"></div>
+          </div>
+        </div>
+
+        <div class="skeleton-thumb"></div>
+      </div>
+    </div>
+
+    <!-- 2. 台账式列表：日期 | 标题+摘要+元信息 | 缩略图 -->
+    <ol
+      v-show="!showSkeleton"
+      class="ledger"
+      :class="transitionClasses"
+    >
       <li v-for="post in articles" :key="post.id" class="entry">
         <div class="entry-link">
           <div class="entry-date">
@@ -47,14 +83,18 @@
           </router-link>
         </div>
       </li>
-    </transition-group>
+    </ol>
 
-    <el-empty v-if="!loading && articles.length === 0" description="暂无文章" />
+    <!-- 3. 空状态提示 -->
+    <el-empty
+      v-if="!loading && transitionPhase === 'idle' && articles.length === 0"
+      description="暂无文章"
+    />
 
-    <div class="pagination-box">
+    <!-- 4. 分页控制栏 -->
+    <div class="pagination-box" v-if="articles.length || total > 0">
       <el-pagination
         background
-        v-if="articles.length"
         @current-change="$emit('page-change', $event)"
         :current-page="params.pageNum"
         :page-size="params.pageSize"
@@ -88,10 +128,20 @@ export default {
     },
     params: {
       type: Object,
-      default: {
+      default: () => ({
         pageNum: 1,
         pageSize: 10
-      }
+      })
+    },
+    // 过渡状态阶段：'idle' | 'leaving' | 'loading' | 'entering'
+    transitionPhase: {
+      type: String,
+      default: 'idle'
+    },
+    // 锁定的容器最小高度，避免布局塌陷抖动
+    minHeight: {
+      type: String,
+      default: ''
     }
   },
   computed: {
@@ -100,6 +150,39 @@ export default {
      */
     isAdmin() {
       return this.$store.getters.isAdmin
+    },
+    /**
+     * 是否展示骨架屏：
+     * 1. 当处于显式 loading 过渡阶段
+     * 2. 或首次加载（loading 且 articles 为空）
+     */
+    showSkeleton() {
+      return (
+        this.transitionPhase === 'loading' ||
+        (this.loading && this.transitionPhase === 'idle' && this.articles.length === 0)
+      )
+    },
+    /**
+     * 列表过渡类名绑定
+     */
+    transitionClasses() {
+      return {
+        'is-leaving': this.transitionPhase === 'leaving',
+        'is-entering': this.transitionPhase === 'entering',
+        'is-idle': this.transitionPhase === 'idle'
+      }
+    },
+    /**
+     * 容器样式（锁定最小高度）
+     */
+    containerStyle() {
+      return this.minHeight ? { minHeight: this.minHeight } : {}
+    },
+    /**
+     * 骨架屏卡片展示数量（默认匹配 pageSize，最高截断到 6 张避免视觉冗余）
+     */
+    skeletonCount() {
+      return Math.min(this.params?.pageSize || 6, 6)
     }
   },
   data() {
@@ -174,6 +257,11 @@ export default {
 //  hover 时底线隐去、由高光底接管层次。
 // ════════════════════════════════════════════════════════════════
 
+.article-list-component {
+  position: relative;
+  transition: min-height 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .ledger {
   list-style: none;
   margin: 0;
@@ -181,6 +269,37 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  will-change: opacity, transform;
+
+  &.is-idle {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  // 1. 请求发起时：旧内容淡出 + 轻微下移 8px
+  &.is-leaving {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+    pointer-events: none;
+  }
+
+  // 2. 新数据渲染时：淡入 + 轻微上移复位
+  &.is-entering {
+    animation: ledgerPageEnter 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+}
+
+@keyframes ledgerPageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .entry {
@@ -217,7 +336,6 @@ export default {
 
     .entry-thumb img {
       transform: scale(1.03);
-      filter: saturate(1.05);
     }
 
     .entry-title a {
@@ -252,7 +370,8 @@ export default {
 
 .entry-link {
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr) 120px;
+  // 第三列必须与 .entry-thumb 的 width 同步：网格轨道不会跟随元素宽度变化
+  grid-template-columns: 74px minmax(0, 1fr) 180px;
   gap: clamp(16px, 2vw, 28px);
   align-items: start;
   padding: 22px 18px;
@@ -266,7 +385,8 @@ export default {
   .y {
     display: block;
     font-size: 0.68rem;
-    color: var(--text-tertiary);
+    // 与 .entry-meta 同一类元信息：tertiary 在纸白上仅 2.84:1，11px 小字不达 AA
+    color: var(--text-secondary);
     letter-spacing: 0.05em;
   }
 
@@ -355,7 +475,6 @@ export default {
   color: var(--text-secondary);
   font-size: 0.92rem;
   line-height: 1.7;
-  max-width: 62ch;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -369,8 +488,9 @@ export default {
   gap: 14px;
   flex-wrap: wrap;
   font-family: $font-mono;
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  // tertiary(#8b949f 在纸白上仅 2.84:1) 提亮到 secondary，仍暗于 .entry-title 的 primary
+  color: var(--text-secondary);
   letter-spacing: 0.02em;
 
   // macOS Finder 风格分类标签胶囊
@@ -391,12 +511,13 @@ export default {
 }
 
 .entry-thumb {
-  width: 120px;
-  aspect-ratio: 16 / 10;
+  width: 180px;
+  aspect-ratio: 3 / 2;
   overflow: hidden;
-  // 视网膜内圆角：比行卡片(10px)大一号，缩略图看起来才是独立的浮层
-  border-radius: 12px;
-  border: 1px solid var(--rule);
+  border-radius: $border-radius-sm;
+  // 比 --rule 明显一档的实线边界，把缩略图从纸白里托出来；--rule-strong 两套主题各有取值，
+  // 不再需要深色覆盖，也不写死颜色
+  border: 1px solid var(--rule-strong);
   background: var(--row-hover);
   display: block;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
@@ -406,13 +527,8 @@ export default {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: saturate(0.92);
-    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
-}
-
-:root[data-theme='dark'] .entry-thumb {
-  border-color: rgba(255, 255, 255, 0.08);
 }
 
 // 管理员置顶按钮：macOS 微胶囊按钮
@@ -427,7 +543,8 @@ export default {
   border-radius: 999px;
   border: 1px solid var(--rule);
   background: transparent;
-  color: var(--text-tertiary);
+  // 这一行里最后一处 2.84:1 的文字；hover 的 accent 当态不变
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
 
@@ -458,42 +575,189 @@ export default {
   justify-content: center;
 }
 
-// 列表进场动效
-.post-list-enter-active {
-  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
-  transition-delay: calc(0.04s * var(--index, 0));
+// ── 骨架屏卡片体系 (macOS 台账风格) ──
+.skeleton-ledger {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: skeletonFadeIn 0.2s ease-out;
 }
 
-.post-list-leave-active {
-  transition: opacity 0.25s ease;
+@keyframes skeletonFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.post-list-enter,
-.post-list-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
+.skeleton-entry {
+  display: grid;
+  // 与 .entry-link 同列宽，否则加载完成的一瞬布局会跳一下
+  grid-template-columns: 74px minmax(0, 1fr) 180px;
+  gap: clamp(16px, 2vw, 28px);
+  align-items: start;
+  padding: 22px 18px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -3px;
+    left: 18px;
+    right: 18px;
+    height: 1px;
+    background: var(--rule);
+  }
+}
+
+.skeleton-box {
+  background: var(--rule);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+
+  // 微光扫光动效 (Shimmer Wave)
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.45),
+      transparent
+    );
+    animation: skeletonShimmer 1.5s infinite;
+  }
+}
+
+:root[data-theme='dark'] .skeleton-box::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+}
+
+@keyframes skeletonShimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-date {
+  padding-top: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  .sk-y {
+    width: 36px;
+    height: 12px;
+  }
+  .sk-md {
+    width: 48px;
+    height: 18px;
+  }
+}
+
+.skeleton-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  .sk-title {
+    width: 65%;
+    height: 22px;
+  }
+  .sk-sum-1 {
+    width: 90%;
+    height: 14px;
+  }
+  .sk-sum-2 {
+    width: 75%;
+    height: 14px;
+  }
+  .skeleton-meta {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+
+    .sk-tag {
+      width: 50px;
+      height: 16px;
+      border-radius: 999px;
+    }
+  }
+}
+
+.skeleton-thumb {
+  width: 180px;
+  aspect-ratio: 3 / 2;
+  border-radius: $border-radius-sm;
+  background: var(--row-hover);
+  border: 1px solid var(--rule-strong);
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.35),
+      transparent
+    );
+    animation: skeletonShimmer 1.5s infinite;
+  }
+}
+
+:root[data-theme='dark'] .skeleton-thumb::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.06),
+    transparent
+  );
 }
 
 @include responsive(lg) {
-  .entry-link {
+  .entry-link,
+  .skeleton-entry {
     grid-template-columns: 64px minmax(0, 1fr) 108px;
     gap: 16px;
     padding: 18px 14px;
   }
 
-  .entry-thumb {
+  .entry-thumb,
+  .skeleton-thumb {
     width: 108px;
   }
 }
 
 @include responsive(md) {
-  .entry-link {
+  .entry-link,
+  .skeleton-entry {
     grid-template-columns: 64px minmax(0, 1fr);
     gap: 14px;
     padding: 18px 12px;
   }
 
-  .entry-thumb {
+  .entry-thumb,
+  .skeleton-thumb {
     display: none;
   }
 
@@ -504,6 +768,23 @@ export default {
   .entry-sum {
     font-size: 0.88rem;
     -webkit-line-clamp: 3;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ledger.is-leaving {
+    opacity: 0;
+    transform: none;
+    transition: opacity 0.1s ease;
+  }
+  .ledger.is-entering {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .skeleton-box::after,
+  .skeleton-thumb::after {
+    animation: none;
   }
 }
 </style>

@@ -1,9 +1,9 @@
 <template>
   <div class="home-page">
-    <!-- 首屏整屏大图：轮播文章封面自动切换，点向下箭头进入文章列表 -->
-    <Hero :carousels="carouselSlides" @scroll-down="scrollToPosts" />
+    <!-- 首屏：全屏封面图 + 居中站名，「向下」滚到文章列表 -->
+    <Hero :carousels="carouselSlides" @scroll-to-posts="scrollToPosts" />
 
-    <div class="home" ref="homeContent">
+    <div class="home">
       <div class="content-layout">
         <main class="home-main-content">
           <!-- 侧边栏在 <=1024px 时整体隐藏，这里给移动端补一个折叠式置顶入口 -->
@@ -37,19 +37,22 @@
                 </svg>
               </router-link>
             </div>
-            <div class="meta-status-capsule">
+            <!-- 只在选中具体分类时出现：默认「全部」的篇数在侧栏作者卡的「文章篇数」里已经有一份 -->
+            <div v-if="activeName !== 'all'" class="meta-status-capsule">
               <span class="status-dot"></span>
               <span class="total-text">共 {{ total }} 篇</span>
             </div>
           </nav>
 
           <!-- 列表只渲染一次,筛选器仅改查询条件,避免每个分类面板重复挂一份完整列表 -->
-          <div ref="postsSection">
+          <div ref="postsSection" class="posts-section">
             <ArticleList
               :articles="articleList"
               :loading="loading"
               :total="total"
               :params="params"
+              :transition-phase="transitionPhase"
+              :min-height="lockedMinHeight"
               @article-click="goToPost"
               @page-change="changePage"
               @stick-changed="getStickArticles"
@@ -90,12 +93,33 @@ export default {
       params: {
         pageNum: 1,
         pageSize: 10,
+        categoryId: null,
+      },
+      // 当前生效的查询参数快照（用于“是否产生新查询”的纯等价判断）
+      activeParams: {
+        pageNum: 1,
+        pageSize: 10,
+        categoryId: null,
+      },
+      // 成功数据的快照（用于请求失败时的数据和页码回滚）
+      backupData: {
+        articles: [],
+        total: 0,
+        params: null,
       },
       articleList: [],
       carouselSlides: [],
       stickyPosts: [],
       loading: false,
       activeName: "all",
+      // 过渡生命周期状态：'idle' | 'leaving' | 'loading' | 'entering'
+      transitionPhase: "idle",
+      // 容器锁定的最小高度，防止布局抖动
+      lockedMinHeight: "",
+      // 竞态计数器：快速连续翻页时只认最后一次请求
+      querySeq: 0,
+      // 骨架屏延时定时器引用
+      skeletonTimer: null,
       // 分段选择器滑块的内联样式。首帧是 0 宽 + 透明，
       // 第一次 placeSegmentThumb() 量到真实位置后走进场动效
       thumbStyle: {
@@ -113,15 +137,194 @@ export default {
   },
   methods: {
     /**
-     * 切换分类
+     * 判断目标参数是否导致发起新的查询请求
+     * 翻页定义：只要用户操作导致发起新的查询请求，都算翻页。
+     * 包括：点击页码、上一页、下一页、筛选、排序、搜索、下拉加载。
+     * 相同参数则不发起查询请求，亦不触发翻页动画。
+     *
+     * @param {object} nextParams 待执行的查询参数
+     * @returns {boolean} 是否需要发起新查询
+     */
+    isQueryNeeded(nextParams) {
+      if (!this.activeParams) return true;
+      const keys = ["pageNum", "pageSize", "categoryId", "keyword", "sortField", "sortOrder"];
+      for (const key of keys) {
+        const curVal = this.activeParams[key] ?? null;
+        const nextVal = nextParams[key] ?? null;
+        if (curVal !== nextVal) {
+          return true;
+        }
+      }
+      return false;
+    },
+    /**
+     * 锁定列表容器当前高度，避免翻页过渡时因内容清空/骨架屏高度差异导致页面跳动
+     */
+    lockContainerHeight() {
+      const el = this.$refs.postsSection;
+      if (el && el.offsetHeight > 0) {
+        this.lockedMinHeight = `${el.offsetHeight}px`;
+      }
+    },
+    /**
+     * 解锁容器最小高度
+     */
+    unlockContainerHeight() {
+      this.lockedMinHeight = "";
+    },
+    /**
+     * 统一文章查询协调器（翻页/筛选/排序/搜索/加载统一入口）
+     * 
+     * 负责：
+     * 1. 平滑过渡：旧内容淡出或轻微下移 -> 显示骨架屏/loading -> 新数据淡入、轻微上移复位
+     * 2. 防抖动：容器最小高度锁定与解除
+     * 3. 竞态处理：维护 querySeq，快速连续翻页时只认最后一次请求，避免动画闪烁和旧覆盖新
+     * 4. 容错回滚：请求失败时保留/恢复旧内容与页码，并弹出错误提示
+     * 
+     * @param {object} nextParams 查询参数
+     * @param {object} options 选项 { scrollToTop: boolean, force: boolean }
+     */
+    async executeArticleQuery(nextParams, options = {}) {
+      const { scrollToTop = false, force = false } = options;
+
+      // 判断逻辑：没有查询请求时不触发翻页动画
+      if (!force && !this.isQueryNeeded(nextParams)) {
+        return;
+      }
+
+      // 1. 生成本次请求唯一序列号
+      const thisSeq = ++this.querySeq;
+
+      // 清理之前的骨架屏延时器
+      if (this.skeletonTimer) {
+        clearTimeout(this.skeletonTimer);
+        this.skeletonTimer = null;
+      }
+
+      // 2. 锁定容器最小高度，避免布局塌陷抖动
+      this.lockContainerHeight();
+
+      // 3. 记录失败回退备份（仅在从正常显示态触发时备份，避免覆盖最初有效内容）
+      if (this.transitionPhase === "idle") {
+        this.backupData = {
+          articles: [...this.articleList],
+          total: this.total,
+          params: { ...this.activeParams },
+        };
+      }
+
+      // 4. 预先更新 params 以让分页指示器即时响应
+      this.params = { ...nextParams };
+      this.loading = true;
+
+      // 5. 过渡状态推进：
+      // 如果处于 idle，进入 leaving（旧内容淡出、轻微下移）
+      // 如果已经处于 leaving/loading（用户快速连续翻页），保持当前态，防止画面剧烈闪烁
+      if (this.transitionPhase === "idle") {
+        this.transitionPhase = "leaving";
+      }
+
+      // 若网络请求超过 180ms，无缝进入 loading 态展示骨架屏
+      this.skeletonTimer = setTimeout(() => {
+        if (thisSeq === this.querySeq && this.transitionPhase === "leaving") {
+          this.transitionPhase = "loading";
+        }
+      }, 180);
+
+      // 保证旧内容至少有 160ms 优雅淡出下移
+      const minFadeOutPromise = new Promise((resolve) => setTimeout(resolve, 160));
+
+      try {
+        // 6. 发起查询请求（保持现有接口与入参协议不变）
+        const requestPromise = getArticlesApi(this.params);
+        const [res] = await Promise.all([requestPromise, minFadeOutPromise]);
+
+        // 7. 快速连续翻页判断：只认最后一次请求，过期的立即丢弃
+        if (thisSeq !== this.querySeq) {
+          return;
+        }
+
+        if (this.skeletonTimer) {
+          clearTimeout(this.skeletonTimer);
+          this.skeletonTimer = null;
+        }
+
+        // 8. 请求成功：新数据渲染
+        this.articleList = res.data?.records || [];
+        this.total = res.data?.total || 0;
+        this.activeParams = { ...this.params };
+
+        // 9. 列表淡入、轻微上移复位
+        this.transitionPhase = "entering";
+
+        if (scrollToTop && this.$refs.postsSection) {
+          const top = Math.max(0, this.$refs.postsSection.offsetTop - 80);
+          window.scrollTo({ top, behavior: "smooth" });
+        }
+
+        this.$nextTick(() => {
+          this.placeSegmentThumb();
+
+          // 等待 CSS entering 进场动画 (320ms) 播放完毕后重置为 idle，并解锁高度
+          setTimeout(() => {
+            if (thisSeq === this.querySeq) {
+              this.transitionPhase = "idle";
+              this.loading = false;
+              this.unlockContainerHeight();
+            }
+          }, 320);
+        });
+
+      } catch (error) {
+        // 过期的请求失败亦忽略
+        if (thisSeq !== this.querySeq) {
+          return;
+        }
+
+        if (this.skeletonTimer) {
+          clearTimeout(this.skeletonTimer);
+          this.skeletonTimer = null;
+        }
+
+        console.error("Failed to fetch articles:", error);
+
+        // 10. 请求失败：保留/恢复旧内容与页码
+        if (this.backupData.articles) {
+          this.articleList = [...this.backupData.articles];
+          this.total = this.backupData.total;
+          this.params = { ...this.backupData.params };
+          this.activeParams = { ...this.backupData.params };
+        }
+
+        this.transitionPhase = "idle";
+        this.loading = false;
+        this.unlockContainerHeight();
+
+        // 显示友好错误提示
+        this.$message.error(error.message || "获取文章列表失败，已恢复原页面");
+        this.$nextTick(() => this.placeSegmentThumb());
+      }
+    },
+    /**
+     * 切换分类（筛选翻页）
      * @param {object} category 分类对象
      */
     handleClick(category) {
+      const nextCategoryId = category.id === "all" ? null : category.id;
+      const nextParams = {
+        ...this.params,
+        categoryId: nextCategoryId,
+        pageNum: 1,
+      };
+
+      // 翻页判断：如果分类与页码未变，不触发查询请求，亦不触发翻页过渡
+      if (!this.isQueryNeeded(nextParams)) {
+        return;
+      }
+
       this.activeName = String(category.id);
-      this.params.categoryId = category.id === "all" ? null : category.id;
-      this.params.pageNum = 1;
-      this.getArticleList();
-      // 等 is-active 落到新按钮上再量宽度：激活态字重更重，宽度和常态不同
+      this.executeArticleQuery(nextParams, { scrollToTop: false });
+      // 等 is-active 落到新按钮上再量宽度
       this.$nextTick(() => this.placeSegmentThumb());
     },
     /**
@@ -183,6 +386,17 @@ export default {
       });
     },
     /**
+     * 首屏「向下」：滚到文章列表。
+     * 列表容器已有 ref，不再另挂 id；系统开了「减少动态效果」就直接跳，不做平滑滚动
+     */
+    scrollToPosts() {
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      this.$refs.postsSection?.scrollIntoView({
+        behavior: reduce ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    },
+    /**
      * 跳转到文章详情
      * @param {number} id 文章id
      */
@@ -190,46 +404,52 @@ export default {
       this.$router.push(`/post/${id}`);
     },
     /**
-     * 从首屏大图平滑滚动到文章列表（用 rect+scrollY 而不是 offsetTop，
-     * 免得被 #app 的 padding 和 hero 的负边距影响）
-     */
-    scrollToPosts() {
-      const el = this.$refs.homeContent;
-      if (!el) return;
-      // 顶栏是 fixed 且高 64px，减去它列表第一行才不会被压住
-      const top = el.getBoundingClientRect().top + window.scrollY - 64;
-      window.scrollTo({ top: Math.max(top, 0), behavior: "smooth" });
-    },
-    /**
-     * 切换页码
+     * 切换页码（页码、上一页、下一页翻页）
      * @param {number} page 页码
      */
     changePage(page) {
-      this.params.pageNum = page;
-      this.getArticleList();
-      window.scrollTo({
-        top: this.$refs.postsSection?.offsetTop - 80,
-        behavior: "smooth",
-      });
+      const nextParams = {
+        ...this.params,
+        pageNum: page,
+      };
+
+      // 翻页判断：点击相同页码不发起请求，亦不触发过渡动画
+      if (!this.isQueryNeeded(nextParams)) {
+        return;
+      }
+
+      this.executeArticleQuery(nextParams, { scrollToTop: true });
+    },
+    /**
+     * 排序（保留排序翻页支持）
+     */
+    handleSort(sortField, sortOrder = 'desc') {
+      const nextParams = {
+        ...this.params,
+        sortField,
+        sortOrder,
+        pageNum: 1,
+      };
+      if (!this.isQueryNeeded(nextParams)) return;
+      this.executeArticleQuery(nextParams, { scrollToTop: true });
+    },
+    /**
+     * 搜索（保留搜索翻页支持）
+     */
+    handleSearch(keyword) {
+      const nextParams = {
+        ...this.params,
+        keyword: (keyword || '').trim(),
+        pageNum: 1,
+      };
+      if (!this.isQueryNeeded(nextParams)) return;
+      this.executeArticleQuery(nextParams, { scrollToTop: true });
     },
     /**
      * 获取文章列表
      */
     getArticleList() {
-      this.loading = true;
-      getArticlesApi(this.params)
-        .then((res) => {
-          this.articleList = res.data.records;
-          this.total = res.data.total;
-        })
-        .catch((error) => {
-          console.error("Failed to fetch articles:", error);
-        })
-        .finally(() => {
-          this.loading = false;
-          // total 决定「全部」后面的数字微标，量完宽度滑块才不会错位
-          this.$nextTick(() => this.placeSegmentThumb());
-        });
+      this.executeArticleQuery(this.params, { force: true, scrollToTop: false });
     },
     /**
      * 获取轮播和推荐文章
@@ -282,6 +502,8 @@ export default {
     },
   },
   created() {
+    // 首次进入页面，直接进入 loading 骨架屏态，请求返回后平滑淡入
+    this.transitionPhase = "loading";
     this.getArticleList();
     this.getCarouselArticles();
     this.getStickArticles();
@@ -297,11 +519,20 @@ export default {
       window.cancelAnimationFrame(this.thumbRaf);
       this.thumbRaf = null;
     }
+    if (this.skeletonTimer) {
+      clearTimeout(this.skeletonTimer);
+      this.skeletonTimer = null;
+    }
   },
 };
 </script>
 
 <style lang="scss" scoped>
+// 固定顶栏高度。它是 Header 自己的 scoped 变量，跨文件拿不到，只能在这里重写一份：
+// 对应 src/styles/global.scss:17 的 #app padding-top 与
+// src/layout/Header/index.vue 的 $header-height，三处必须同步修改
+$header-offset: 64px;
+
 // 整屏大图要通栏，所以顶掉 .home 的 max-width/padding，单独放在外层。
 // 注意：这里不能加 overflow:hidden —— 大图靠 -64px 负边距顶到页面最顶部，
 // 一旦这里变成裁剪容器，负边距那段就会被切掉，露出一条页面底色
@@ -309,23 +540,31 @@ export default {
   width: 100%;
 }
 
+// 首屏「向下」把列表滚到 y=0，列表顶端会被固定顶栏盖住：
+// 留出顶栏高度 + 一小段呼吸距离，落点正好在顶栏下缘往下一点点
+.posts-section {
+  scroll-margin-top: calc(#{$header-offset} + #{$spacing-sm});
+}
+
 .home {
-  max-width: 1400px;
+  max-width: $container-max;
   margin: 0 auto;
   width: 100%;
-  // 左右内边距必须和 Hero 的 .hero-inner 用同一个 clamp，
-  // 否则大图上的站名和下方台账的左边缘对不齐（差 24px 很显眼）
-  padding: clamp(36px, 5vh, 60px) clamp(20px, 4vw, 48px) $spacing-xl;
+  // 左右内边距走版心令牌：和 Hero 的 .hero-inner 共用同一条边界，
+  // 否则首屏的站名和下方台账的左边缘对不齐（差一截很显眼）
+  padding: clamp(36px, 5vh, 60px) $container-gutter $spacing-xl;
 
   @include responsive(lg) {
-    padding: $spacing-lg $spacing-md;
+    // 窄屏这一档也要跟着版心令牌走：原来的 16px 会和 .hero-inner 的 gutter 错开
+    padding: $spacing-lg $container-gutter;
   }
 }
 
 .content-layout {
   display: grid;
   // 侧栏卡片自带 16px 内边距，列宽从 286px 提到 300px，让卡内文字宽度和改造前持平
-  grid-template-columns: minmax(0, 1fr) 300px;
+  // 宽度走版心令牌：首屏的整屏图不再和它对位，但列宽本身仍是内容列的一部分
+  grid-template-columns: minmax(0, 1fr) $sidebar-w;
   gap: clamp(36px, 4vw, 64px);
   align-items: start;
 
@@ -432,10 +671,11 @@ export default {
       padding: 2px 5px;
       border-radius: 999px;
       background: rgba(0, 0, 0, 0.05);
-      color: var(--text-tertiary);
+      // tertiary #8b949f 在纸白底上只有 2.84:1，够不到 AA 正文的 4.5:1，用 secondary（≈6.4:1）
+      color: var(--text-secondary);
       font-family: $font-mono;
       font-variant-numeric: tabular-nums;
-      font-size: 0.66rem;
+      font-size: 0.72rem;
       line-height: 1;
       transition: background 0.2s ease, color 0.2s ease;
     }
@@ -449,7 +689,7 @@ export default {
       text-decoration: none;
       gap: 4px;
       font-size: 0.76rem;
-      color: var(--text-tertiary);
+      color: var(--text-secondary);
       padding: 5px 12px;
 
       svg {
@@ -487,7 +727,7 @@ export default {
     .total-text {
       font-family: $font-mono;
       font-size: 0.72rem;
-      color: var(--text-tertiary);
+      color: var(--text-secondary);
       letter-spacing: 0.02em;
     }
   }

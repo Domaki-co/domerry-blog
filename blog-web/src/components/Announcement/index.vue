@@ -58,12 +58,12 @@ export default {
 }
 
 .announcement-content {
-  max-width: 1400px;
+  max-width: $container-max;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 $container-gutter;
   font-size: 0.95em;
   position: relative;
 }

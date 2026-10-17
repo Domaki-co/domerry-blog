@@ -1,6 +1,6 @@
 <template>
-  <aside class="sidebar">
-    <!-- 作者块：头像 + 昵称 + 签名，然后是仪表小格与社交方块 -->
+  <aside class="sidebar" :class="{ 'has-notice': announcements.length > 0 }">
+    <!-- 作者块：头像 + 昵称 + 签名，下面一条三格站点统计 -->
     <section class="block author-block">
       <div class="author">
         <img
@@ -15,24 +15,22 @@
         </div>
       </div>
 
-      <!-- macOS 仪表小格：2×2，数字衬线等宽、标签在数字下方居中 -->
-      <div class="metrics">
-        <div class="metric"><b>{{ visitorCount }}</b><span>访客</span></div>
-        <div class="metric"><b>{{ viewCount }}</b><span>浏览</span></div>
-        <div class="metric"><b>{{ postCount }}</b><span>文章</span></div>
-        <div class="metric"><b>{{ tagCount }}</b><span>标签</span></div>
-      </div>
-      <div class="social-links">
-        <div v-for="item in socialLinksWithData" :key="item.type">
-          <!-- v-if 必须挂在 el-tooltip 上：Element Plus 的 ElOnlyChild 要求默认插槽里存在真实元素，
-               写在 <a> 上时插槽只剩注释节点，每次渲染都会报 ElementPlusError: [ElOnlyChild] no valid child node found -->
-          <el-tooltip v-if="($store.state.webSiteInfo.showList || []).indexOf(item.type) !== -1"
-            placement="top" :content="item.content">
-            <a href="javascript:void(0)"
-                :title="item.title" class="social-btn" @click="copyToClipboard(item)">
-                <i :class="item.icon"></i>
-            </a>
-          </el-tooltip>
+      <!--
+        站点统计回到作者卡：数字跟身份同处一卡，读者不必为「这站多少文章」再往上找一条横带。
+        三格居中、无分隔线也无边框，层次只由数字与标签的字号差表达
+      -->
+      <div class="author-stats">
+        <div class="stat">
+          <b class="stat-value">{{ articleCountText }}</b>
+          <span class="stat-label">文章篇数</span>
+        </div>
+        <div class="stat">
+          <b class="stat-value">{{ readCountText }}</b>
+          <span class="stat-label">累计阅读</span>
+        </div>
+        <div class="stat">
+          <b class="stat-value">{{ tagCountText }}</b>
+          <span class="stat-label">归类标签</span>
         </div>
       </div>
     </section>
@@ -58,28 +56,22 @@
       否则侧边栏整体高于视口时，末尾的标签云要等页面滚到最底才露出来
     -->
     <div class="sidebar-scroll">
-      <section class="block" v-if="sticks.length > 0">
-        <h4>置顶</h4>
-        <ul class="recent">
-          <li v-for="post in sticks" :key="post.id">
-            <router-link :to="`/post/${post.id}`">
-              <span class="d">{{ shortDate(post.createTime) }}</span>
-              <span class="t">{{ post.title }}</span>
-            </router-link>
-          </li>
-        </ul>
-      </section>
-
-      <section class="block" v-if="hot.length > 0">
-        <h4>近期</h4>
-        <ul class="recent">
-          <li v-for="post in hot" :key="post.id">
-            <router-link :to="`/post/${post.id}`">
-              <span class="d">{{ shortDate(post.createTime) }}</span>
-              <span class="t">{{ post.title }}</span>
-            </router-link>
-          </li>
-        </ul>
+      <!--
+        置顶与推荐共用一张卡：两组的结构完全一致（等宽日期 + 标题），
+        拆成两张卡只是平白多一条边框、一道阴影和 16px 间距
+      -->
+      <section class="block" v-if="postGroups.length">
+        <div class="ledger-group" v-for="group in postGroups" :key="group.title">
+          <h4>{{ group.title }}</h4>
+          <ul class="recent">
+            <li v-for="post in group.posts" :key="post.id">
+              <router-link :to="`/post/${post.id}`">
+                <span class="d">{{ shortDate(post.createTime) }}</span>
+                <span class="t">{{ post.title }}</span>
+              </router-link>
+            </li>
+          </ul>
+        </div>
       </section>
 
       <section class="block">
@@ -101,8 +93,9 @@
 </template>
 
 <script>
-import { getRecommendArticlesApi, getArticlesApi } from '@/api/article'
+import { getArticlesApi, getRecommendArticlesApi } from '@/api/article'
 import { getTagsApi } from '@/api/tags'
+import { formatCount } from '@/utils/format'
 import { pickDisplayTags } from '@/utils/tags'
 
 export default {
@@ -116,94 +109,42 @@ export default {
   },
   data() {
     return {
+      // 后端 /api/article/getRecommends 返回的已发布推荐文（模板里标「推荐」）
       hot: [],
       tags: [],
-      // 文章总数：只取 total，不拉列表内容
-      articleTotal: null,
       announcements: [],
-      socialLinks: [
-        {
-          icon: 'fab fa-github',
-          type: 'github',
-          content: '点击跳转GitHub主页',
-          icCopy: false
-        },
-        {
-          icon: 'fab fa-git-alt',
-          type: 'gitee',
-          content: '点击跳转GitEE主页',
-          icCopy: false
-        },
-        {
-          icon: 'fab fa-qq',
-          title: 'QQ',
-          type: 'qq',
-          content: '点击复制QQ号',
-          icCopy: true
-        },
-        {
-          icon: 'fas fa-users',
-          title: 'QQ群',
-          type: 'qqGroup',
-          content: '点击复制QQ群号',
-          icCopy: true
-        },
-        {
-          icon: 'fas fa-at',
-          title: '邮箱',
-          type: 'email',
-          content: '点击复制邮箱',
-          icCopy: true
-        },
-        {
-          icon: 'fab fa-weixin',
-          title: '微信',
-          type: 'wechat',
-          content: '点击复制微信号',
-          icCopy: true
-        }
-      ]
+      // 文章总数：接口回来前保持 null，用来区分「没回来」与「真的是 0」
+      articleTotal: null
     }
   },
   computed: {
-    socialLinksWithData() {
-      return this.socialLinks.map(item => {
-        const linkMap = {
-          github: this.$store.state.webSiteInfo.github,
-          gitee: this.$store.state.webSiteInfo.gitee,
-          qq: this.$store.state.webSiteInfo.qqNumber,
-          qqGroup: this.$store.state.webSiteInfo.qqGroup,
-          email: this.$store.state.webSiteInfo.email,
-          wechat: this.$store.state.webSiteInfo.wechat
-        }
-        return {
-          ...item,
-          link: linkMap[item.type]
-        }
-      })
-    },
-    /**
-     * 仪表小格：文章总数由 /api/article/list 的 total 提供，
-     * 标签数用已拉到的标签列表长度，访客/浏览量来自 store
-     */
-    postCount() {
+    // 三态：没回来给「—」，真的 0 由 formatCount 也渲染成「—」（规则见 src/utils/format.js）
+    articleCountText() {
       return this.articleTotal === null ? '—' : formatCount(this.articleTotal)
     },
-    tagCount() {
-      return this.tags.length ? formatCount(this.tags.length) : '—'
+    readCountText() {
+      return formatCount(this.$store.state.siteAccess)
+    },
+    // 复用 mounted 里 getTagsApi 的结果，不再为计数多发一次请求
+    tagCountText() {
+      return formatCount(this.tags.length)
     },
     /**
      * 侧边栏标签云：丢掉没有文章的标签，按文章数倒序，再按数量上限截断
-     * （规则见 src/utils/tags.js）。仪表小格里的 tagCount 仍是全量总数。
+     * （规则见 src/utils/tags.js）
      */
     visibleTags() {
       return pickDisplayTags(this.tags)
     },
-    visitorCount() {
-      return formatCount(this.$store.state.visitorAccess)
-    },
-    viewCount() {
-      return formatCount(this.$store.state.siteAccess)
+    /**
+     * 置顶与推荐合成一张卡里的两组。两组都可能为空（没人置顶 / 没人标记推荐），
+     * 空组直接剔掉，否则卡片里会留下一个光秃秃的标题
+     */
+    postGroups() {
+      return [
+        { title: '置顶', posts: this.sticks },
+        { title: '推荐', posts: this.hot }
+      ].filter(group => group.posts.length > 0)
     }
   },
   watch: {
@@ -215,12 +156,15 @@ export default {
   },
   mounted() {
     getRecommendArticlesApi().then(res => {
-      this.hot = res.data || []
+      // 后端 getRecommends 走的 getArticlesByCondition(is_recommend) 不带 limit，
+      // 标记了多少条就返回多少条；置顶那条有 STICK_LIMIT=5 兜底，这里没有，
+      // 不截断的话侧栏会被撑成一长条。取 5 条和置顶保持一致
+      this.hot = (res.data || []).slice(0, 5)
     })
     getTagsApi().then(res => {
       this.tags = res.data || []
     })
-    // 版记里的文章总数：只要 total，pageSize 取 1 避免白拉一页数据
+    // 只要 total，别把整页数据拉回来：pageSize 给 1，载荷压到最小
     getArticlesApi({ pageNum: 1, pageSize: 1 })
       .then(res => {
         this.articleTotal = res.data?.total ?? 0
@@ -253,31 +197,8 @@ export default {
       } else {
         e.target.style.visibility = 'hidden'
       }
-    },
-    /**
-     * 复制到剪贴板
-     */
-    copyToClipboard(item) {
-      if (item.icCopy) {
-        navigator.clipboard.writeText(item.link).then(() => {
-          this.$message.success(`${item.title}账号已复制到剪贴板`);
-        }).catch(() => {
-          this.$message.error('复制失败，请手动复制');
-        });
-      } else {
-        window.open(item.link, '_blank')
-      }
     }
   }
-}
-
-/**
- * 大数字加千分位，避免仪表小格里出现一长串数字把格子撑开
- */
-function formatCount(value) {
-  const n = Number(value)
-  if (!n) return '—'
-  return n.toLocaleString('en-US')
 }
 </script>
 
@@ -285,7 +206,7 @@ function formatCount(value) {
 // ════════════════════════════════════════════════════════════════
 //  侧栏 · macOS 小组件群
 //
-//  作者名片（仪表小格 + 毛玻璃方块）、便签式公告、置顶/近期列表、
+//  作者名片（毛玻璃方块）、便签式公告、置顶/推荐列表、
 //  等高标签胶囊。每块都是一张卡片 —— --card-bg 底、1px 发丝边、12px 圆角，
 //  块间距取小组件之间的 16px 排水槽。
 //
@@ -319,6 +240,9 @@ function formatCount(value) {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    //鼠标停在侧栏上滚动时别把滚动链传给页面：内层滚到底继续滚，
+    //页面会突然接手跳一屏（滚动手感断裂）
+    overscroll-behavior: contain;
 
     > :last-child {
       margin-bottom: 0;
@@ -383,100 +307,37 @@ function formatCount(value) {
   }
 }
 
-// ── 仪表小格：2×2，格子之间靠容器底色透出 1px 发丝线 ──
-.metrics {
+// ── 站点统计：三格一排，无分隔线也无边框 ──
+.author-stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1px;
-  margin-top: 16px;
-  background: var(--rule);
-  border: 1px solid var(--rule);
-  border-radius: $border-radius-md;
-  overflow: hidden;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 18px;
+  text-align: center;
 
-  .metric {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1px;
-    padding: 9px 4px 8px;
-    background: var(--card-bg);
-    transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-
-    &:hover {
-      background: var(--row-hover);
-    }
-
-    // 衬线大字 + 等宽数字位：位数变化时格子不跟着抖
-    b {
-      font-family: $font-serif;
-      font-size: 1.12rem;
-      font-weight: 400;
-      line-height: 1.25;
-      color: var(--text-primary);
-      font-variant-numeric: tabular-nums;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    span {
-      font-family: $font-mono;
-      font-size: 0.66rem;
-      color: var(--text-tertiary);
-    }
+  .stat-value {
+    display: block;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+    // 数字等宽，三格的小数点与位权才对得齐
+    font-variant-numeric: tabular-nums;
   }
-}
 
-// ── 社交：macOS 控制中心那种方形毛玻璃块 ──
-.social-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 14px;
-
-  .social-btn {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: $border-radius-sm;
-    font-size: 0.9rem;
-    // 图标统一单色，hover 才点亮成琥珀
+  .stat-label {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    background: var(--row-hover);
-    border: 1px solid var(--rule);
-    backdrop-filter: blur(12px) saturate(160%);
-    -webkit-backdrop-filter: blur(12px) saturate(160%);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-    transition: color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                background 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-                transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    text-decoration: none;
-
-    &:hover {
-      color: var(--accent);
-      background: var(--accent-soft);
-      border-color: rgba($accent, 0.3);
-      box-shadow: 0 2px 6px var(--accent-soft);
-      transform: translateY(-1px);
-    }
-
-    &:active {
-      transform: scale(0.95);
-    }
   }
 }
 
 // ── 公告：便签。接口没有时间字段，头部是图钉 + 「公告」，不是通知横幅的时间戳位 ──
+// 去暖洗：暖琥珀整片铺在冷灰纸白上会跟页面底色打架，底与边界回到中性卡片，
+// 公告身份只由 .note-head 的图钉 + 琥珀等宽标题承担
 .note-block {
-  background: var(--accent-soft);
-  border-color: rgba($accent, 0.22);
-  box-shadow: 0 1px 3px rgba(168, 106, 16, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  background: var(--card-bg);
+  border-color: var(--rule);
 }
 
 .note-head {
@@ -504,7 +365,15 @@ function formatCount(value) {
   }
 }
 
-// ── 近期 / 置顶：等宽日期 + 标题 ──
+// ── 置顶 / 推荐：等宽日期 + 标题 ──
+// 同一张卡里的第二组顶上补一条发丝线，把两组的行分开；
+// .recent li:last-child 没有下边框，正好不跟这条线叠成双线
+.ledger-group + .ledger-group {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
 .recent {
   list-style: none;
   margin: 0;
@@ -617,36 +486,6 @@ function formatCount(value) {
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
 
-    .note-block {
-      background: rgba(217, 154, 61, 0.08);
-      border-color: rgba(217, 154, 61, 0.25);
-      box-shadow: inset 0 1px 0 rgba(217, 154, 61, 0.12);
-    }
-
-    .metrics {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.08);
-
-      .metric {
-        background: var(--card-bg);
-
-        &:hover {
-          background: rgba(255, 255, 255, 0.04);
-        }
-      }
-    }
-
-    .social-links .social-btn {
-      background: rgba(255, 255, 255, 0.06);
-      border-color: rgba(255, 255, 255, 0.1);
-
-      &:hover {
-        background: rgba(217, 154, 61, 0.2);
-        border-color: rgba(217, 154, 61, 0.4);
-        box-shadow: 0 2px 6px rgba(217, 154, 61, 0.2);
-      }
-    }
-
     .cloud a {
       background: rgba(255, 255, 255, 0.04);
       border-color: rgba(255, 255, 255, 0.08);
@@ -665,16 +504,34 @@ function formatCount(value) {
     animation: none;
   }
 
-  .social-links .social-btn:hover,
   .cloud a:hover,
   .recent a:hover {
     transform: none;
   }
 }
 
-// 侧边栏在 <=1024px 时整体隐藏（首页另有 MobileStickyBar 兜底）
+// <=1024px 时侧边栏只保留公告卡，作者卡 / 置顶 / 推荐 / 标签云整体隐藏
+// （置顶由首页的 MobileStickyBar 承接）。
+// 公告必须留着：$store.state.notice.right 全站只有侧边栏这一个消费者，
+// 整块 display:none 的话后台填的右侧公告在移动端谁都看不到。
+// order:-1 把它提到主栏之前 —— 单列布局下侧栏排在 </main> 后面，
+// 不提前就会掉到文章列表底下，等于还是没人看得到。
 @include responsive(lg) {
+  // 没有右侧公告时整块不占位：单列布局里侧栏仍在主栏之前，
+  // 空元素会被 grid 排成一行并白吃一个 gap（这里 36-64px）
+  .sidebar:not(.has-notice) {
+    display: none;
+  }
+
   .sidebar {
+    position: static;
+    top: auto;
+    max-height: none;
+    order: -1;
+  }
+
+  .author-block,
+  .sidebar-scroll {
     display: none;
   }
 }

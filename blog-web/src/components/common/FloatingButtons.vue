@@ -4,12 +4,6 @@
     :class="{ 'show-top': showBackToTop, 'over-hero': overHero }"
   >
 
-    <el-tooltip content="切换主题" placement="left">
-      <button class="float-btn theme-btn" @click="toggleTheme" title="切换主题">
-        <i :class="['fas', isDarkMode ? 'fa-sun' : 'fa-moon']"></i>
-      </button>
-    </el-tooltip>
-
     <el-tooltip content="回到顶部" placement="left">
       <button 
         v-show="showBackToTop"
@@ -24,29 +18,16 @@
 </template>
 
 <script>
-import { getThemeMode, setThemeMode, initTheme } from '@/utils/theme'
-
 export default {
   name: 'FloatingButtons',
   data() {
     return {
-      isDarkMode: false,
       showBackToTop: false,
       // 首页首屏：整屏大图右下角已经有「向下」指示，这里要让位
       overHero: false
     }
   },
-  computed: {
-    themeIcon() {
-      return ['fas', this.isDarkMode ? 'fa-sun' : 'fa-moon']
-    }
-  },
   methods: {
-    toggleTheme() {
-      this.isDarkMode = !this.isDarkMode
-      const mode = this.isDarkMode ? 'dark' : 'light'
-      setThemeMode(mode)
-    },
     scrollToTop() {
       window.scrollTo({
         top: 0,
@@ -76,7 +57,6 @@ export default {
     }
   },
   mounted() {
-    this.isDarkMode = initTheme()
     window.addEventListener('scroll', this.handleScroll)
     this.updateOverHero()
   },
@@ -125,22 +105,6 @@ export default {
     transform: translateY(-2px);
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
   }
-
-  // 主题切换按钮：实底 + 白图标
-  &.theme-btn {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(168, 106, 16, 0.25);
-
-    &:hover {
-      background: var(--accent);
-      filter: brightness(1.08);
-      box-shadow: 0 6px 18px rgba(168, 106, 16, 0.35);
-      color: #fff;
-    }
-  }
-  
 
   &.top-btn {
     opacity: 0;

@@ -169,7 +169,9 @@ export default {
 body {
   font-family: $font-sans;
   color: var(--text-primary);
-  background: var(--background);
+  // 页面底色统一交给 <html>（global.scss 里的 html + html::before 氛围层）。
+  // body 只要还留着不透明底色，就会把 z-index:-1 的氛围层整个盖掉，所以这里必须是 transparent。
+  background: transparent;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -1,6 +1,16 @@
 
 
 
+/*
+  整站底色统一挂在 <html> 上。
+  氛围层是 html::before / html::after（position:fixed; z-index:-1），在绘制顺序里排在
+  「根背景之后、常规流背景之前」——所以 body 和 #app 任何一层只要还留着不透明底色，
+  就会把它整层盖掉。这两处的 background 必须是 transparent（body 那条在 App.vue 里）。
+*/
+html {
+  background: var(--background);
+}
+
 #app {
   min-height: 100vh;
   // 顶栏 fixed 高 64px，这里给内容让位；首页 Hero 用 -64px 负边距顶回页面最顶部
@@ -8,7 +18,8 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--background);
+  // 透明，让 html::before 的氛围层透上来（见上面的注释）
+  background: transparent;
 }
 
 .app-container {
@@ -200,6 +211,25 @@
   --surface-rgb: 255, 255, 255;
   --border-color-rgb: 0, 0, 0;
 
+  // 过渡时长与缓动：切换时 src/utils/theme.js 会用内联样式覆盖这两个默认值，
+  // 保证「JS 什么时候摘掉过渡类」和「CSS 过渡跑多久」用的是同一份数字，不会互相截断。
+  --theme-duration: 560ms;
+  --theme-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  // ── 氛围层配色（html::before 天空 / html::after 星空，见文件末尾）──
+  // 白天：暖阳从右上打下来，左下用冷调补光找平，云是很淡的白。
+  // --sky-top / --sky-bottom 是不透明的（已经把底色 --background 合进去了），
+  // 这样天空层自己就是整页底色，改这两组值时记得顺手跟 --background 对一下明暗。
+  // 其余几层 alpha 都压得很低，是为了不破坏「技术台账」的平底色——
+  // 想更亮或更含蓄只调这几个数，不用动别处。
+  --sky-top: #fbf6ed;
+  --sky-bottom: #ebf0f5;
+  --sky-glow: #{rgba(#f0b95c, 0.17)};
+  --sky-glow-2: #{rgba(#7d9cc4, 0.11)};
+  --sky-cloud: #{rgba(#ffffff, 0.5)};
+  --star: #{rgba(#eef4fb, 0)};
+  --sky-stars: 0;
+
   // 字体栈
   --font-serif: #{$font-serif};
   --font-sans: #{$font-sans};
@@ -230,7 +260,254 @@
   --accent-soft: #{rgba(map-get($dark, 'accent'), 0.16)};
   --surface-rgb: 22, 26, 32;
   --border-color-rgb: 255, 255, 255;
+
+  // 夜里：天空从偏蓝的深灰压到近黑（不是纯黑，保一点蓝调层次），
+  // 月亮光晕是冷白蓝；--sky-glow-2 留一丝品牌琥珀，免得整页彻底丢掉暖色。
+  --sky-top: #191f2c;
+  --sky-bottom: #0c0f14;
+  --sky-glow: #{rgba(#9dbbdd, 0.14)};
+  --sky-glow-2: #{rgba(#d99a3d, 0.07)};
+  --sky-cloud: #{rgba(#dfe8f5, 0.045)};
+  --star: #{rgba(#e8f0fa, 0.85)};
+  --sky-stars: 1;
+
   --about-me: var(--surface);
   --reply-message-bg: #{rgba(map-get($dark, 'border'), 0.5)};
   --resources-bg: var(--surface);
+}
+
+/*
+  主题切换过渡（降级路径的主力）。
+  只在切换的那一瞬间由 src/utils/theme.js 给 <html> 挂上 .theme-transition，
+  动画结束即摘除——常驻的话 hover / 滚动都会带上颜色渐变，反而变卡变糊。
+  这里只过渡颜色相关属性，不动 transform / opacity 这类会触发重排或盖住其它动画的属性。
+
+  时长和缓动走 --theme-duration / --theme-ease，由 JS 在切换前写入 <html> 内联样式。
+*/
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+  transition: background-color var(--theme-duration) var(--theme-ease),
+    color var(--theme-duration) var(--theme-ease),
+    border-color var(--theme-duration) var(--theme-ease),
+    fill var(--theme-duration) var(--theme-ease),
+    stroke var(--theme-duration) var(--theme-ease),
+    box-shadow var(--theme-duration) var(--theme-ease) !important;
+  // 分层延迟：元素用 `--theme-delay` 认领自己的档位（顶栏 40ms、浮层 90ms…），
+  // 颜色就不会「啪」地一起翻过去，而是氛围先走、外壳随后、浮层收尾。
+  transition-delay: var(--theme-delay, 0ms) !important;
+}
+
+/*
+  氛围令牌的插值。
+  --sky-* / --star 被下面的 @property 注册成了 <color>，注册过的自定义属性能像普通颜色
+  一样做补间——这是「天空是变形过去的、不是整条硬切」的关键。它们声明在 :root 上，
+  所以补间也必须开在 html 上（值的变更点在哪，transition 就得写在哪）。
+  这一段必须排在上面那条通配规则之后：那条规则会用 !important 覆盖 html 自身的 transition，
+  只有更靠后的同优先级 !important 才盖得回来。
+*/
+html.theme-transition {
+  transition: --sky-top var(--theme-duration) var(--theme-ease),
+    --sky-bottom var(--theme-duration) var(--theme-ease),
+    --sky-glow var(--theme-duration) var(--theme-ease),
+    --sky-glow-2 var(--theme-duration) var(--theme-ease),
+    --sky-cloud var(--theme-duration) var(--theme-ease),
+    --star var(--theme-duration) var(--theme-ease) !important;
+}
+
+/*
+  快照窗口，只在 View Transition 抓「新」状态的那一两帧生效（见 src/utils/theme.js）。
+  必须把元素级过渡全部掐掉：View Transition 抓的是静态图，抓取时若颜色还在过渡，
+  图里留下的就是旧色，等圆形扩散结束、真实 DOM 露出来才会补上剩下的变化——
+  观感上就是「切完之后又抖了一下」。掐掉后快照直接是终态，扩散到哪里哪里就是最终样子。
+*/
+html.theme-snapshot,
+html.theme-snapshot *,
+html.theme-snapshot *::before,
+html.theme-snapshot *::after {
+  transition: none !important;
+}
+
+html.theme-snapshot::before,
+html.theme-snapshot::after {
+  transition: none;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+   主题氛围层 · 白天天空 / 夜晚星空
+   ────────────────────────────────────────────────────────────────────────
+   两层根伪元素铺满视口、压在内容最底下（z-index:-1），不新增任何 DOM、图片或
+   网络请求：天空渐变、日/月光晕、云、星点全部由多层 radial-gradient 叠出来。
+   动画只走 opacity 与 transform，都是合成器属性，不触发重排重绘。
+   ════════════════════════════════════════════════════════════════════════ */
+
+/*
+  把氛围色从「任意 token」注册成真正的 <color>，浏览器才会在渐变里对它们做插值。
+  不支持 @property 的浏览器会忽略这几行：渐变退化成硬切，其余动画照常，没有副作用。
+*/
+@property --sky-top {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+@property --sky-bottom {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+@property --sky-glow {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+@property --sky-glow-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+@property --sky-cloud {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+@property --star {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+
+html::before,
+html::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  // 这里的 opacity 过渡要自己写：上面那条通配规则只覆盖颜色，而且 html 不匹配
+  // `html.theme-transition *::before`（它不是自己的后代），星空的淡入不会被它接管。
+  transition: opacity var(--theme-duration) var(--theme-ease);
+}
+
+// 天空：日/月光晕 + 对侧补光 + 两团云 + 一条上下渐变的底色
+html::before {
+  background-image: radial-gradient(70% 55% at 82% 4%, var(--sky-glow) 0%, transparent 62%),
+    radial-gradient(55% 45% at 10% 94%, var(--sky-glow-2) 0%, transparent 66%),
+    radial-gradient(46% 30% at 24% 18%, var(--sky-cloud) 0%, transparent 72%),
+    radial-gradient(40% 26% at 70% 36%, var(--sky-cloud) 0%, transparent 74%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%);
+  // 光晕和云极缓慢地漂，160s 一个来回：单看某一帧察觉不到，但页面是「活」的
+  animation: skyDrift 160s ease-in-out infinite alternate;
+}
+
+// 星空：用硬边 radial-gradient 铺星点，靠 background-size 错开周期，只在天黑时淡入
+html::after {
+  background-image: radial-gradient(1.6px 1.6px at 18% 26%, var(--star) 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 63% 12%, var(--star) 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 84% 44%, var(--star) 50%, transparent 51%),
+    radial-gradient(1.1px 1.1px at 36% 68%, var(--star) 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 8% 56%, var(--star) 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 52% 88%, var(--star) 50%, transparent 51%);
+  background-size: 260px 260px, 340px 340px, 420px 420px, 300px 300px, 480px 480px, 380px 380px;
+  opacity: var(--sky-stars, 0);
+}
+
+@keyframes skyDrift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-1.6%, 1.2%, 0);
+  }
+}
+
+/*
+  View Transitions API（Chrome/Edge 111+、Safari 18+、Firefox 144+）。
+  切主题时浏览器把整页快照成 old / new 两层，圆形扩散由 src/utils/theme.js 在
+  ::view-transition-new(root) 上跑 clip-path 动画。这里只需要做两件事：
+  关掉 UA 默认的交叉淡入淡出，并让 new 层压在 old 层之上。
+  不支持的浏览器会整段忽略 ::view-transition-* 选择器，没有任何副作用。
+*/
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+}
+
+/*
+  降级路径的径向光晕：只有 <html> 挂上 .theme-veil 时才出场，
+  圆心和放大倍数由 JS 算好写到 <html> 的内联样式上。
+  用 body::before 而不是 html::before / html::after——那两层已经被天空和星空占了。
+  光晕本体只是个 48px 的柔光圆，靠 transform: scale() 放大：渐变只栅格化 48px，
+  放大交给合成器，比每帧重画一个全屏径向渐变便宜得多。
+  animation-fill-mode: both 让动画结束后停在 opacity:0，
+  所以哪怕 JS 中途挂了，它也会自己消失，不会糊住整页。
+*/
+body::before {
+  content: '';
+  position: fixed;
+  left: var(--theme-veil-x, 50%);
+  top: var(--theme-veil-y, 50%);
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  pointer-events: none;
+  // 压在页面内容之上、但留在顶栏（z-index 1000）之下：光晕扫过整页时，
+  // 主题按钮自己的图标变形和点击光晕还能被看见，不会被糊住
+  z-index: 999;
+  opacity: 0;
+  background: radial-gradient(circle closest-side, var(--accent) 0%, transparent 70%);
+  will-change: transform, opacity;
+  display: none;
+}
+
+html.theme-veil body::before {
+  // display 从 none 切到 block，浏览器会重新播放动画——连续切换时不会「哑火」
+  display: block;
+  animation: themeVeilTint var(--theme-duration) var(--theme-ease) both;
+}
+
+@keyframes themeVeilTint {
+  from {
+    opacity: 0.22;
+    transform: scale(1);
+  }
+  55% {
+    opacity: 0.13;
+  }
+  to {
+    opacity: 0;
+    transform: scale(var(--theme-veil-scale, 40));
+  }
+}
+
+// 尊重系统的「减少动态效果」设置：全部改成即时切换
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition: none !important;
+  }
+
+  // 氛围层不在这条通配规则的覆盖范围内（html 不是自己的后代），单独关掉
+  html::before,
+  html::after {
+    animation: none;
+    transition: none;
+  }
+
+  html.theme-veil body::before {
+    display: none;
+    animation: none;
+  }
 }

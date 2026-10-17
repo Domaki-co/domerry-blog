@@ -46,7 +46,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-//侧边栏（作者卡 / 公告 / 推荐 / 置顶 / 标签云）在 <=1024px 时整体 display:none，
+//侧边栏的置顶卡在 <=1024px 时隐藏（那一档侧栏只留公告卡），
 //这里补一个移动端专用的置顶入口，断点与 Sidebar 的 @include responsive(lg) 严格对齐，
 //保证任何宽度下都是「要么侧边栏有置顶卡、要么这里有置顶栏」，不会同时出现或同时消失
 .mobile-sticky {

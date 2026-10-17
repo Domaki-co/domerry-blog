@@ -32,7 +32,7 @@
 </template>
 
 <script>
-import { getThemeMode, setThemeMode } from '@/utils/theme'
+import { getThemeMode, setThemeModeWithTransition } from '@/utils/theme'
 export default {
   name: 'ContextMenu',
   data() {
@@ -135,10 +135,12 @@ export default {
     /**
      * 切换主题
      */
-    toggleTheme() {
+    toggleTheme(event) {
+      // 扩散起点要在 hide() 之前抓：菜单一隐藏就取不到布局盒了
+      const origin = (event && event.currentTarget) || null
       this.isDark = !this.isDark
       const mode = this.isDark ? 'dark' : 'light'
-      setThemeMode(mode)
+      setThemeModeWithTransition(mode, origin)
       this.hide()
     },
     handleCopyText() {

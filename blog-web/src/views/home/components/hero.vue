@@ -1,80 +1,55 @@
 <template>
-  <section class="hero">
+  <section class="hero" :class="{ 'is-plain': !showCover }">
     <!--
-      首屏大图：只用一张 —— 最新那篇文章的封面。
-      不做轮播：轮播是「每 6 秒换一张装饰图」，既抢首屏带宽，也和「工程笔记」的
-      台账语言不是一路。这张图有明确语义（它是这一篇的封面，和右侧「最新」文案同源），
-      所以留着；它被装进一个 macOS 窗口壳里浮在右侧，左边让给文字。
-      窗口壳要的是硬边矩形，和原先那条「往左淡出到纸白」的 mask 互斥，按定稿取窗口壳。
+      首屏 = 一张站点固定封面铺满视口，站名居中压在图上。
+      这里是「首页图」，不放任何文章信息：最新一篇只留一枚 Latest 胶囊当入口，
+      文章台账要往下滚动才出现。图是纯装饰（站名就在旁边），整层对读屏隐藏。
     -->
-    <div v-if="cover && !coverFailed" class="hero-media">
-      <div class="hero-window">
-        <!-- 三色控制点纯装饰，不绑行为，整条标题栏对读屏隐藏 -->
-        <div class="window-bar" aria-hidden="true">
-          <span class="window-lights">
-            <i class="light-close"></i>
-            <i class="light-min"></i>
-            <i class="light-zoom"></i>
-          </span>
-          <span class="window-title">cover</span>
-        </div>
-        <div class="window-body">
-          <img
-            :src="cover"
-            :alt="latest ? latest.title : ''"
-            loading="eager"
-            fetchpriority="high"
-            decoding="async"
-            @error="coverFailed = true"
-          >
-        </div>
-      </div>
+    <div class="hero-cover" aria-hidden="true">
+      <img
+        v-if="showCover"
+        :src="HERO_COVER"
+        alt=""
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+        @error="coverFailed = true"
+      >
     </div>
+    <!-- 遮罩：图不可预知，白字需要一个与主题无关的底（理由见样式块） -->
+    <div class="hero-scrim" aria-hidden="true"></div>
 
     <div class="hero-inner">
-      <div class="hero-copy">
-        <h1 class="hero-name reveal">{{ siteName }}</h1>
-        <p v-if="siteSummary" class="hero-tag reveal">{{ siteSummary }}</p>
+      <!--
+        Latest 胶囊：有最新文章时是入口，没有时退化成不可点的标签。
+        aria-label 补上标题 —— 可见文字只有「Latest」，读屏听不出它通向哪一篇
+      -->
+      <router-link
+        v-if="latest"
+        class="hero-pill reveal"
+        :to="`/post/${latest.id}`"
+        :aria-label="`最新一篇：${latest.title}`"
+      >
+        Latest
+      </router-link>
+      <span v-else class="hero-pill reveal">Latest</span>
 
-        <div v-if="latest" class="hero-latest reveal">
-          <div class="line">
-            <time>{{ latest.date }}</time>
-            <span v-if="latest.category" class="cat">{{ latest.category }}</span>
-          </div>
-          <h2>
-            <router-link :to="`/post/${latest.id}`">{{ latest.title }}</router-link>
-          </h2>
-        </div>
-
-        <!-- 小组件带：便签 + 运行状态胶囊。两个都是真数据，没有可显示的内容就不渲染 -->
-        <div class="hero-widgets reveal">
-          <div v-if="motto" class="widget-note">
-            <span class="widget-label">便签</span>
-            <p class="widget-note-text">{{ motto }}</p>
-          </div>
-          <div class="widget-status">
-            <span class="status-text">
-              已运行 <b>{{ runningDays }}</b> 天
-            </span>
-            <span class="status-divider" aria-hidden="true"></span>
-            <span class="status-text">{{ updatedToday ? '今日已更新' : '今日未更新' }}</span>
-            <span
-              class="status-dot"
-              :class="{ 'is-live': updatedToday }"
-              aria-hidden="true"
-            ></span>
-          </div>
-        </div>
-      </div>
+      <h1 class="hero-name reveal">{{ siteName }}</h1>
+      <p v-if="siteSummary" class="hero-tag reveal">{{ siteSummary }}</p>
     </div>
 
-    <button class="hero-scroll" type="button" @click="$emit('scroll-down')">
+    <button type="button" class="hero-scroll" @click="$emit('scroll-to-posts')">
+      <span aria-hidden="true">↓</span>
       向下
     </button>
   </section>
 </template>
 
 <script>
+// 首屏封面：换图只改这一行，或直接替换 public/static/img/ 下的文件；置空则退回纯墨色首屏
+// const HERO_COVER = '/static/img/beijing.jpg'
+const HERO_COVER = '/static/img/book.png'
+
 export default {
   name: 'HomeHero',
   props: {
@@ -84,15 +59,18 @@ export default {
       default: () => []
     }
   },
+  emits: ['scroll-to-posts'],
   data() {
     return {
-      // 封面加载失败就撤掉整块图，露出 .hero 的纸白底，不做占位图回退
+      // 交给模板用（Options API 的模板只能读实例属性），保持常量的书写形式便于对照
+      HERO_COVER,
+      // 封面加载失败就撤掉 img，露出 .hero 的墨底，不做占位图回退
       coverFailed: false
     }
   },
   computed: {
     /**
-     * 首屏「最新」取列表第一条（后端按置顶 + 时间返回），无数据时整块不渲染
+     * 首屏「最新」取列表第一条（后端按置顶 + 时间返回），无数据时胶囊退化成标签
      */
     latest() {
       const first = this.carousels.find(item => item && item.id)
@@ -100,17 +78,7 @@ export default {
       return {
         id: first.id,
         title: first.title,
-        // 台账取向：日期等宽 + YYYY-MM-DD 定长
-        date: String(first.createTime || '').slice(0, 10),
-        category: first.categoryName || ''
       }
-    },
-    /**
-     * 首屏大图 = 最新那篇的封面。没有就整块不渲染，走纯排版报头
-     */
-    cover() {
-      const first = this.carousels.find(item => item && item.id && item.cover)
-      return first ? first.cover : ''
     },
     siteName() {
       const info = this.$store.state.webSiteInfo
@@ -122,405 +90,195 @@ export default {
       return this.$store.state.webSiteInfo.summary || ''
     },
     /**
-     * 便签文案：后台「作者信息」这一栏，全站只有侧栏在用它，这里当座右铭复用
+     * 有图且没加载失败才渲染 img；否则整屏退回墨色，白字照样立得住
      */
-    motto() {
-      const info = this.$store.state.webSiteInfo
-      return (info && info.authorInfo) || ''
-    },
-    /**
-     * 已运行天数。起始日和页脚同源（layout/Footer/index.vue:38 的 startDate），
-     * 那边改了这里要一起改
-     */
-    runningDays() {
-      const start = new Date('2021-07-01T00:00:00')
-      const days = Math.floor((Date.now() - start.getTime()) / 86400000)
-      return days > 0 ? days : 0
-    },
-    /**
-     * 列表里最新的一天。取最大值而不是第一条：置顶文章的 createTime 可能更早
-     */
-    latestUpdateDate() {
-      const days = this.carousels
-        .map(item => String((item && item.createTime) || '').slice(0, 10))
-        .filter(Boolean)
-        .sort()
-      return days.length ? days[days.length - 1] : ''
-    },
-    /**
-     * 今天是否更新过。createTime 是后端按本地时间排出来的字符串，这里只比对到「天」，
-     * 跨时区部署时可能差一天，当状态灯够用了
-     */
-    updatedToday() {
-      if (!this.latestUpdateDate) return false
-      const now = new Date()
-      const pad = value => String(value).padStart(2, '0')
-      const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-      return this.latestUpdateDate === today
+    showCover() {
+      return !!HERO_COVER && !this.coverFailed
     }
   },
-  watch: {
-    // 换了最新文章就重新给封面一次机会
-    cover() {
-      this.coverFailed = false
-    }
-  }
 }
 </script>
 
 <style lang="scss" scoped>
 // ════════════════════════════════════════════════════════════════
-//  首屏 · 报头
+//  首屏 · 全屏封面
 //
-//  取向上放弃「整屏大图 + 居中标题」那套门户长相，改成一本工程笔记的扉页：
-//  左边站名 + 最新一篇 + 两个小组件，右边一个浮动的封面视窗，底下一条实线压住统计行。
-//  高度从 100vh 降到 ~64vh —— 纯内容不需要占满一屏，让下面的台账早点露出来。
+//  取向上放弃「左文右窗」的扉页排版，改成门户式的整屏图 + 居中站名：
+//  一张站点固定封面（与具体文章无关）铺满视口，站名居中压在图上，
+//  底部中央是「向下」提示。高度严格一屏，文字垂直居中。
 //
-//  动效只有三处：四段文字依次浮起、视窗悬停时朝观察者转出并抬起、状态点呼吸。
-//  前两个纯装饰，prefers-reduced-motion 下连同呼吸灯一起停掉。
+//  动效只有两处：三段文字依次浮起、「向下」上下浮动；都是纯装饰，
+//  prefers-reduced-motion 下一起停掉。
 // ════════════════════════════════════════════════════════════════
 
 $header-offset: 64px;
-// 右侧封面视窗的宽度与留给它的呼吸位。这两个值同时决定「窗口多宽」和「正文留多宽」，
-// 写成变量，免得两边各改一处、改着改着窗口就压到文字上
-$window-w: clamp(240px, 30vw, 420px);
-$window-gap: clamp(24px, 3vw, 56px);
 
 .hero {
   position: relative;
   width: 100%;
-  // 不再占满整屏：内容说了算，但给一个下限免得窄内容时太扁
-  min-height: min(64vh, 620px);
-  // 顶栏是 fixed 的，#app 又留了 64px padding，这里负边距顶回页面最顶部
+  // 顶栏是 fixed 的、#app 又留了 64px padding：负边距把图顶到视口最上沿，
+  // 等量 padding-top 再把内容让回顶栏下面。两条成对出现，缺一个图就铺不满。
   margin-top: -$header-offset;
   padding-top: $header-offset;
+  // padding-top 是给固定顶栏让位的，它会把内容盒的中心推到视口中心下方 32px；
+  // 补一条等量的下内边距把这块偏移抵消回来，justify-content:center 才是真的居中
+  // （.hero-scroll 是绝对定位，不吃内边距，位置不受这条影响）
+  padding-bottom: $header-offset;
+  // 严格一屏；svh 写在 vh 后面覆盖它 —— 移动端地址栏收放时 svh 不跳
+  min-height: 100vh;
+  min-height: 100svh;
   overflow: hidden;
-  // 纸白底 + 一条底部实线，和全站的台账语言对齐
-  background: var(--background);
-  border-bottom: 1px solid var(--rule);
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
+  justify-content: center;
+  // 常驻墨底。写死理由：它要保证「图没解码完」「图加载失败」「HERO_COVER 置空」
+  // 三种状态下白字都有底，而它不是主题色 —— 跟着 data-theme 翻转的话深色档下会
+  // 变得更亮，白字反而消失，所以不去动 variables.scss。
+  background: #12161c;
 }
 
-// ── 右侧封面视窗 ──
-// 这一层只当定位带：居中到 1400px 内容列、右对齐到正文右缘，窗口本体再靠右端摆放。
-// 定位（translateX）和景深（perspective/rotateY）分挂两层，同一个元素上会互相顶掉
-.hero-media {
+// 封面层：图铺满并裁切，自己不吃事件，文字层压在它上面
+.hero-cover {
   position: absolute;
-  top: $header-offset;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(1400px, 100%);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  // 和 .hero-inner 用同一个 clamp，窗口右缘才和正文右缘对齐
-  padding-right: clamp(20px, 4vw, 48px);
-  // 这条带横跨整个右侧，自己不吃事件，免得挡掉正文选择和「向下」
-  pointer-events: none;
-}
-
-.hero-window {
-  pointer-events: auto;
-  width: $window-w;
-  border-radius: $border-radius-lg;
-  background: var(--card-bg);
-  // 1px 微细外边框：窗口和纸白底之间要有条线，否则浅色下糊成一片
-  border: 1px solid var(--rule);
-  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  overflow: hidden;
-  // 函数列表两边写成同一组（rotateY 0 → -2deg），过渡才是插值而不是离散替换
-  transform: perspective(1000px) rotateY(0deg) translateZ(0);
-  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-
-  // 朝观察者轻微转出 + 抬起。translateZ 挂在 perspective() 之后才吃得到景深
-  &:hover {
-    transform: perspective(1000px) rotateY(-2deg) translateZ(14px);
-    box-shadow: 0 34px 60px -22px rgba(0, 0, 0, 0.3), 0 2px 10px rgba(0, 0, 0, 0.08),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-}
-
-.window-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 30px;
-  padding: 0 12px;
-  // 磨砂标题栏：深浅两套靠 --surface-rgb 自己的值走，不用各写一份
-  background: rgba(var(--surface-rgb), 0.72);
-  backdrop-filter: blur(12px) saturate(160%);
-  border-bottom: 1px solid var(--rule);
-}
-
-.window-lights {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: none;
-
-  i {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    // 0.5px 内描边（而不是 border）：纯色圆点在高分屏上会发毛，压一圈边才像系统画的
-    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.14);
-  }
-
-  .light-close {
-    background: #ff5f56;
-  }
-
-  .light-min {
-    background: #ffbd2e;
-  }
-
-  .light-zoom {
-    background: #27c93f;
-  }
-}
-
-.window-title {
-  font-family: $font-mono;
-  font-size: 0.64rem;
-  letter-spacing: 0.08em;
-  color: var(--text-tertiary);
-}
-
-.window-body {
-  // 定死比例：封面尺寸不一，不锁的话窗口会随图变得又高又矮
-  aspect-ratio: 16 / 10;
-  background: var(--surface);
+  inset: 0;
 
   img {
     display: block;
     width: 100%;
     height: 100%;
+    // object-position 略偏上：横图默认居中会把天空裁掉一半
     object-fit: cover;
+    object-position: center 45%;
   }
+}
+
+// 遮罩：分三段「顶压暗 / 中间全透 / 底压暗」。单层整体压暗是整个画面发浊、暖色被
+// 洗成灰紫的原因，所以只在需要的地方给墨：顶带托住顶栏（那里有白字要达标）、
+// 底带托住「向下」，中间整段是 0，照片本色透出来。
+// 文字块原先单独铺过一圈径向压暗，已经去掉：它在图上是一块看得见的深色椭圆，
+// 读起来像污渍而不是遮罩。现在标题的底只剩 .hero-name / .hero-tag 自己那层
+// text-shadow；若换到很亮的图、白字开始发飘，先给中间这段一个很小的值（整张均匀
+// 压暗），不要再把局部椭圆加回来。
+// 写死墨色：遮罩要中和的是「不可预知的图」，跟主题无关；若跟着 data-theme 翻转，
+// 深色档下遮罩会变亮，白字就没底了。
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  // 顶带用固定长度而不是百分比：顶栏是固定 64px 高，视口越矮它占的比例越大，
+  // 写死的百分比在矮屏上会让顶栏下缘落进衰减段，白字直接掉到达标线以下
+  //
+  // 顶带从 0.84 松到 0.62：图上态的顶栏已经不是裸白字，而是深色玻璃壳
+  // （Header/index.vue 的 .site-header.is-over-hero .navbar），壳自带 10% 白 + 模糊。
+  // 遮罩再压着 0.84，图就没有明暗变化可模糊，玻璃会退化成一块深色板。
+  // 两边是同一条契约：若换到很亮的图、白字开始发飘，先把 0.62 和壳的 0.1 一起往上加。
+  background: linear-gradient(
+    180deg,
+    rgba(9, 12, 16, 0.62) 0,
+    rgba(9, 12, 16, 0.62) calc(#{$header-offset} + #{$spacing-sm}),
+    rgba(9, 12, 16, 0.2) 30%,
+    rgba(9, 12, 16, 0) 44%,
+    rgba(9, 12, 16, 0) 60%,
+    rgba(9, 12, 16, 0.5) 100%
+  );
+}
+
+// 图缺失 / 加载失败：遮罩撤掉 —— 它只为「不可预知的图」服务，平墨底上再叠一层
+// 只会把底压花（.hero 的墨色已经足够）。
+.hero.is-plain .hero-scrim {
+  display: none;
 }
 
 .hero-inner {
   position: relative;
-  z-index: 2;
+  z-index: 1;
+  // 保留版心：居中标题在超宽屏上也和下方台账共用同一条左右边界
   width: 100%;
-  max-width: 1400px;
+  max-width: $container-max;
   margin: 0 auto;
-  padding: clamp(40px, 6vh, 72px) clamp(20px, 4vw, 48px) clamp(28px, 4vh, 44px);
+  padding: 0 $container-gutter;
   display: flex;
   flex-direction: column;
-  gap: clamp(24px, 4vh, 40px);
+  align-items: center;
+  text-align: center;
+  gap: clamp(14px, 2.4vh, 24px);
 }
 
-.hero-copy {
-  // 文字压在纸白上，右侧留出封面视窗的宽度 + 一段呼吸位。
-  // 注意全局是 border-box：max-width 含 padding，所以这里要把预留的右内边距加回去，
-  // 否则真正留给文字的一列只剩 62ch - 420px ≈ 200px，
-  // 没有 Songti SC 的机器（回退到 SimSun/Georgia，字形更宽）站名就会折成两行。
-  max-width: min(100%, calc(62ch + #{$window-w} + #{$window-gap}));
-  padding-right: calc(#{$window-w} + #{$window-gap});
+// Latest 胶囊：白描边 + 半透明白底，不用填充色块（这套设计没有实心按钮）
+.hero-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-family: $font-mono;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: #fff;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+// 兜底的 span 版本不该有 hover 反馈，只给真链接
+a.hero-pill:hover {
+  background: rgba(255, 255, 255, 0.24);
 }
 
 .hero-name {
-  font-family: $font-serif;
-  font-size: clamp(2.1rem, 5vw, 3.5rem);
+  // 全屏图上改成无衬线粗体：衬线字在照片背景里笔画会糊掉
+  font-family: $font-sans;
+  font-size: clamp(2.75rem, 8vw, 4.5rem);
   line-height: 1.08;
-  letter-spacing: 0.005em;
-  font-weight: 600;
-  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  color: #fff;
+  // 字边一层薄墨：平核已经够达标，这层只压住笔画和照片高光相接的那圈过渡
+  text-shadow: 0 2px 16px rgba(9, 12, 16, 0.4);
 }
 
 .hero-tag {
-  margin-top: 12px;
-  font-size: clamp(0.86rem, 1.1vw, 0.98rem);
-  color: var(--text-secondary);
   max-width: 44ch;
+  font-size: clamp(0.9rem, 1.2vw, 1.05rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+  // 同上，小字号要的更近、更实一点
+  text-shadow: 0 1px 8px rgba(9, 12, 16, 0.55);
 }
 
-.hero-latest {
-  margin-top: clamp(24px, 4vh, 40px);
-  padding-top: 18px;
-  // 1px 实线，不用卡片阴影
-  border-top: 1px solid var(--rule);
-  max-width: 58ch;
-
-  .line {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-family: $font-mono;
-    font-size: 0.76rem;
-    letter-spacing: 0.04em;
-    color: var(--accent);
-
-    .cat {
-      color: var(--text-tertiary);
-    }
-  }
-
-  h2 {
-    margin-top: 9px;
-    font-family: $font-serif;
-    font-size: clamp(1.2rem, 2.2vw, 1.65rem);
-    line-height: 1.35;
-    font-weight: 600;
-
-    a {
-      color: var(--text-primary);
-      text-decoration: none;
-      // 下划线从左侧展开，不用 border-bottom（会占掉行盒高度）
-      background-image: linear-gradient(currentColor, currentColor);
-      background-size: 0% 1px;
-      background-repeat: no-repeat;
-      background-position: 0 100%;
-      transition: background-size 0.35s ease;
-
-      &:hover {
-        background-size: 100% 1px;
-      }
-    }
-  }
-}
-
-// ── 首屏小组件带 ──
-.hero-widgets {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: clamp(20px, 3vh, 32px);
-}
-
-// 灵感便签：Stickies 的暖琥珀半透明。边框用 accent 的透明色，不是实色
-.widget-note {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  max-width: 46ch;
-  padding: 9px 13px;
-  border-radius: $border-radius-md;
-  background: var(--accent-soft);
-  border: 1px solid rgba($accent, 0.22);
-  backdrop-filter: blur(10px) saturate(150%);
-
-  .widget-label {
-    flex: none;
-    font-family: $font-mono;
-    font-size: 0.62rem;
-    letter-spacing: 0.14em;
-    color: var(--accent);
-  }
-
-  .widget-note-text {
-    font-size: 0.82rem;
-    line-height: 1.5;
-    color: var(--text-secondary);
-    // 便签最多两行，再多就盖过正文了
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-}
-
-// 运行状态胶囊：毛玻璃底 + 呼吸绿点
-.widget-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 13px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px solid var(--rule);
-  backdrop-filter: blur(12px) saturate(150%);
-
-  .status-text {
-    font-family: $font-mono;
-    font-size: 0.7rem;
-    letter-spacing: 0.02em;
-    // 天数从 3 位涨到 4 位时胶囊宽度不跳，靠等宽数字
-    font-variant-numeric: tabular-nums;
-    color: var(--text-tertiary);
-
-    b {
-      font-weight: 600;
-      color: var(--text-secondary);
-    }
-  }
-
-  .status-divider {
-    width: 1px;
-    height: 11px;
-    background: var(--rule-strong);
-  }
-
-  .status-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: var(--text-tertiary);
-    opacity: 0.45;
-
-    // 只有「今日已更新」才亮。这个绿和视窗三色里的绿灯同源
-    &.is-live {
-      background: #27c93f;
-      opacity: 1;
-      animation: live-pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite;
-    }
-  }
-}
-
-// 呼吸＝一圈扩散开的光晕，比直接改 opacity 更像系统里的活动指示
-@keyframes live-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(39, 201, 63, 0.45);
-  }
-
-  50% {
-    box-shadow: 0 0 0 5px rgba(39, 201, 63, 0);
-  }
-}
-
+// 「向下」提示：钉在底部中央。用 button 而不是 div —— 它是可点的
 .hero-scroll {
   position: absolute;
-  right: clamp(20px, 4vw, 48px);
-  bottom: clamp(28px, 4vh, 44px);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 0;
-  border: none;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: clamp(20px, 3.5vh, 36px);
+  // left/right 拉满 + width:max-content + 自动边距：居中交给布局，
+  // transform 就留给浮动动画，两者不会互相顶掉
+  width: max-content;
+  margin: 0 auto;
+  padding: 6px 10px;
+  border: 0;
   background: none;
-  cursor: pointer;
   font-family: $font-mono;
   font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  color: var(--text-tertiary);
-  writing-mode: vertical-rl;
-  transition: color 0.25s ease;
-
-  &::after {
-    content: '';
-    width: 1px;
-    height: 52px;
-    background: linear-gradient(
-      to bottom,
-      var(--rule-strong),
-      transparent
-    );
-  }
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  transition: color 0.2s ease;
+  animation: hero-bob 2.6s ease-in-out infinite;
 
   &:hover {
-    color: var(--text-primary);
+    color: #fff;
   }
 }
 
-// 四段文字依次浮起
+@keyframes hero-bob {
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+// 三段文字依次浮起
 .reveal {
   opacity: 0;
   transform: translateY(14px);
@@ -537,10 +295,6 @@ $window-gap: clamp(24px, 3vw, 56px);
   &:nth-child(3) {
     animation-delay: 0.42s;
   }
-
-  &:nth-child(4) {
-    animation-delay: 0.54s;
-  }
 }
 
 @keyframes reveal {
@@ -550,54 +304,16 @@ $window-gap: clamp(24px, 3vw, 56px);
   }
 }
 
-// 深色下窗口靠外发光高光线立住，投影也要更重一档才有浮起感
-:root[data-theme='dark'] .hero-window {
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-
-  // 这个 hover 必须重写：本选择器权重高于上面的 .hero-window:hover，
-  // 只覆盖基础态的话，深色下悬停就没有投影反馈了
-  &:hover {
-    box-shadow: 0 34px 60px -22px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  // 深色底上控制点自带的那圈压边要更暗，否则三个圆点会发光
-  .window-lights i {
-    box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.35);
-  }
-}
-
-:root[data-theme='dark'] .hero-widgets {
-  .widget-note {
-    border-color: rgba($accent, 0.3);
-  }
-
-  .widget-status {
-    background: rgba(255, 255, 255, 0.04);
-  }
-}
-
 @include responsive(lg) {
-  .hero-copy {
-    padding-right: 0;
-    max-width: 100%;
+  // 窄屏两处下限要跟着降：2.75rem 的站名在 320–375px 上会顶到 gutter；
+  // 底部提示往下多让一点，避开手机的 Home Indicator。
+  // （旧版这里藏着「右侧封面视窗」的两条规则，本轮图要铺满手机，已整块删除）
+  .hero-name {
+    font-size: clamp(2.25rem, 11vw, 3.25rem);
   }
 
-  // 窄屏下封面竖栏会挤掉正文，直接撤掉，退回纯排版报头
-  .hero-media {
-    display: none;
-  }
-}
-
-@include responsive(md) {
-  .hero {
-    min-height: min(56vh, 480px);
-  }
-
-  // 窄屏下竖排的「向下」会和正文抢空间
   .hero-scroll {
-    display: none;
+    bottom: clamp(28px, 6vh, 44px);
   }
 }
 
@@ -610,16 +326,10 @@ $window-gap: clamp(24px, 3vw, 56px);
     transform: none;
   }
 
-  // 景深浮起和呼吸灯都是纯装饰，一并停掉。这里写在 :hover 之后，权重相同才盖得住
-  .hero-window,
-  .hero-window:hover {
-    transform: none;
-    transition: none;
-  }
-
-  .widget-status .status-dot.is-live {
+  // 「向下」的往复浮动是纯装饰，一并停掉；这里写在动画声明之后，权重相同才盖得住
+  .hero-scroll {
     animation: none;
-    box-shadow: 0 0 0 3px rgba(39, 201, 63, 0.18);
+    transition: none;
   }
 }
 </style>
