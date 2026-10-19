@@ -117,7 +117,7 @@ export function addFeedbackApi(data) {
 export function signInApi() {
     return request({
         url: '/sign/',
-        method: 'get'
+        method: 'post'
     })
 }
 

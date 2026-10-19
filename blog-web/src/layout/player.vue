@@ -447,6 +447,10 @@ export default {
     // 缓冲检测用：100ms 看一眼播放进度有没有前进（见 watchBuffering）
     this._bufferTimer = 0
     this._lastPos = 0
+    // 抑制拖拽后补发 click 的 60ms 计时器，卸载时要清掉
+    this._suppressTimer = 0
+    // 歌单是异步请求，$nextTick 回调可能在组件卸载后才执行，用它兜住
+    this._isUnmounted = false
 
     // 记住的播放模式 / 单曲循环 / 音量
     const savedMode = readStore(PLAY_MODE_KEY)
@@ -509,6 +513,8 @@ export default {
       // 收起态用 CSS 生成的黑胶兜底，等用户播放或展开时再按需加载。
 
       this.$nextTick(() => {
+        // 请求返回时组件可能已经卸载，此时 $refs.aplayer 已不存在，构造 APlayer 会抛错
+        if (this._isUnmounted) return
         this.initAPlayer()
       })
     } catch (error) {
@@ -544,8 +550,10 @@ export default {
     window.removeEventListener('pointermove', this.onWindowPointerMove)
     window.removeEventListener('pointerup', this.onWindowPointerUp)
     window.removeEventListener('pointercancel', this.onWindowPointerUp)
+    this._isUnmounted = true
     clearTimeout(this._idleTimer)
     clearTimeout(this._snapTimer)
+    clearTimeout(this._suppressTimer)
     clearInterval(this._bufferTimer)
     if (this.player) {
       const audio = this.player.audio
@@ -564,6 +572,9 @@ export default {
 
       if (this.player) {
         this.player.destroy()
+        // 旧引擎的 audio 元素已随 destroy 丢弃，但 this.errorHandler 还指着旧处理器，
+        // 不清空的话 bindPlayerErrorHandler 会因它非空直接返回，新引擎就永远没有 error 兜底
+        this.errorHandler = null
       }
 
       // APlayer 只当音频引擎和歌词解析器用，界面完全隐藏（.cp__engine 是 1px 的透明盒）。
@@ -1086,7 +1097,8 @@ export default {
       clearTimeout(this._snapTimer)
       this._snapTimer = setTimeout(() => { this.snap = false }, 650)
       this._suppress = true
-      setTimeout(() => { this._suppress = false }, 60)
+      clearTimeout(this._suppressTimer)
+      this._suppressTimer = setTimeout(() => { this._suppress = false }, 60)
       this.resetIdle()
     },
     onRootPointerEnter() {

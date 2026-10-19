@@ -93,7 +93,9 @@ export default {
      */
     show(images, startIndex = 0) {
       this.images = Array.isArray(images) ? images : [images]
-      this.currentIndex = startIndex
+      // 调用方可能传 indexOf 的 -1 或越界值，收敛到 [0, length-1]；空数组停在 0
+      const index = Math.floor(Number(startIndex)) || 0
+      this.currentIndex = Math.min(Math.max(index, 0), Math.max(this.images.length - 1, 0))
       this.visible = true
       this.reset()
       document.body.style.overflow = 'hidden'
@@ -255,20 +257,17 @@ export default {
     }
   },
   mounted() {
-    // 监听ESC键盘事件
-    document.addEventListener('keydown', (e) => {
+    // 监听ESC键盘事件；处理器存到实例上，beforeUnmount 才能移除同一个引用
+    this.handleKeydown = (e) => {
       if (e.key === 'Escape') {
         this.close()
       }
-    })
+    }
+    document.addEventListener('keydown', this.handleKeydown)
   },
   beforeUnmount() {
     // 移除ESC键盘事件监听
-    document.removeEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        this.close()
-      }
-    })
+    document.removeEventListener('keydown', this.handleKeydown)
   }
 }
 </script>

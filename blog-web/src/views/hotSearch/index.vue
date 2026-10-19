@@ -54,7 +54,16 @@
             >
               <span class="rank" :class="getRankClass(index)">{{ String(index + 1).padStart(2, '0') }}</span>
               <div class="row-main">
-                <a :href="item.url" target="_blank" class="title" @click.stop>{{ item.keyword }}</a>
+                <!-- 榜单数据由后端透传第三方接口，协议不可信：非 http(s) 时降级为纯文本，避免 javascript: 伪协议 -->
+                <a
+                  v-if="safeExternalUrl(item.url)"
+                  :href="safeExternalUrl(item.url)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="title"
+                  @click.stop
+                >{{ item.keyword }}</a>
+                <span v-else class="title">{{ item.keyword }}</span>
                 <span class="row-meta">
                   <span class="hot-value" v-if="item.hotValue">{{ formatHotValue(item.hotValue) }}</span>
                   <span class="trend" v-if="item.trend">
@@ -73,6 +82,7 @@
 
 <script>
 import { getHotListApi } from '@/api/hot-search'
+import { safeExternalUrl } from '@/utils/sanitize'
 export default {
   name: 'HotSearch',
   data() {
@@ -122,7 +132,10 @@ export default {
         return
       }
       const engine = this.getCurrentEngine
-      window.open(engine.url + encodeURIComponent(this.searchText), '_blank')
+      const target = safeExternalUrl(engine.url + encodeURIComponent(this.searchText))
+      if (!target) return
+      // noopener 防止新页面通过 window.opener 反向操作本页
+      window.open(target, '_blank', 'noopener,noreferrer')
     },
     getRankClass(index) {
       if (index < 3) return `rank-${index + 1}`
@@ -147,10 +160,12 @@ export default {
       }
     },
     handleHotItemClick(item) {
-      if (item.url) {
-        window.open(item.url, '_blank')
-      }
+      const target = safeExternalUrl(item.url)
+      if (!target) return
+      // noopener 防止新页面通过 window.opener 反向操作本页
+      window.open(target, '_blank', 'noopener,noreferrer')
     },
+    safeExternalUrl,
     getTrendIcon(trend) {
       if (trend === '上升') return 'fas fa-arrow-up text-success'
       if (trend === '下降') return 'fas fa-arrow-down text-danger'

@@ -147,6 +147,8 @@
         verifySuccess: false,
         // 校验失败状态
         verifyFail: false,
+        // 失败态复位定时器句柄（回调只写 verifyFail），卸载时须撤掉
+        refreshFailTimer: null,
         // 阻塞块对象
         blockObj: null,
         // 图片画布对象
@@ -186,6 +188,22 @@
     mounted() {
       this.init();
     },
+    beforeUnmount() {
+      // 组件卸载时统一移除监听：el-dialog 惰性渲染且不销毁内容，只有真正卸载才该清理
+      if (this.sliderButton) {
+        this.sliderButton.removeEventListener("mousedown", this.handleSliderMousedown);
+        this.sliderButton.removeEventListener("touchstart", this.handleSliderTouchstart);
+      }
+      document.removeEventListener("mousemove", this.handleSliderMousemove);
+      document.removeEventListener("mouseup", this.handleSliderMouseup);
+      document.removeEventListener("touchmove", this.handleSliderTouchmove);
+      document.removeEventListener("touchend", this.handleSliderTouchend);
+      // 失败态复位定时器：回调只写 verifyFail，但组件卸载后仍会执行一次
+      if (this.refreshFailTimer) {
+        clearTimeout(this.refreshFailTimer);
+        this.refreshFailTimer = null;
+      }
+    },
     methods: {
       /* 初始化*/
       init() {
@@ -214,6 +232,9 @@
             this.$refs.block.src = data.blockSrc;
             this.$refs.block.style.top = data.blockY + "px";
             this.$refs.canvas.src = data.canvasSrc;
+          })
+          .catch(() => {
+            this.$message.error("验证码加载失败，请点击刷新重试");
           })
           .finally(() => {
             this.isLoading = false;
@@ -312,40 +333,45 @@
       },
       /* 事件绑定*/
       bindEvents() {
-        // 监听鼠标按下事件
-        document
-          .getElementById("slider-button")
-          .addEventListener("mousedown", (event) => {
-            this.startEvent(event.clientX, event.clientY);
-          });
-        // 监听鼠标移动事件
-        document.addEventListener("mousemove", (event) => {
+        // 处理器统一存到实例上：add/remove 必须是同一个引用，匿名函数移除不掉
+        this.sliderButton = document.getElementById("slider-button");
+        this.handleSliderMousedown = (event) => {
+          this.startEvent(event.clientX, event.clientY);
+        };
+        this.handleSliderMousemove = (event) => {
           this.moveEvent(event.clientX, event.clientY);
-        });
-        // 监听鼠标离开事件
-        document.addEventListener("mouseup", (event) => {
+        };
+        this.handleSliderMouseup = (event) => {
           this.endEvent(event.clientX);
-        });
-        // 监听触摸开始事件
-        document
-          .getElementById("slider-button")
-          .addEventListener("touchstart", (event) => {
-            this.startEvent(
-              event.changedTouches[0].pageX,
-              event.changedTouches[0].pageY
-            );
-          });
-        // 监听触摸滑动事件
-        document.addEventListener("touchmove", (event) => {
+        };
+        this.handleSliderTouchstart = (event) => {
+          this.startEvent(
+            event.changedTouches[0].pageX,
+            event.changedTouches[0].pageY
+          );
+        };
+        this.handleSliderTouchmove = (event) => {
           this.moveEvent(
             event.changedTouches[0].pageX,
             event.changedTouches[0].pageY
           );
-        });
-        // 监听触摸离开事件
-        document.addEventListener("touchend", (event) => {
+        };
+        this.handleSliderTouchend = (event) => {
           this.endEvent(event.changedTouches[0].pageX);
-        });
+        };
+
+        // 监听鼠标按下事件
+        this.sliderButton.addEventListener("mousedown", this.handleSliderMousedown);
+        // 监听鼠标移动事件
+        document.addEventListener("mousemove", this.handleSliderMousemove);
+        // 监听鼠标离开事件
+        document.addEventListener("mouseup", this.handleSliderMouseup);
+        // 监听触摸开始事件
+        this.sliderButton.addEventListener("touchstart", this.handleSliderTouchstart);
+        // 监听触摸滑动事件
+        document.addEventListener("touchmove", this.handleSliderTouchmove);
+        // 监听触摸离开事件
+        document.addEventListener("touchend", this.handleSliderTouchend);
       },
       /* 校验图片是否存在*/
       checkImgSrc() {
@@ -453,7 +479,7 @@
       /* 刷新图片验证码*/
       refresh() {
         // 延迟class的删除，等待动画结束
-        setTimeout(() => {
+        this.refreshFailTimer = setTimeout(() => {
           this.verifyFail = false;
         }, 500);
         this.isLoading = true;

@@ -11,26 +11,36 @@
 export default {
   name: 'About',
 
+  data() {
+    return {
+      // 500ms 后才给正文图片挂点击事件，句柄留在实例上供 beforeUnmount 清理
+      previewTimer: null
+    };
+  },
   mounted() {
     this.initImagePreview();
   },
   methods: {
     initImagePreview() {
       this.$nextTick(() => {
-        setTimeout(() => {  
+        this.previewTimer = setTimeout(() => {
         const content = this.$refs.content;
         if (content) {
           const images = content.getElementsByTagName('img');
           Array.from(images).forEach(img => {
             img.style.cursor = 'zoom-in';
             img.addEventListener('click', () => {
-              this.$refs.imagePreview.show(img.src);
+              this.$refs.imagePreview?.show(img.src);
             });
           });
         }
       }, 500); 
       });
     }
+  },
+  beforeUnmount() {
+    // 定时器回调要读 this.$refs，组件卸载后必须掐掉，否则会打在已销毁的实例上
+    clearTimeout(this.previewTimer);
   }
 }
 </script>

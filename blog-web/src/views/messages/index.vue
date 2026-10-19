@@ -274,6 +274,10 @@
 import { getMessagesApi, addMessageApi } from '@/api/message'
 import { formatTime } from '@/utils/time'
 
+// 接口一次性返回整张留言表且无分页，全量渲染会拖垮长卷视图；
+// 只保留最近 N 条进入 DOM（数组本身仍是"最新在前"的顺序，浮岛巡航语义不变）
+const MAX_BARRAGE_RENDER = 200
+
 export default {
   name: 'Messages',
 
@@ -285,12 +289,13 @@ export default {
       sending: false,
       barrageList: [],
       drawerVisible: false,
-      user: this.$store.state.userInfo,
       defaultAvatar: 'https://img.shiyit.com/avatar.jpg',
 
       // 视图控制：'orbit' (微浮岛漫游) | 'wall' (信笺长卷瀑布流)
       viewMode: 'orbit',
       isInitialized: false,
+      // 首屏过渡定时器句柄（回调只写 isInitialized），卸载时须撤掉
+      initTransitionTimer: null,
       autoCruise: true,
       isHovered: false,
       cruiseTimer: null,
@@ -338,7 +343,7 @@ export default {
     this.initActiveIslands()
     this.$nextTick(() => {
       // 首屏已绘制，激活后续巡航与新增时的渐隐渐现过渡体系
-      setTimeout(() => {
+      this.initTransitionTimer = setTimeout(() => {
         this.isInitialized = true
       }, 60)
     })
@@ -351,6 +356,12 @@ export default {
     if (this.timer) {
       clearInterval(this.timer)
       this.timer = null
+    }
+    // 首屏过渡定时器：回调只写 isInitialized，但组件卸载后仍会执行一次，
+    // 留着等于让已卸载的实例继续被闭包引用
+    if (this.initTransitionTimer) {
+      clearTimeout(this.initTransitionTimer)
+      this.initTransitionTimer = null
     }
   },
 
@@ -536,9 +547,9 @@ export default {
     async listMessage() {
       try {
         const res = await getMessagesApi()
-        const rawList = res.data || []
-        // 按时间倒序排列，最新留言排在最前
-        this.barrageList = rawList.slice().reverse()
+        const rawList = Array.isArray(res.data) ? res.data : []
+        // 按时间倒序排列，最新留言排在最前；超出上限的部分不进入 DOM
+        this.barrageList = rawList.slice().reverse().slice(0, MAX_BARRAGE_RENDER)
       } catch (err) {
         console.error('获取留言列表失败:', err)
       }
@@ -556,17 +567,19 @@ export default {
       }
 
       this.sending = true
-      const touristAvatar = this.$store.state.webSiteInfo?.touristAvatar || this.defaultAvatar
-      // createTime 由后端 MyMetaObjectHandler 自动填充，前端不要提交
-      const payload = {
-        avatar: this.user ? this.user.avatar : touristAvatar,
-        nickname: this.user ? this.user.nickname : '星海旅人',
-        content: trimmed
-      }
+      // 提交时才读 store：data() 里取的是初始化快照，登录后进来的用户会一直按游客发言
+      const userInfo = this.$store.state.userInfo
+      // 身份由服务端按会话填充，前端只提交内容
+      const payload = { content: trimmed }
       const now = new Date()
       const pad = (value) => String(value).padStart(2, '0')
+      // createTime 由后端 MyMetaObjectHandler 自动填充，前端不要提交
+      // 本地乐观渲染用的昵称/头像只是展示，不代表服务端落库的身份
+      const touristAvatar = this.$store.state.webSiteInfo?.touristAvatar || this.defaultAvatar
       const newMessage = {
         ...payload,
+        avatar: userInfo ? userInfo.avatar : touristAvatar,
+        nickname: userInfo ? userInfo.nickname : '星海旅人',
         createTime: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
         isNew: true
       }

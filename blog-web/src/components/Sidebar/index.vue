@@ -160,9 +160,15 @@ export default {
       // 标记了多少条就返回多少条；置顶那条有 STICK_LIMIT=5 兜底，这里没有，
       // 不截断的话侧栏会被撑成一长条。取 5 条和置顶保持一致
       this.hot = (res.data || []).slice(0, 5)
+    }).catch(() => {
+      // 推荐卡拿不到就保持空数组：postGroups 会把空组剔掉，卡片整块不渲染
+      this.$message.error('获取推荐文章失败')
     })
     getTagsApi().then(res => {
       this.tags = res.data || []
+    }).catch(() => {
+      // 标签云与文章计数都读 this.tags，失败时保持空数组，计数显示为「—」
+      this.$message.error('获取标签失败')
     })
     // 只要 total，别把整页数据拉回来：pageSize 给 1，载荷压到最小
     getArticlesApi({ pageNum: 1, pageSize: 1 })

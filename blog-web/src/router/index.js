@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 // 所有页面组件一律走动态 import：静态 import 会把文章详情页的 highlight.js、
 // 相册、编辑器等全部并入首屏模块图（dev 下首屏 JS 解压体积 8MB 主要来自这里）。
 import store from '@/store';
+import { getToken } from '@/utils/cookie';
 
 const routes = [
 
@@ -223,6 +224,14 @@ router.beforeEach((to) => {
   }
   //关闭搜索框
   store.commit('SET_SEARCH_VISIBLE', false)
+
+  // requireAuth / requiresAuth 两种拼写在路由定义里并存（Header 登出逻辑读的是 requiresAuth），
+  // 所以两个都认；登录态只看 cookie 里的 token，不看 sessionStorage（那份缓存可被脚本伪造）
+  if (to.meta.requireAuth || to.meta.requiresAuth) {
+    if (!getToken()) {
+      return { path: '/login', query: { redirect: to.fullPath } }
+    }
+  }
 })
 
 export default router

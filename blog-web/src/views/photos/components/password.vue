@@ -71,9 +71,10 @@ export default {
       this.$refs.form.validate(valid => {
         if (valid) {
           this.loading = true;
-          this.$emit('submit', this.form.password, () => {
+          // 父组件回调带 success 标记：失败时只复位 loading，弹窗保持打开以便重试
+          this.$emit('submit', this.form.password, (success = true) => {
             this.loading = false;
-            this.visible = false; // 提交后关闭弹窗
+            if (success) this.visible = false; // 提交成功后才关闭弹窗
           });
         }
       });

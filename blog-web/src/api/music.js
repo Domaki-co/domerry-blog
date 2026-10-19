@@ -1,31 +1,49 @@
-const API = 'https://api.chksz.com/api'
-const API_KEY = 'chksz_EzOgUj0rOUeIYpnGXZmZqCpc8tDwu8fbpmJE30Obg-g'
+import request from '@/utils/request'
 
-function createUrl(path, params = {}) {
-  const url = new URL(`${API}/${path}`)
-  Object.entries({ ...params, apikey: API_KEY }).forEach(([key, value]) => {
-    url.searchParams.set(key, value)
-  })
-  return url.toString()
-}
+// 音乐接口统一走后端代理：第三方地址与 key 由后端从字典读取（dictType: music_api），前端不再持有密钥。
+// 后端原样透传第三方响应体，所以调用方仍按 res.code / res.data 读取。
 
-async function request(path, params, signal) {
-  const response = await fetch(createUrl(path, params), { signal })
-  return response.json()
+// axios 取消请求抛的是 CanceledError，调用方按 AbortError 判断，这里做一次归一化
+function toAbortError(error) {
+  if (error?.code !== 'ERR_CANCELED' && error?.name !== 'CanceledError') return error
+  const abortError = new Error('canceled')
+  abortError.name = 'AbortError'
+  return abortError
 }
 
 export function searchSongsApi(keyword, signal) {
-  return request('163_search', { keyword, limit: 30 }, signal)
+  return request({
+    url: '/api/music/search',
+    method: 'get',
+    params: { keyword, limit: 30 },
+    signal
+  }).catch(error => Promise.reject(toAbortError(error)))
 }
 
-export function getPlaylistApi(playlistId) {
-  return request('163_playlist', { id: playlistId })
+// signal 一律放在参数表末尾：既有调用方不传也能照常工作，取消能力按需追加
+export function getPlaylistApi(playlistId, signal) {
+  return request({
+    url: '/api/music/playlist',
+    method: 'get',
+    params: { id: playlistId },
+    signal
+  }).catch(error => Promise.reject(toAbortError(error)))
 }
 
-export function getMusicApi(songId, quality) {
-  return request('163_music', { id: songId, level: quality })
+export function getMusicApi(songId, quality, signal) {
+  return request({
+    url: '/api/music/song',
+    method: 'get',
+    params: { id: songId, level: quality },
+    signal
+  }).catch(error => Promise.reject(toAbortError(error)))
 }
 
-export function getLyricApi(songId) {
-  return request('163_lyric', { id: songId })
+export function getLyricApi(songId, signal) {
+  return request({
+    url: '/api/music/lyric',
+    method: 'get',
+    params: { id: songId },
+    signal
+  }).catch(error => Promise.reject(toAbortError(error)))
 }

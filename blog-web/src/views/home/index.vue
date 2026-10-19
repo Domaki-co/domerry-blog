@@ -120,6 +120,8 @@ export default {
       querySeq: 0,
       // 骨架屏延时定时器引用
       skeletonTimer: null,
+      // 进场动画结束后复位过渡态的定时器引用
+      transitionTimer: null,
       // 分段选择器滑块的内联样式。首帧是 0 宽 + 透明，
       // 第一次 placeSegmentThumb() 量到真实位置后走进场动效
       thumbStyle: {
@@ -266,7 +268,7 @@ export default {
           this.placeSegmentThumb();
 
           // 等待 CSS entering 进场动画 (320ms) 播放完毕后重置为 idle，并解锁高度
-          setTimeout(() => {
+          this.transitionTimer = setTimeout(() => {
             if (thisSeq === this.querySeq) {
               this.transitionPhase = "idle";
               this.loading = false;
@@ -455,9 +457,14 @@ export default {
      * 获取轮播和推荐文章
      */
     getCarouselArticles() {
-      getCarouselArticlesApi().then((res) => {
-        this.carouselSlides = res.data;
-      });
+      getCarouselArticlesApi()
+        .then((res) => {
+          this.carouselSlides = res.data;
+        })
+        .catch((error) => {
+          console.error("Failed to fetch carousel articles:", error);
+          this.$message.error("获取轮播图失败");
+        });
     },
     /**
      * 获取置顶文章（传给右侧边栏的置顶卡片，不受分类切换影响）
@@ -493,11 +500,17 @@ export default {
         this.$nextTick(() => this.placeSegmentThumb());
       } catch (err) {
         console.error("Failed to fetch top categories:", err);
-        getAllCategoriesApi().then((fallbackRes) => {
-          const fallbackList = (fallbackRes.data || []).slice(0, 8);
-          this.categories = [{ id: "all", name: "全部" }, ...fallbackList];
-          this.$nextTick(() => this.placeSegmentThumb());
-        });
+        getAllCategoriesApi()
+          .then((fallbackRes) => {
+            const fallbackList = (fallbackRes.data || []).slice(0, 8);
+            this.categories = [{ id: "all", name: "全部" }, ...fallbackList];
+            this.$nextTick(() => this.placeSegmentThumb());
+          })
+          .catch((retryErr) => {
+            // 两次都失败：分段选择器只剩「全部」，至少让用户知道筛选没加载出来
+            console.error("Failed to fetch categories on retry:", retryErr);
+            this.$message.error("获取分类失败");
+          });
       }
     },
   },
@@ -522,6 +535,12 @@ export default {
     if (this.skeletonTimer) {
       clearTimeout(this.skeletonTimer);
       this.skeletonTimer = null;
+    }
+    // 进场动画收尾定时器：回调会写 transitionPhase / loading / lockedMinHeight，
+    // 卸载后再执行就是在给一个已经下线的实例改状态
+    if (this.transitionTimer) {
+      clearTimeout(this.transitionTimer);
+      this.transitionTimer = null;
     }
   },
 };

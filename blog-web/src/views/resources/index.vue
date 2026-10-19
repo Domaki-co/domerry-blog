@@ -156,6 +156,9 @@ import { getLyricApi, getMusicApi, getPlaylistApi, searchSongsApi } from '@/api/
 // 波形描边的兜底值：CSS 变量读不到时（SSR / 极老浏览器）仍能画出来
 const WAVE_FALLBACK = { active: 'rgba(26,26,26,0.22)', idle: 'rgba(26,26,26,0.08)', verm: 'rgba(192,53,43,0.16)' }
 
+// 播放队列上限：无节制地导入歌单/追加歌曲会让队列无限增长
+const MAX_QUEUE_SIZE = 200
+
 const QUALITY_NAMES = {
   standard: '标准 128kbps', higher: '较高 192kbps', exhigh: '极高 320kbps',
   lossless: '无损 FLAC', hires: 'Hi-Res 高清高解析度', jymaster: '母带 Master',
@@ -197,14 +200,14 @@ export default {
   data() {
     return {
       keyword: '许嵩', playlistInput: '', importOpen: false, searchResults: [], queue: [], currentIndex: -1,
-      searchAbortController: null,
+      searchAbortController: null, playlistRequestToken: 0,
       activeTab: 'search', listLoading: false, isLoadingSong: false, isPlaying: false,
       currentTime: 0, audioDuration: 0, volume: 0.85, selectedQuality: 'jymaster',
       qualityStatus: '', currentAudioUrl: '', lyricRaw: { lrc: '', tlrc: '' },
       lyricLines: [], activeLyric: 0, playMode: 'loop', isSeeking: false,
-      lyricProgrammatic: false, userScrollingLyric: false, lyricPauseTimer: null,
+      lyricProgrammatic: false, userScrollingLyric: false, lyricPauseTimer: null, lyricProgrammaticTimer: null,
       waveAnimationId: 0, waveTime: 0, waveRunning: true, songLoadToken: 0,
-      waveColors: null, themeObserver: null
+      waveColors: null, themeObserver: null, audioHandlers: null
     }
   },
   computed: {
@@ -242,7 +245,12 @@ export default {
     window.removeEventListener('resize', this.resizeWave)
     window.removeEventListener('keydown', this.handleKeydown)
     clearTimeout(this.lyricPauseTimer)
+    clearTimeout(this.lyricProgrammaticTimer)
+    // 卸载后搜索响应仍会写死实例的 searchResults / listLoading，导航前先掐掉在途请求；
+    // 取消抛出的 AbortError 已由 handleSearch 的 catch 按名字放行，不会弹错误提示。
+    if (this.searchAbortController) { this.searchAbortController.abort(); this.searchAbortController = null }
     this.songLoadToken += 1
+    this.unbindAudioEvents()
     if (this.audio) { this.audio.pause(); this.audio.removeAttribute('src') }
   },
   methods: {
@@ -311,9 +319,12 @@ export default {
       if (!input) return
       const match = input.match(/(?:playlist\?id=|id=)(\d+)/) || input.match(/(\d{5,})/)
       const playlistId = match ? match[1] : input
+      // 请求令牌：连续导入时只有最后一次请求的结果能落地，过期响应直接丢弃
+      const token = ++this.playlistRequestToken
       this.activeTab = 'search'; this.listLoading = true
       try {
         const body = await getPlaylistApi(playlistId)
+        if (token !== this.playlistRequestToken) return
         let tracks = []
         if (body?.data) {
           if (Array.isArray(body.data)) tracks = body.data
@@ -322,12 +333,22 @@ export default {
         if (tracks.length === 0 && body.tracks) tracks = body.tracks
         const songs = tracks.map(normalizeSong)
         if (songs.length > 0) {
-          this.queue = [...songs, ...this.queue]
+          // 新歌插到队首：被保留的旧歌整体后移 prepended 位，currentIndex 必须同步偏移，
+          // 否则正在播放的歌会指向别的条目（超上限时丢弃队尾）
+          const prepended = Math.min(songs.length, MAX_QUEUE_SIZE)
+          const kept = this.queue.slice(0, Math.max(0, MAX_QUEUE_SIZE - prepended))
+          this.queue = [...songs.slice(0, prepended), ...kept]
+          if (this.currentIndex >= 0) this.currentIndex += prepended
           this.searchResults = songs
           this.playlistInput = ''
           this.importOpen = false
         }
-      } catch (error) {} finally { this.listLoading = false }
+      } catch (error) {
+        if (token !== this.playlistRequestToken) return
+        this.$message?.error(error?.message || '歌单导入失败，请检查链接或稍后重试')
+      } finally {
+        if (token === this.playlistRequestToken) this.listLoading = false
+      }
     },
     playFromList(index) {
       if (this.activeTab === 'search') {
@@ -335,7 +356,11 @@ export default {
         if (!song) return
         const existingIndex = this.queue.findIndex(item => String(item.id) === String(song.id))
         if (existingIndex >= 0) this.currentIndex = existingIndex
-        else { this.queue = [song, ...this.queue]; this.currentIndex = 0 }
+        else {
+          // 同 fetchPlaylist：插到队首时旧歌整体后移，正在播放的下标要跟着 +1
+          this.queue = [song, ...this.queue.slice(0, MAX_QUEUE_SIZE - 1)]
+          this.currentIndex = 0
+        }
         this.loadSong(song)
       } else { this.playAt(index) }
     },
@@ -347,6 +372,10 @@ export default {
     inQueue(song) { return this.queue.some(item => String(item.id) === String(song.id)) },
     addToQueue(song) {
       if (!song || this.inQueue(song)) return
+      if (this.queue.length >= MAX_QUEUE_SIZE) {
+        this.$message?.warning(`播放队列最多 ${MAX_QUEUE_SIZE} 首，请先移除部分歌曲`)
+        return
+      }
       this.queue = [...this.queue, song]
     },
     removeFromQueue(index) {
@@ -435,26 +464,41 @@ export default {
       if (!this.audio || !this.audioDuration) return
       this.audio.currentTime = Math.max(0, Math.min(this.audioDuration, (this.audio.currentTime || 0) + seconds))
     },
+    // 处理器句柄存在实例上：bindAudioEvents 是公开方法，二次调用若不解绑就会在同一元素上重复注册
+    // （timeupdate 翻倍、ended 连跳两首）。先解绑再绑定，重复调用天然幂等，卸载时也能成对移除。
     bindAudioEvents() {
-      this.audio.addEventListener('timeupdate', () => {
-        this.currentTime = this.audio.currentTime || 0
-        this.audioDuration = this.audio.duration || this.audioDuration
-        if (!this.lyricLines.length) return
-        let index = 0
-        this.lyricLines.forEach((line, lineIndex) => { if (this.currentTime >= line.time) index = lineIndex })
-        if (index !== this.activeLyric) {
-          this.activeLyric = index
-          if (!this.userScrollingLyric) this.$nextTick(() => this.scrollLyricTo(index, true))
+      this.unbindAudioEvents()
+      const handlers = {
+        timeupdate: () => {
+          this.currentTime = this.audio.currentTime || 0
+          this.audioDuration = this.audio.duration || this.audioDuration
+          if (!this.lyricLines.length) return
+          let index = 0
+          this.lyricLines.forEach((line, lineIndex) => { if (this.currentTime >= line.time) index = lineIndex })
+          if (index !== this.activeLyric) {
+            this.activeLyric = index
+            if (!this.userScrollingLyric) this.$nextTick(() => this.scrollLyricTo(index, true))
+          }
+        },
+        loadedmetadata: () => { this.audioDuration = this.audio.duration },
+        play: () => { this.isPlaying = true },
+        pause: () => { this.isPlaying = false },
+        ended: () => {
+          if (this.playMode === 'one') { this.audio.currentTime = 0; this.audio.play() }
+          else if (this.playMode === 'shuffle') this.playAt(Math.floor(Math.random() * this.queue.length))
+          else this.playNext()
         }
-      })
-      this.audio.addEventListener('loadedmetadata', () => { this.audioDuration = this.audio.duration })
-      this.audio.addEventListener('play', () => { this.isPlaying = true })
-      this.audio.addEventListener('pause', () => { this.isPlaying = false })
-      this.audio.addEventListener('ended', () => {
-        if (this.playMode === 'one') { this.audio.currentTime = 0; this.audio.play() }
-        else if (this.playMode === 'shuffle') this.playAt(Math.floor(Math.random() * this.queue.length))
-        else this.playNext()
-      })
+      }
+      this.audioHandlers = handlers
+      Object.entries(handlers).forEach(([type, handler]) => this.audio.addEventListener(type, handler))
+    },
+    unbindAudioEvents() {
+      const handlers = this.audioHandlers
+      if (!handlers) return
+      this.audioHandlers = null
+      const audio = this.audio
+      if (!audio) return
+      Object.entries(handlers).forEach(([type, handler]) => audio.removeEventListener(type, handler))
     },
     seekTo(clientX) {
       if (!this.audioDuration) return
@@ -488,7 +532,10 @@ export default {
       const max = container.scrollHeight - container.clientHeight
       this.lyricProgrammatic = true
       container.scrollTo({ top: Math.max(0, Math.min(desired, max)), behavior: smooth ? 'smooth' : 'auto' })
-      setTimeout(() => { this.lyricProgrammatic = false }, smooth ? 600 : 50)
+      // 先清掉上一个：滚动是连续的，旧定时器会在新的平滑滚动还没走完时就放开标志位，
+      // 于是 handleLyricScroll 把程序滚动误判成用户滚动，自动跟随白停 3.5 秒。
+      clearTimeout(this.lyricProgrammaticTimer)
+      this.lyricProgrammaticTimer = setTimeout(() => { this.lyricProgrammatic = false }, smooth ? 600 : 50)
     },
     async downloadAudio() {
       if (!this.currentAudioUrl || !this.currentSong) return

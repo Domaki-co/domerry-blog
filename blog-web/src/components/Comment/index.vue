@@ -211,6 +211,8 @@ export default {
       browserInfo: null,
       total: 0,
       countdown: 0,
+      // 倒计时句柄存到实例上，组件卸载时才有东西可清
+      countdownTimer: null,
       canComment: true,
     };
   },
@@ -348,7 +350,10 @@ export default {
 
         // 清空输入框内容
         this.replyContent = "";
-        this.$refs.replyInput[0].innerHTML = "";
+        // 请求飞行中用户可能已点「取消」卸载了编辑器，ref 会变成 undefined
+        if (this.$refs.replyInput && this.$refs.replyInput[0]) {
+          this.$refs.replyInput[0].innerHTML = "";
+        }
         this.replyingTo = null;
         this.start()
 
@@ -371,10 +376,10 @@ export default {
       this.canComment = false;
       this.countdown = 5;
 
-      const timer = setInterval(() => {
+      this.countdownTimer = setInterval(() => {
         this.countdown--;
         if (this.countdown <= 0) {
-          clearInterval(timer);
+          clearInterval(this.countdownTimer);
           this.canComment = true;
         }
       }, 1000);
@@ -513,7 +518,10 @@ export default {
 
         // 清空输入框内容
         this.replyContent = "";
-        this.$refs.childReplyInput[0].innerHTML = "";
+        // 同上：子回复框同样可能已被「取消」卸载
+        if (this.$refs.childReplyInput && this.$refs.childReplyInput[0]) {
+          this.$refs.childReplyInput[0].innerHTML = "";
+        }
         this.cancelReply();
         this.getComments();
       } catch (error) {
@@ -525,6 +533,10 @@ export default {
   created() {
     this.getComments();
     this.browserInfo = getBrowserInfo();
+  },
+  beforeUnmount() {
+    // 倒计时每秒改一次状态，组件卸载后必须停掉，否则回调会一直打在已销毁的实例上
+    clearInterval(this.countdownTimer);
   },
 };
 </script>

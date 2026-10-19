@@ -24,7 +24,9 @@ export default {
     return {
       visible: false,
       minDisplayTime: 300, // 最小显示时间（毫秒）
-      showStartTime: 0
+      showStartTime: 0,
+      // 延迟复位 body 滚动的句柄
+      overflowResetTimer: null
     }
   },
   watch: {
@@ -36,7 +38,7 @@ export default {
         } else {
           const elapsedTime = Date.now() - this.showStartTime
           if (elapsedTime < this.minDisplayTime) {
-            setTimeout(() => {
+            this.overflowResetTimer = setTimeout(() => {
               document.body.style.overflow = ''
             }, this.minDisplayTime - elapsedTime)
           } else {
@@ -48,6 +50,12 @@ export default {
   },
   beforeUnmount() {
     if (!this.local) {
+      // 回调写的是 document.body.style.overflow 这个全局样式，卸载后仍会执行，
+      // 会把后来者（另一个 Loading 或弹窗）刚设上的 'hidden' 误清成可滚动，必须先撤掉
+      if (this.overflowResetTimer) {
+        clearTimeout(this.overflowResetTimer)
+        this.overflowResetTimer = null
+      }
       document.body.style.overflow = ''
     }
   }

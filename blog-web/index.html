@@ -11,6 +11,17 @@
     />
     <title>%VITE_APP_TITLE%</title>
     <!--
+      Font Awesome 5.15.4 用 <link> 引入而不是在 App.vue 里 @import：CSS 的 @import 无法
+      携带 integrity，第三方 CDN 被投毒时前端无从校验。sha384 由本地下载的 all.min.css
+      计算，并已与 cdnjs API 给出的 sha512 交叉核对一致。
+    -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+      integrity="sha384-DyZ88mC6Up2uqS4h/KRgHuoeGwBcD4Ng9SiP4dIRy0EXTlnuz47vAwmeGwVChigm"
+      crossorigin="anonymous"
+    />
+    <!--
       主题必须在首屏绘制前落到 <html> 上，否则深色模式会先闪一下浅色底。
       这段逻辑和 src/utils/theme.js 的 getThemeMode 保持一致，改一处要同步另一处。
     -->

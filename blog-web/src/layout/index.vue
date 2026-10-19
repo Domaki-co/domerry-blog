@@ -25,6 +25,10 @@ export default {
     if (getToken()) {
       getSystemNoticeApi().then((res) => {
         this.$store.state.isUnread = res.data
+      }).catch(() => {
+        // 未读数是顶栏小红点，拉不到就维持上一次的值即可；
+        // 这里在每次路由更新时都会执行，用 toast 会在每次导航时刷屏，故只留控制台告警
+        console.warn('获取未读消息数失败');
       });
     }
     next();

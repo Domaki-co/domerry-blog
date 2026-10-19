@@ -55,6 +55,12 @@
       <el-empty description="该内容仅作者可见"></el-empty>
     </div>
 
+    <div v-else-if="loadError" class="load-error">
+      <el-empty description="加载失败">
+        <el-button type="primary" @click="getArticle">点击重试</el-button>
+      </el-empty>
+    </div>
+
     <div class="content-layout" id="articleBox" :class="{ center: !showSidebar }" v-else>
       <main class="article-main">
         <!-- 文章头部 -->
@@ -104,7 +110,7 @@
         </header>
 
         <!-- 转载声明：仅转载文章显示 -->
-        <div class="reprint-notice" v-if="article.isOriginal === 0 && article.originalUrl">
+        <div class="reprint-notice" v-if="article.isOriginal === 0 && sourceDomain">
           <i class="fas fa-share-square"></i>
           本文转载自
           <a :href="article.originalUrl" target="_blank" rel="noopener nofollow">{{ sourceDomain }}</a>
@@ -444,12 +450,15 @@ export default {
   data() {
     return {
       noPermission: false,
+      // 非权限类错误（网络超时 / 500）走可重试的错误态，不能冒充"仅作者可见"
+      loadError: false,
       article: {
         title: '',
         category: {},
         isOriginal: true,
         readType: 1,
         price: 0,
+        likeNum: 0,
       },
       prevArticle: {
         id: 1,
@@ -465,12 +474,18 @@ export default {
       activeHeading: '',
       readTime: 0,
       likeDebounce: false,
+      // 防抖定时器的 id：不存下来就没法在组件卸载时清掉，
+      // 回调闭包会一直持有 this（整篇文章的数据）直到 5 秒后触发
+      likeDebounceTimer: null,
       loading: false,
       actionBarLeft: '0px',
       showSidebar: true,
       contentLayout: 'center',
       collapsedCodeBlocks: new Set(),
       images: [],
+      imageObserver: null,
+      initTimer: null,
+      imageObserverTimer: null,
       showPaymentDialog: false,
       showMembershipDialog: false,
       isAiDescriptionExpanded: true,
@@ -480,7 +495,9 @@ export default {
   },
   computed: {
     currentUrl() {
-      return window.location.href
+      // 永久链接只取 origin + pathname：query 里可能带敏感参数，
+      // 而它会被拼进第三方分享/二维码接口，不能外传
+      return window.location.origin + window.location.pathname
     },
     /**
      * 当前登录用户是否为文章作者（作者本人可在详情页直接编辑）
@@ -495,9 +512,12 @@ export default {
      */
     sourceDomain() {
       try {
-        return new URL(this.article.originalUrl).hostname
+        const url = new URL(this.article.originalUrl)
+        // 只认 http(s)：javascript://x.com/... 也能被 URL 解析出 hostname，
+        // 直接展示会渲染出一个看似合法的来源域名
+        return ['http:', 'https:'].includes(url.protocol) ? url.hostname : ''
       } catch (e) {
-        return '原文'
+        return ''
       }
     }
   },
@@ -508,9 +528,13 @@ export default {
     async getArticle() {
       this.loading = true
       this.noPermission = false
-      hljs.configure({
-        ignoreUnescapedHTML: true
-      })
+      this.loadError = false
+      // 换文章（或重试）前先清掉上一篇的观察器与定时器
+      this.resetDomState()
+      // 这里不再 hljs.configure({ ignoreUnescapedHTML: true })：那条配置会吞掉
+      // 「代码块内存在未转义 HTML」的告警，而该告警正是「内容被当作真实标签解析」
+      // 的信号。正文渲染前已经过 $sanitize（模板里 v-html="$sanitize(article.content)"），
+      // 所以默认告警即使偶发也可以接受——宁可看到噪声，也不要丢掉这个信号。
       try {
         const res = await getArticleDetailApi(this.$route.params.id)
         this.article = {
@@ -527,8 +551,10 @@ export default {
         // 等待下一个 tick，确保文章内容渲染完成
         await this.$nextTick()
 
-        // 使用 setTimeout 确保 DOM 完全渲染
-        setTimeout(() => {
+        // 使用 setTimeout 确保 DOM 完全渲染。
+        // DOM 助手只在这里调用一次：mounted 里再调一遍会让复制按钮/行号/折叠按钮重复处理
+        this.initTimer = setTimeout(() => {
+          this.initTimer = null
           this.generateToc()
           document.querySelectorAll('pre code').forEach((block) => {
             hljs.highlightElement(block)
@@ -557,9 +583,16 @@ export default {
         this.readTime = Math.ceil(textContent.split(/\s+/).length / 300)
 
       } catch (error) {
-        // 私密文章无权查看时展示友好提示
-        this.noPermission = true
-        this.$message.error(error?.message || '获取文章详情失败')
+        const message = error?.message || ''
+        // 只有明确的权限错误才展示"仅作者可见"：403 是后端 NotPermissionException，
+        // 而私密文章用的是 ServiceException("该内容仅作者可见")，落在 code 500 上，
+        // 所以文案命中也要认；网络超时、500、404 一律走可重试的错误态
+        if (error?.code === 403 || /仅作者可见|无权限|未登录/.test(message)) {
+          this.noPermission = true
+        } else {
+          this.loadError = true
+        }
+        this.$message.error(message || '获取文章详情失败')
       } finally {
         this.loading = false
       }
@@ -574,11 +607,46 @@ export default {
      * 为文章内容中的图片添加懒加载
      */
     addLazyLoadToImages(content) {
-      // 使用data-src来存储实际图片地址，并添加lazy-image类用于识别
-      return content.replace(
-        /<img([^>]*)src="([^"]*)"([^>]*)>/gi,
-        '<img$1src="' + this.getLoadingImage() + '" data-src="$2" class="lazy-image"$3>'
-      )
+      const loadingImage = this.getLoadingImage()
+      // 逐个 <img> 重建属性：原实现无条件再拼一个 class="lazy-image"，
+      // 遇到本来就有 class 的图片会产出重复属性，浏览器只认第一个，lazy-image 就失效了
+      return content.replace(/<img\b([^>]*)>/gi, (tag, attrText) => {
+        const attrs = attrText.match(/([^\s=/>]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+))?/g) || []
+        const kept = []
+        let src = ''
+        let hasClass = false
+
+        attrs.forEach((attr) => {
+          const eq = attr.indexOf('=')
+          const name = (eq === -1 ? attr : attr.slice(0, eq)).toLowerCase()
+          const value = eq === -1 ? '' : attr.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+
+          if (name === 'src') {
+            src = value
+          } else if (name === 'data-src') {
+            // 正文里可能已经带了 data-src（编辑器粘贴的 HTML），
+            // 保留会拼出两个同名属性，下面统一用真实地址重建
+            return
+          } else if (name === 'class') {
+            kept.push('class="' + (value ? value + ' lazy-image' : 'lazy-image') + '"')
+            hasClass = true
+          } else {
+            kept.push(attr)
+          }
+        })
+
+        // 没有 src 的图片原样返回，别把占位图塞进一个本来就没图的标签
+        if (!src) {
+          return tag
+        }
+
+        if (!hasClass) {
+          kept.push('class="lazy-image"')
+        }
+        // 真实地址挪到 data-src，src 换成占位图，由 IntersectionObserver 换回来
+        kept.push('src="' + loadingImage + '"', 'data-src="' + src + '"')
+        return '<img ' + kept.join(' ') + '>'
+      })
     },
     /**
      * 获取加载中的图片
@@ -640,6 +708,8 @@ export default {
         this.$message.warning('请于 5 秒后再试')
         return
       }
+      // 防抖必须在请求发出前置位：放在成功回调里的话，请求失败时防抖形同虚设，可以无限连点
+      this.likeDebounce = true
       // 实现点赞功能
       likeArticleApi(this.$route.params.id).then(res => {
         if (this.article.isLike) {
@@ -649,11 +719,12 @@ export default {
         }
         this.$message.success(this.article.isLike ? '取消点赞成功' : '点赞成功')
         this.article.isLike = !this.article.isLike
+      }).catch(error => {
+        // 失败也要给提示，否则是未处理的 rejection
+        this.$message.error(error?.message || '操作失败，请稍后重试')
+      }).finally(() => {
         // 设置一个5秒的防抖
-        this.likeDebounce = true
-        setTimeout(() => {
-          this.likeDebounce = false
-        }, 5000)
+        this.scheduleLikeDebounceReset()
       })
     },
     /**
@@ -713,7 +784,7 @@ export default {
     shareToWechat() {
       // 由于微信分享需要使用微信SDK，这样简单处理
       window.open(
-        `https://api.pwmqr.com/qrcode/create/?url=${window.location.href}`,
+        `https://api.pwmqr.com/qrcode/create/?url=${encodeURIComponent(this.currentUrl)}`,
         "renren-share", "width=490,height=700");
       this.closeShareMenu()
     },
@@ -754,6 +825,21 @@ export default {
       }
 
       const href = link.getAttribute('href')
+      if (!href) {
+        return
+      }
+
+      // 伪协议必须在这里拦死：isExternalLink 对它们返回 false，直接 return 就是放行默认行为，
+      // 浏览器会照常执行 javascript: 里的脚本。协议名中间可以插空白/控制字符（如 "java\tscript:"），
+      // 所以先剥掉这些字符再判断；mailto:/tel:/相对路径/# 锚点不在拦截范围内，保持原行为。
+      const normalizedHref = href.replace(/[\u0000-\u0020]/g, '').toLowerCase()
+      if (/^(javascript|data|vbscript|file|blob):/.test(normalizedHref)) {
+        event.preventDefault()
+        event.stopPropagation()
+        this.$message.warning('该链接使用了不安全的协议，已阻止打开')
+        return
+      }
+
       if (!this.isExternalLink(href)) {
         return
       }
@@ -800,7 +886,8 @@ export default {
       const winHeight = window.innerHeight
       const docHeight = docEl.scrollHeight - winHeight
       const scrollTop = window.scrollY || docEl.scrollTop
-      this.readProgress = Math.round((scrollTop / docHeight) * 100)
+      // 短页面 docHeight 为 0，除法会得到 NaN
+      this.readProgress = docHeight > 0 ? Math.min(100, Math.round((scrollTop / docHeight) * 100)) : 0
     },
     /**
      * 滚动到标题
@@ -906,6 +993,14 @@ export default {
      * 初始化图片预览
      */
     initImagePreview() {
+      // 重复调用时先断开旧观察器，否则每进一次文章页就多留一个观察器 + 一份组件实例
+      if (this.imageObserver) {
+        this.imageObserver.disconnect()
+        this.imageObserver = null
+      }
+      if (this.imageObserverTimer) {
+        clearTimeout(this.imageObserverTimer)
+      }
       // 使用 IntersectionObserver 监听图片
       const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -934,8 +1029,11 @@ export default {
         threshold: 0.1
       })
 
+      this.imageObserver = observer
+
       // 监听所有带有 lazy-image 类的图片
-      setTimeout(() => {
+      this.imageObserverTimer = setTimeout(() => {
+        this.imageObserverTimer = null
         const lazyImages = document.querySelectorAll('.lazy-image')
         lazyImages.forEach(img => {
           observer.observe(img)
@@ -952,6 +1050,24 @@ export default {
           img.addEventListener('click', this.handleImageClick)
         })
       }, 200)
+    },
+    /**
+     * 清掉本页建立的观察器与定时器。
+     * 换文章和卸载都要调用：观察器回调闭包持有组件实例，不清理会连同整篇文章一起泄漏。
+     */
+    resetDomState() {
+      if (this.initTimer) {
+        clearTimeout(this.initTimer)
+        this.initTimer = null
+      }
+      if (this.imageObserverTimer) {
+        clearTimeout(this.imageObserverTimer)
+        this.imageObserverTimer = null
+      }
+      if (this.imageObserver) {
+        this.imageObserver.disconnect()
+        this.imageObserver = null
+      }
     },
     /**
      * 处理图片点击
@@ -977,7 +1093,18 @@ export default {
       }
       this.article.isDislike = !this.article.isDislike
       this.likeDebounce = true
-      setTimeout(() => {
+      this.scheduleLikeDebounceReset()
+    },
+    /**
+     * 5 秒后解除点赞/点踩的防抖锁。
+     * 定时器 id 挂在实例上，卸载时由 beforeUnmount 清理，避免回调在组件销毁后仍持有 this。
+     */
+    scheduleLikeDebounceReset() {
+      if (this.likeDebounceTimer) {
+        clearTimeout(this.likeDebounceTimer)
+      }
+      this.likeDebounceTimer = setTimeout(() => {
+        this.likeDebounceTimer = null
         this.likeDebounce = false
       }, 5000)
     },
@@ -1019,11 +1146,8 @@ export default {
     initializeCodeBlocks() {
       const codeBlocks = document.querySelectorAll('.article-content pre')
       codeBlocks.forEach((pre, index) => {
-        // 移除可能存在的旧按钮
-        const oldButton = pre.querySelector('.expand-button')
-        if (oldButton) {
-          oldButton.remove()
-        }
+        // 已经处理过的代码块直接跳过：重复调用会重建按钮并把用户展开过的块重新折叠
+        if (this.collapsedCodeBlocks.has(index) || pre.querySelector('.expand-button')) return
 
         // 获取代码块的实际高度
         const actualHeight = pre.scrollHeight
@@ -1160,11 +1284,13 @@ export default {
   mounted() {
     window.addEventListener('scroll', this.updateActiveHeading)
     this.$el.addEventListener('click', this.handleExternalLinkClick)
-    this.$nextTick(() => {
-      this.initImagePreview()
-    })
   },
   beforeUnmount() {
+    this.resetDomState()
+    if (this.likeDebounceTimer) {
+      clearTimeout(this.likeDebounceTimer)
+      this.likeDebounceTimer = null
+    }
     window.removeEventListener('scroll', this.updateActiveHeading)
     window.removeEventListener('resize', this.updateActionBarPosition)
     this.$el.removeEventListener('click', this.handleExternalLinkClick)
@@ -1178,8 +1304,8 @@ export default {
     // 监听路由参数变化
     '$route'(to, from) {
       if (to.params.id !== from.params.id) {
-        // 重新获取文章数据
-        this.getArticleData()
+        // 重新获取文章数据（getArticle 内部会先 resetDomState 清掉旧观察器/定时器）
+        this.getArticle()
       }
     }
   }

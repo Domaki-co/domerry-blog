@@ -20,8 +20,8 @@ export function uploadFileApi(data,source) {
 export function deleteFileApi(url) {
   return request({
     url: `/file/delete`,
-    method: 'get',
-    params: {
+    method: 'post',
+    data: {
       url
     }
   })

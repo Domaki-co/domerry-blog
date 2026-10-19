@@ -69,7 +69,7 @@
       </template>
       <template v-else>
         <el-button @click="handleClose">取消支付</el-button>
-        <el-button type="primary" @click="checkPaymentStatus">
+        <el-button type="primary" @click="checkPaymentStatus()">
           已完成支付
         </el-button>
       </template>
@@ -80,6 +80,11 @@
 
 <script>
 import { createOrder, checkOrderStatus } from '@/api/payment'
+
+// 轮询配置：最多 20 次，间隔 3s 起按 1.5 倍退避、上限 15s（总计约 4.5 分钟）
+const CHECK_BASE_INTERVAL = 3000
+const CHECK_MAX_INTERVAL = 15000
+const CHECK_MAX_ATTEMPTS = 20
 
 export default {
   name: 'PaymentDialog',
@@ -109,7 +114,10 @@ export default {
       showQRCode: false,
       qrCodeUrl: this.paymentMethod === 'alipay' ? this.$store.state.webSiteInfo.aliPay : this.$store.state.webSiteInfo.weixinPay,
       orderNo: '',
-      checkTimer: null
+      checkTimer: null,
+      checkAttempts: 0,
+      checkStopped: false,
+      paymentHandled: false
     }
   },
   computed: {
@@ -149,12 +157,36 @@ export default {
       }
     },
     startCheckingPayment() {
-      this.checkTimer = setInterval(async () => {
+      this.checkAttempts = 0
+      this.checkStopped = false
+      this.paymentHandled = false
+      this.scheduleNextCheck()
+    },
+    // 自调度 setTimeout 链：上一次请求返回后才排下一次，天然避免 setInterval 的重叠
+    scheduleNextCheck() {
+      if (this.checkTimer) {
+        clearTimeout(this.checkTimer)
+      }
+      const delay = Math.min(CHECK_BASE_INTERVAL * Math.pow(1.5, this.checkAttempts), CHECK_MAX_INTERVAL)
+      this.checkTimer = setTimeout(async () => {
+        this.checkAttempts++
+        // 成功处理由 checkPaymentStatus 独占，这里只决定是否继续轮询
         const status = await this.checkPaymentStatus(false)
-        if (status === 'SUCCESS') {
-          this.handlePaymentSuccess()
+        if (status === 'SUCCESS' || this.checkStopped) return
+        if (this.checkAttempts >= CHECK_MAX_ATTEMPTS) {
+          this.$message.warning('未检测到支付结果，请稍后在订单页确认')
+          return
         }
-      }, 3000)
+        this.scheduleNextCheck()
+      }, delay)
+    },
+    // 停止轮询：置位 checkStopped，让飞行中的那次请求返回后也不再续排
+    clearCheckTimer() {
+      this.checkStopped = true
+      if (this.checkTimer) {
+        clearTimeout(this.checkTimer)
+        this.checkTimer = null
+      }
     },
     async checkPaymentStatus(showMessage = true) {
       try {
@@ -174,13 +206,16 @@ export default {
       }
     },
     handlePaymentSuccess() {
-      clearInterval(this.checkTimer)
+      // 轮询与「已完成支付」按钮可能同时拿到 SUCCESS，这里保证只处理一次
+      if (this.paymentHandled) return
+      this.paymentHandled = true
+      this.clearCheckTimer()
       this.$message.success('支付成功')
       this.$emit('payment-success')
       this.handleClose()
     },
     handleClose() {
-      clearInterval(this.checkTimer)
+      this.clearCheckTimer()
       this.showQRCode = false
       this.qrCodeUrl = ''
       this.orderNo = ''
@@ -188,7 +223,7 @@ export default {
     }
   },
   beforeUnmount() {
-    clearInterval(this.checkTimer)
+    this.clearCheckTimer()
   }
 }
 </script>

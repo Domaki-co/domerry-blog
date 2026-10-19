@@ -33,13 +33,13 @@ npm run preview
 - 所有 HTTP 请求走 `src/utils/request.js`（baseURL = `VITE_APP_BASE_API`，timeout 30s），**视图组件里不要自建 axios 实例**。门户接口路径以 `/api/` 开头（如 `/api/article/list`）。
 - 请求拦截器从 cookie 读 token 放进 `Authorization` 头；响应拦截器：`code === 200` 放行，`401` → 清 token、清 userInfo、跳 `/login`，其他 reject `message`。
 - 前端目前**没有任何 WebSocket 连接**：原聊天页 `views/chat/index.vue` 与 `api/chat.js` 已按需求删除（后端 `ChatController` / `WebSocketServer` 保留）。`.env*` 里的 `VITE_APP_WEBSOCKET_API` 仍在，将来要加实时功能可直接复用。
-- **已知例外**：`src/api/music.js` 用原生 `fetch` 直连第三方网易云代理（`api.chksz.com`，key 硬编码在文件里）——这是历史遗留，不要在新代码中复制这种模式（key 不该进源码）。
+- **音乐接口**：`src/api/music.js` 不再用原生 `fetch`，改为走共享的 `src/utils/request.js` 请求后端代理 `/api/music/**`（search / playlist / song / lyric）。第三方地址与 key 只存在于后端字典（`sys_dict_data`，dictType `music_api`），前端不持有任何密钥。
 
 ## 音乐功能
 
 - `/resources` 路由（`views/resources/`）是音乐页：网易云歌曲搜索、歌单链接导入、播放队列。
 - 全站常驻播放器在 `layout/player.vue`（贴边胶囊态 ↔ 340×560 展开卡片），歌单来自后端 `/third/getSongList`（`src/api/file.js`），歌词解码用 `src/utils/encoding.js` 的字符集探测。
-- 后端对应实现在 `blog/mojian-file`（ThirdPartyController 等），改歌曲相关接口时两边同步。
+- 后端对应实现在 `blog/domerry-file`（ThirdPartyController 等），改歌曲相关接口时两边同步。
 
 
 ## 编码约定

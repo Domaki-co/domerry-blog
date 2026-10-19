@@ -133,6 +133,27 @@
 <script>
 import { getFriendsApi, applyFriendApi } from '@/api/friends'
 
+/**
+ * async-validator 自带的 type: 'url' 只要求可选协议后面跟 "//"，
+ * 会放过 javascript://x.com/%0aalert(1) 这类伪协议，所以自己校验协议
+ */
+function validateHttpUrl(rule, value, callback) {
+  if (!value) {
+    callback()
+    return
+  }
+  try {
+    const protocol = new URL(value).protocol
+    if (protocol === 'http:' || protocol === 'https:') {
+      callback()
+      return
+    }
+  } catch (e) {
+    // 解析失败按非法链接处理
+  }
+  callback(new Error('请输入以 http:// 或 https:// 开头的链接'))
+}
+
 export default {
   name: 'Friends',
 
@@ -153,7 +174,7 @@ export default {
         ],
         url: [
           { required: true, message: '请输入网站链接', trigger: 'blur' },
-          { type: 'url', message: '请输入正确的链接格式', trigger: 'blur' }
+          { validator: validateHttpUrl, trigger: 'blur' }
         ],
         info: [
           { required: true, message: '请输入网站描述', trigger: 'blur' }
@@ -175,7 +196,20 @@ export default {
   },
   methods: {
     visitFriend(url) {
-      window.open(url, '_blank')
+      // 友链地址来自数据库，可能是被绕过后端校验写入的 javascript: 伪协议，
+      // 这里做最后一道闸：只放行 http/https
+      let target
+      try {
+        target = new URL(url)
+      } catch (e) {
+        this.$message.error('该友链地址无效')
+        return
+      }
+      if (target.protocol !== 'http:' && target.protocol !== 'https:') {
+        this.$message.error('该友链地址无效')
+        return
+      }
+      window.open(target.href, '_blank', 'noopener,noreferrer')
     },
     handleApply() {
       this.form = {

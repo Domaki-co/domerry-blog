@@ -148,16 +148,27 @@ export default {
      */
     async getArticleList() {
       this.loading = true
-      const res = await getArticlesApi(this.params)
-      this.selectedTagPosts = res.data.records
-      this.total = res.data.total
-      this.loading = false
+      try {
+        const res = await getArticlesApi(this.params)
+        this.selectedTagPosts = res.data?.records || []
+        this.total = res.data?.total || 0
+      } catch (error) {
+        this.$message.error(error.message)
+      } finally {
+        // 请求失败也必须复位，否则 v-loading 会一直转
+        this.loading = false
+      }
     },
   
   },
   async created() {
-    const res = await getTagsApi()
-    this.tags = res.data
+    try {
+      const res = await getTagsApi()
+      this.tags = res.data || []
+    } catch (error) {
+      this.$message.error(error.message)
+      return
+    }
     if(this.$route.query.tagId){
       this.selectTag(this.$route.query.tagName,this.$route.query.tagId)
     }else{

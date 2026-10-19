@@ -22,7 +22,7 @@
             >
               <span class="year">{{ item.year }}</span>
               <span class="year-rule"></span>
-              <span class="year-count">{{ item.posts.length }}</span>
+              <span class="year-count">{{ item.posts?.length || 0 }}</span>
               <i class="fas fa-chevron-down toggle-icon" :class="{ 'is-open': !collapsedYears[item.year] }"></i>
             </button>
 
@@ -75,7 +75,7 @@ export default {
   },
   computed: {
     totalPosts() {
-      return this.archives.reduce((sum, item) => sum + item.posts.length, 0)
+      return this.archives.reduce((sum, item) => sum + (item.posts?.length || 0), 0)
     }
   },
   methods: {
@@ -108,11 +108,16 @@ export default {
     }
   },
   async created() {
-    const res = await getArchivesApi()
-    this.archives = res.data
-    this.archives.forEach(item => {
-      this.collapsedYears[item.year] = false
-    })
+    try {
+      const res = await getArchivesApi()
+      // data 可能为 null，模板和 computed 都按数组处理
+      this.archives = res.data || []
+      this.archives.forEach(item => {
+        this.collapsedYears[item.year] = false
+      })
+    } catch (error) {
+      this.$message.error(error.message)
+    }
   }
 }
 </script>

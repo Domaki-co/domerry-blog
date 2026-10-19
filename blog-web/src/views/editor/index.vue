@@ -253,7 +253,26 @@ export default {
                 ],
                 originalUrl: [
                     { required: true, message: '请输入原文地址', trigger: 'blur' },
-                    { type: 'url', message: '请输入有效的URL地址', trigger: 'blur' }
+                    {
+                        // async-validator 的 type: 'url' 只要求出现 "//"，javascript:// 这类伪协议能混过去，故显式校验协议
+                        validator: (rule, value, callback) => {
+                            if (!value) {
+                                callback();
+                                return;
+                            }
+                            try {
+                                const protocol = new URL(value).protocol;
+                                if (protocol === 'http:' || protocol === 'https:') {
+                                    callback();
+                                } else {
+                                    callback(new Error('原文地址只支持 http/https 协议'));
+                                }
+                            } catch (error) {
+                                callback(new Error('请输入有效的URL地址'));
+                            }
+                        },
+                        trigger: 'blur'
+                    }
                 ],
                 keywords: [
                     {
@@ -287,9 +306,13 @@ export default {
     created() {
         getCategoriesApi().then(res => {
             this.categories = res.data
+        }).catch(() => {
+            this.$message.error('获取分类失败')
         })
         getTagsApi().then(res => {
             this.tags = res.data
+        }).catch(() => {
+            this.$message.error('获取标签失败')
         })
         this.articleForm.id = this.$route.query.id
         if (this.articleForm.id) {
@@ -306,6 +329,8 @@ export default {
                         this.vditor.setValue(this.pendingContent)
                     }
                 })
+            }).catch(() => {
+                this.$message.error('获取文章信息失败')
             })
         }
     },

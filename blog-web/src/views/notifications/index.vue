@@ -292,15 +292,19 @@ export default {
      * 获取未读消息数量
      */
     async getUnreadNotificationsCount() {
-      const { data } = await getUnreadNotificationsCountApi()
-      let unreadCount = 0
-      this.categories.forEach(category => {
-        if (category.type !== 'all') {
-          category.unread = data[category.type]?.num || 0
-          unreadCount += category.unread
-        }
-      })
-      this.categories.find(c => c.type === 'all').unread = unreadCount
+      try {
+        const { data } = await getUnreadNotificationsCountApi()
+        let unreadCount = 0
+        this.categories.forEach(category => {
+          if (category.type !== 'all') {
+            category.unread = data?.[category.type]?.num || 0
+            unreadCount += category.unread
+          }
+        })
+        this.categories.find(c => c.type === 'all').unread = unreadCount
+      } catch (error) {
+        this.$message.error('获取未读消息数量失败')
+      }
     } 
   },
   created() {
@@ -308,8 +312,9 @@ export default {
       this.$router.push('/login')
       return
     }
-    this.fetchNotifications()
-    this.getUnreadNotificationsCount()
+    // 两个取数方法内部已各自 try/catch 并提示；这里再兜一层，保证 created 阶段不会冒出未处理的 rejection
+    this.fetchNotifications().catch(() => {})
+    this.getUnreadNotificationsCount().catch(() => {})
     }
 }
 </script>

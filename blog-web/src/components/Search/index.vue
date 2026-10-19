@@ -98,6 +98,8 @@ export default {
       searchResults: [],
       loading: false,
       searchTimeout: null,
+      // 请求序号：用于丢弃过期响应
+      searchRequestId: 0,
       tags: [],
       params: {
         keyword: '',
@@ -124,9 +126,13 @@ export default {
     dialogVisible: {
       handler(newVal, oldVal) {
         if (newVal) {
-          getTagsApi().then(res => {
-            this.tags = res.data
-          })
+          getTagsApi()
+            .then(res => {
+              this.tags = res.data || []
+            })
+            .catch(error => {
+              this.$message.error(error.message)
+            })
         }
       }
     }
@@ -143,27 +149,37 @@ export default {
      * 搜索
      */
     async handleSearch() {
-      
+        // 每次搜索领一个序号：关键词/翻页切得快时，先发出的慢响应不能覆盖后发出的结果。
+        // 序号在「清空关键词」的早退之前就领走，否则清空后仍在途的响应会把结果又写回来。
+        const requestId = ++this.searchRequestId
+
         if (!this.params.keyword.trim()) {
           this.searchResults = []
           this.hasSearched = false
+          // 序号已换代，在途请求不会再走到 finally，这里自己收掉 loading
+          this.loading = false
           return
         }
 
         this.loading = true
         try {
           const res = await getArticlesApi(this.params)
-          this.total = res.data.total
-          this.searchResults = res.data.records.map(item => ({
+          if (requestId !== this.searchRequestId) return
+          this.total = res.data?.total || 0
+          this.searchResults = (res.data?.records || []).map(item => ({
             ...item,
             title: this.truncateText(item.title, 50),
             summary: this.truncateText(item.summary || item.content, 150)
           }))
           this.hasSearched = true
         } catch (error) {
+          // 过期请求的失败不再提示，用户已经换了关键词/页码
+          if (requestId !== this.searchRequestId) return
           this.$message.error(error.message)
         } finally {
-          this.loading = false
+          if (requestId === this.searchRequestId) {
+            this.loading = false
+          }
         }
     },
     /**
