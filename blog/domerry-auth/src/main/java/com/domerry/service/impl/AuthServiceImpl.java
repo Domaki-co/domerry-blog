@@ -8,6 +8,7 @@ import com.alibaba.fastjson.JSON;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.domerry.common.Constants;
 import com.domerry.common.RedisConstants;
+import com.domerry.constant.AuthCodeConstants;
 import com.domerry.config.properties.*;
 import com.domerry.dto.Captcha;
 import com.domerry.dto.EmailRegisterDto;
@@ -312,7 +313,12 @@ public class AuthServiceImpl implements AuthService {
         }
 
         StpUtil.login(user.getId());
-        httpServletResponse.sendRedirect(webUrl +"/?token=" + StpUtil.getTokenValue());
+        // token 不能进 URL（会留在浏览器历史/Referer 里，还能被会话固定攻击利用），
+        // 改为下发一次性 code，由前端调 /auth/exchangeCode 换取 token
+        String code = UUID.randomUUID().toString().replace("-", "");
+        redisUtil.set(AuthCodeConstants.THIRD_PARTY_LOGIN_CODE + code, StpUtil.getTokenValue(),
+                RedisConstants.MINUTE_EXPIRE, TimeUnit.SECONDS);
+        httpServletResponse.sendRedirect(webUrl + "/?code=" + code);
     }
 
     @Override

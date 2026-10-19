@@ -35,14 +35,14 @@ public class NotificationsController {
         return Result.success(notificationsService.page(notifications));
     }
 
-    @GetMapping("/read/{id}")
+    @PostMapping("/read/{id}")
     @ApiOperation(value = "已读消息通知")
     public Result<Void> doRead(@PathVariable Long id) {
         notificationsService.doRead(id);
         return Result.success();
     }
 
-    @GetMapping("/read/all")
+    @PostMapping("/read/all")
     @ApiOperation(value = "全部已读")
     public Result<Void> allRead() {
         notificationsService.allRead();

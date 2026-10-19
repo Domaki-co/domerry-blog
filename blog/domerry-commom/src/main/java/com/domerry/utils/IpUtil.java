@@ -18,6 +18,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.UnknownHostException;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class IpUtil {
 
@@ -27,6 +29,24 @@ public class IpUtil {
     private final static String localIp = "127.0.0.1";
 
     private final static String resource_name = "ip2region.xdb";
+
+    /** IPv4 字面量，四段十进制；段值范围由 isIpv4Literal 再校验 */
+    private static final Pattern IPV4_PATTERN = Pattern.compile("^(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})$");
+
+    /** IPv6 字面量，含 :: 压缩写法与 IPv4 内嵌写法 */
+    private static final Pattern IPV6_PATTERN = Pattern.compile("^(?:" +
+            "(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|" +
+            "(?:[0-9a-fA-F]{1,4}:){1,7}:|" +
+            "(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|" +
+            "(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|" +
+            "(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|" +
+            "(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|" +
+            "(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|" +
+            "[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|" +
+            ":(?:(?::[0-9a-fA-F]{1,4}){1,7}|:)|" +
+            "(?:[0-9a-fA-F]{1,4}:){6}(?:\\d{1,3}\\.){3}\\d{1,3}|" +
+            "::(?:ffff(?::0{1,4})?:)?(?:\\d{1,3}\\.){3}\\d{1,3}" +
+            ")$");
 
 
     private static Searcher searcher = null;
@@ -69,20 +89,24 @@ public class IpUtil {
 
     /**
      * 获取ip地址
+     * <p>
+     * 只采信反向代理覆盖写入的头：X-Real-IP 优先，其次 X-Forwarded-For 的最右一段（最近的代理写入的那一段），
+     * 两者都必须能解析成 IP 字面量才采用，否则一律回落到 remoteAddr。
+     * 这些头客户端可以随意伪造，一旦采信就会让按 IP 分桶的 @AccessLimit 限流被逐个请求绕过，
+     * 所以不再读取同样可伪造的 Proxy-Client-IP / WL-Proxy-Client-IP。
+     *
      * @return
      */
     public static String getIp(){
         HttpServletRequest request = getRequest();
-        String ipAddress;
+        String ipAddress = null;
         try {
-            ipAddress = request.getHeader("x-forwarded-for");
-            if (ipAddress == null || ipAddress.length() == 0 || "unknown".equalsIgnoreCase(ipAddress)) {
-                ipAddress = request.getHeader("Proxy-Client-IP");
+            ipAddress = request.getHeader("X-Real-IP");
+            if (!isIpLiteral(ipAddress)) {
+                // 多级代理下最左一段是客户端自己写的，最右一段才是最近的代理写入的
+                ipAddress = lastForwardedFor(request.getHeader("X-Forwarded-For"));
             }
-            if (ipAddress == null || ipAddress.length() == 0 || "unknown".equalsIgnoreCase(ipAddress)) {
-                ipAddress = request.getHeader("WL-Proxy-Client-IP");
-            }
-            if (ipAddress == null || ipAddress.length() == 0 || "unknown".equalsIgnoreCase(ipAddress)) {
+            if (!isIpLiteral(ipAddress)) {
                 ipAddress = request.getRemoteAddr();
                 if (localIp.equals(ipAddress)) {
                     // 根据网卡取本机配置的IP
@@ -95,17 +119,52 @@ public class IpUtil {
                     }
                 }
             }
-            // 对于通过多个代理的情况，第一个IP为客户端真实IP,多个IP按照','分割
-            if (ipAddress != null && ipAddress.length() > 15) {
-                // = 15
-                if (ipAddress.indexOf(",") > 0) {
-                    ipAddress = ipAddress.substring(0, ipAddress.indexOf(","));
-                }
-            }
         } catch (Exception e) {
             ipAddress = "";
         }
         return "0:0:0:0:0:0:0:1".equals(ipAddress) ? localIp : ipAddress;
+    }
+
+    /**
+     * 取 X-Forwarded-For 的最右一段：多级代理下它才是最近的代理写入的值，
+     * 最左一段是客户端可以随意伪造的。
+     *
+     * @param forwardedFor X-Forwarded-For 头
+     * @return 最右一段（可能不是合法 IP，由调用方校验）
+     */
+    private static String lastForwardedFor(String forwardedFor) {
+        if (forwardedFor == null) {
+            return null;
+        }
+        int lastComma = forwardedFor.lastIndexOf(',');
+        return lastComma < 0 ? forwardedFor.trim() : forwardedFor.substring(lastComma + 1).trim();
+    }
+
+    /**
+     * 判断是否为 IP 字面量（IPv4/IPv6），只做字符串校验，不触发 DNS 解析。
+     *
+     * @param value 待校验的值
+     * @return 是否为 IP 字面量
+     */
+    private static boolean isIpLiteral(String value) {
+        if (StringUtils.isBlank(value)) {
+            return false;
+        }
+        String candidate = value.trim();
+        return isIpv4Literal(candidate) || IPV6_PATTERN.matcher(candidate).matches();
+    }
+
+    private static boolean isIpv4Literal(String value) {
+        Matcher matcher = IPV4_PATTERN.matcher(value);
+        if (!matcher.matches()) {
+            return false;
+        }
+        for (int i = 1; i <= 4; i++) {
+            if (Integer.parseInt(matcher.group(i)) > 255) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**

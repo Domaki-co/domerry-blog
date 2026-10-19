@@ -1,5 +1,6 @@
 package com.domerry.controller.message;
 
+import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.domerry.annotation.AccessLimit;
 import com.domerry.service.MessageService;
 import com.domerry.common.Result;
@@ -27,6 +28,7 @@ public class MessageController {
         return Result.success(messageService.getMessageList());
     }
 
+    @SaCheckLogin
     @PostMapping("/add")
     @ApiOperation(value = "发表留言")
     public Result<Boolean> add(@RequestBody SysMessage sysMessage) {

@@ -3,6 +3,7 @@ package com.domerry.controller.resource;
 import cn.dev33.satoken.annotation.SaCheckLogin;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.domerry.common.Result;
+import com.domerry.dto.resource.ResourceVerifyDto;
 import com.domerry.entity.SysResource;
 import com.domerry.service.ResourceService;
 import com.domerry.vo.resource.SysResourceVo;
@@ -33,10 +34,10 @@ public class ResourceController {
         return Result.success();
     }
 
-    @GetMapping("/verify")
+    @PostMapping("/verify")
     @Operation(description = "校验验证码")
-    public Result<SysResource> verify(String code,Long id) {
-        return Result.success(resourceService.verify(code,id));
+    public Result<SysResource> verify(@RequestBody ResourceVerifyDto resourceVerifyDto) {
+        return Result.success(resourceService.verify(resourceVerifyDto.getCode(), resourceVerifyDto.getId()));
     }
 
 

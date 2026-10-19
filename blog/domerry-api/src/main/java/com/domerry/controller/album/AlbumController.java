@@ -2,6 +2,7 @@ package com.domerry.controller.album;
 
 import com.domerry.annotation.AccessLimit;
 import com.domerry.common.Result;
+import com.domerry.dto.album.AlbumVerifyDto;
 import com.domerry.entity.SysAlbum;
 import com.domerry.entity.SysPhoto;
 import com.domerry.service.AlbumService;
@@ -10,6 +11,8 @@ import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -47,9 +50,9 @@ public class AlbumController {
     }
 
     @AccessLimit(count = 5, time = 30)
-    @GetMapping("/verify/{id}")
+    @PostMapping("/verify/{id}")
     @ApiOperation(value = "验证相册的密码")
-    public Result<Boolean> verify(@PathVariable Long id,String password) {
-        return albumService.verify(id,password) ? Result.success(true) : Result.error("密码错误");
+    public Result<Boolean> verify(@PathVariable Long id, @RequestBody AlbumVerifyDto albumVerifyDto) {
+        return albumService.verify(id, albumVerifyDto.getPassword()) ? Result.success(true) : Result.error("密码错误");
     }
 }
