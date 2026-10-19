@@ -278,8 +278,8 @@
                 <i class="fas fa-book-reader"></i>
                 <span class="progress-text">{{ readProgress }}</span>
               </div>
-              <button class="toc-toggle" type="button" title="收起目录" @click="toggleSidebar">
-                <i class="fas fa-angles-right"></i>
+              <button class="toc-toggle" type="button" title="收起目录" aria-label="收起目录" @click="toggleSidebar">
+                <el-icon><DArrowRight /></el-icon>
               </button>
             </div>
           </div>
@@ -307,7 +307,7 @@
         title="展开目录"
         @click="toggleSidebar"
       >
-        <i class="fas fa-list"></i>
+        <el-icon><DArrowLeft /></el-icon>
         <span>目录</span>
       </button>
     </div>
@@ -1500,13 +1500,37 @@ export default {
     font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
   }
 
+  /* 代码窗口是全文唯一的「深色器皿」，底色不跟主题翻白；但夜里正文就铺在
+     --surface #161a20 上，窗底若是 #1b1f24 只差 5 阶，窗口会糊进页面。
+     所以只把「窗底 / 边线 / 投影」交给主题令牌，高亮配色（atom-one-dark）不动。 */
+  --code-window-bg: #1b1f24;
+  --code-window-border: rgba(255, 255, 255, 0.08);
+  --code-window-shadow: 0 12px 30px rgba(17, 20, 26, 0.16);
+  // atom-one-dark 里唯一低于 AA 的一档：注释/引用 #5c6370 在窗底上只有 2.4–2.7:1，
+  // 还带斜体，中文注释尤其糊。按窗底色分别提亮（浅窗 4.38:1 / 深窗 4.90:1），其余 token 不动。
+  --code-comment: #7a8494;
+
+  :root[data-theme='dark'] & {
+    --code-window-bg: #23282f;
+    --code-window-border: rgba(255, 255, 255, 0.14);
+    --code-window-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
+    --code-comment: #8b95a5;
+  }
+
+  // hljs 的 token span 在代码块深处，scoped 下要 :deep 才穿得进去
+  :deep(.hljs-comment),
+  :deep(.hljs-quote) {
+    color: var(--code-comment);
+  }
+
   :deep(pre) {
     margin: $spacing-lg 0;
     position: relative;
     // 深墨灰窗口底，配全站冷灰；比 atom-one-dark 的蓝紫 #282c34 更中性
-    background: #1b1f24;
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 10px;
+    background: var(--code-window-bg);
+    border: 1px solid var(--code-window-border);
+    border-radius: 12px;
+    box-shadow: var(--code-window-shadow);
     // 顶部为仿 macOS 标题栏预留高度
     padding-top: 2.75em;
     overflow: hidden;
@@ -1523,7 +1547,7 @@ export default {
         left: 0;
         right: 0;
         height: 60px;
-        background: linear-gradient(transparent, #1b1f24);
+        background: linear-gradient(transparent, var(--code-window-bg));
         pointer-events: none;
         z-index: 2;
       }
@@ -1611,6 +1635,30 @@ export default {
       padding-left: 4.2em;
       margin-left: 0;
       overflow-x: auto;
+      // 细滚动条：代码横滚时别甩出一条系统粗条压在窗口底
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+
+      &::-webkit-scrollbar {
+        height: 8px;
+      }
+
+      &::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.18);
+        background-clip: content-box;
+        border: 2px solid transparent;
+        border-radius: 999px;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+          background-clip: content-box;
+        }
+      }
+
       font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
       font-size: 14px;
       line-height: 1.6;
@@ -1712,6 +1760,13 @@ export default {
 
     &:hover .copy-button {
       opacity: 1;
+    }
+
+    // 触屏没有 hover，复制键常显，否则永远点不到
+    @media (hover: none) {
+      .copy-button {
+        opacity: 1;
+      }
     }
   }
 
@@ -2144,8 +2199,8 @@ export default {
         cursor: pointer;
         transition: color 0.2s ease, border-color 0.2s ease;
 
-        i {
-          font-size: 0.85em;
+        .el-icon {
+          font-size: 13px;
         }
 
         &:hover {
@@ -2287,16 +2342,16 @@ export default {
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease;
 
-  i {
+  .el-icon {
     color: $primary;
-    font-size: 0.95em;
+    font-size: 15px;
   }
 
   &:hover {
     color: var(--text-primary);
     border-color: var(--accent);
 
-    i {
+    .el-icon {
       color: var(--accent);
     }
   }
