@@ -35,7 +35,7 @@
           <el-table-column label="IP来源" align="center" prop="source" show-overflow-tooltip />
           <el-table-column label="留言内容" width="300" align="center" prop="content" show-overflow-tooltip>
             <template #default="scope">
-                <span v-html="scope.row.content"></span>
+                <span v-html="sanitizeHtml(scope.row.content)"></span>
             </template>
           </el-table-column>
           <el-table-column label="创建时间" align="center" prop="createTime" width="180" />
@@ -71,6 +71,7 @@
   
   <script setup lang="ts">
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { sanitizeHtml } from '@/utils/sanitize'
   import {
     getMessageListApi,
     deleteMessageApi

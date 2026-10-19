@@ -236,6 +236,7 @@ import {
 } from "@/api/tool/gen";
 import hljs from "highlight.js";
 import "highlight.js/styles/github.css";
+import { sanitizeHtml } from "@/utils/sanitize";
 import { saveAs } from 'file-saver'
 // refs
 const queryFormRef = ref();
@@ -348,14 +349,15 @@ const highlightedCode = (code: string) => {
 
     const lang =
       languageMap[language as keyof typeof languageMap] || "plaintext";
-    result = hljs.highlight(code, { language: lang }).value;
+    // hljs 自身会转义源码，这里仍统一消毒，避免回退分支把原始代码直接塞进 v-html
+    result = sanitizeHtml(hljs.highlight(code, { language: lang }).value);
 
     // 存入缓存
     codeCache.set(cacheKey, result);
     return result;
   } catch (error) {
     console.error("代码高亮失败:", error);
-    return code;
+    return sanitizeHtml(code);
   }
 };
 
