@@ -29,6 +29,25 @@ function readCachedSiteConfig() {
   }
 }
 
+// favicon 的扩展名 -> MIME。写死 image/x-icon 会让 png/svg/webp 图标在部分浏览器里被舍弃
+const ICON_MIME_MAP: Record<string, string> = {
+  ico: 'image/x-icon',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  bmp: 'image/bmp',
+  avif: 'image/avif'
+}
+
+// 取不到就返回空串，让浏览器自己嗅探，好过给一个错的 type
+function iconMimeOf(url: string) {
+  const matched = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(url || '')
+  return (matched && ICON_MIME_MAP[matched[1].toLowerCase()]) || ''
+}
+
 const defaultAppLogo = import.meta.env.VITE_APP_LOGO || '/logo.svg'
 const cachedSiteConfig = readCachedSiteConfig()
 
@@ -257,7 +276,10 @@ export const useSettingsStore = defineStore({
       oldLinks.forEach((el) => el.remove())
 
       const link = document.createElement('link')
-      link.type = 'image/x-icon'
+      const iconType = iconMimeOf(url)
+      if (iconType) {
+        link.type = iconType
+      }
       link.rel = 'shortcut icon'
       link.href = url
       head.appendChild(link)

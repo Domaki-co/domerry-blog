@@ -12,11 +12,12 @@
       :on-success="handleSuccess"
       :on-exceed="handleExceed"
       :before-upload="beforeUpload"
+      :accept="accept"
     >
       <el-icon><Plus /></el-icon>
       <template #tip>
         <div class="upload-tip">
-          只能上传jpg/png/gif文件，且不超过{{ fileSize }}MB
+          支持 {{ acceptText }} 格式，且不超过{{ fileSize }}MB
         </div>
       </template>
     </el-upload>
@@ -140,13 +141,28 @@ const handleExceed: UploadProps['onExceed'] = () => {
   ElMessage.warning(`最多只能上传 ${props.limit} 个文件`)
 }
 
+// 允许上传的图片格式（覆盖常见位图、动图、矢量图与图标）
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'bmp', 'svg', 'ico']
+// 文件选择框的过滤项，顺便用于提示文案
+const accept = IMAGE_EXTS.map(ext => `.${ext}`).join(',')
+const acceptText = IMAGE_EXTS.join('/')
+
+// 取文件名后缀（小写）
+const getExtension = (name?: string) => {
+  const fileName = name || ''
+  const index = fileName.lastIndexOf('.')
+  return index > -1 ? fileName.slice(index + 1).toLowerCase() : ''
+}
+
 // 上传前的校验
 const beforeUpload: UploadProps['beforeUpload'] = (file) => {
-  const isImage = /^image\/(jpeg|png|gif)$/.test(file.type)
+  // 部分浏览器对 ico/svg 给出的 MIME 不一致，扩展名优先，MIME 兜底
+  const isImage = IMAGE_EXTS.includes(getExtension(file.name))
+    || (!!file.type && file.type.startsWith('image/'))
   const isLt = file.size / 1024 / 1024 < props.fileSize
 
   if (!isImage) {
-    ElMessage.error('只能上传jpg/png/gif格式的图片!')
+    ElMessage.error(`只能上传 ${acceptText} 格式的图片!`)
     return false
   }
   if (!isLt) {

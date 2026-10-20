@@ -6,12 +6,8 @@
       <div class="shell hero-inner">
         <div class="logo">
           <div class="logo-mark brush">听</div>
-          <div class="logo-text">
-            <div class="top"><h1>墨澜</h1><small>水墨听音 · 星缘新风</small></div>
-            <p>一曲清音 · 水墨成诗 · 行云流水 · 流如溪涧</p>
-          </div>
+          <div class="logo-text"><h1>墨澜</h1></div>
         </div>
-        <div class="hero-right"><span>● 星缘改版</span><span class="sep">|</span><span>古风 · 水墨 · 极简线条 · 音符律动</span></div>
       </div>
     </section>
 
@@ -38,15 +34,15 @@
             <button :class="{on:activeTab==='queue'}" role="tab" @click="activeTab='queue'">队列 {{ queue.length }}</button>
           </div>
           <div ref="list" class="list">
-            <div v-if="listLoading" class="empty"><div class="spinner"></div><div class="sm">{{ activeTab==='search' ? '墨正研开…' : '正引入歌单…' }}</div></div>
-            <div v-else-if="visibleSongs.length===0" class="empty"><div class="big brush">无声处听惊雷</div><div class="sm">试试搜「周杰伦 / 陈奕迅 / 许嵩」<br/>或点右上角 ≡ 粘贴歌单链接</div></div>
+            <div v-if="listLoading" class="empty"><div class="spinner"></div><div class="sm">{{ activeTab==='search' ? '搜索中…' : '引入中…' }}</div></div>
+            <div v-else-if="visibleSongs.length===0" class="empty"><div class="big brush">无声处听惊雷</div><div class="sm">试试搜歌手名，或点右上角 ≡ 引入歌单</div></div>
             <div v-for="(song,index) in visibleSongs" v-else :key="`${song.id}-${index}`" class="song" :class="{on:isCurrent(song)}" tabindex="0" :aria-label="song.name" @click="playFromList(index)" @keydown.enter.prevent="playFromList(index)" @keydown.space.prevent="playFromList(index)">
               <span class="bar"></span>
               <div class="song-cover">
                 <img v-if="song.cover" :src="song.cover" loading="lazy" alt="" />
                 <div v-else class="cover-placeholder">♪</div>
               </div>
-              <div class="song-meta"><div class="t">{{ song.name }}</div><div class="a">{{ song.artist }} · {{ song.album || '未知' }}</div></div>
+              <div class="song-meta"><div class="t">{{ song.name }}</div><div class="a">{{ song.artist }}{{ song.album ? ' · ' + song.album : '' }}</div></div>
               <div v-if="isCurrent(song)&&isPlaying" class="eq" aria-hidden="true"><span></span><span></span><span></span></div>
               <div class="song-acts">
                 <button v-if="activeTab==='search'" type="button" class="song-act" :class="{added:inQueue(song)}" :title="inQueue(song)?'已在队列':'加入队列'" :aria-label="inQueue(song)?'已在队列':'加入队列'" @click.stop="addToQueue(song)" @keydown.enter.stop @keydown.space.stop>{{ inQueue(song)?'✓':'＋' }}</button>
@@ -76,21 +72,21 @@
             </div>
             <div class="meta-center">
               <h2>{{ currentSong ? currentSong.name : '未在播放' }}</h2>
-              <div class="sub">{{ currentSong ? `${currentSong.artist} — ${currentSong.album || '单曲'}` : '寻一首心动，染半纸流云' }}</div>
+              <div v-if="currentSong" class="sub">{{ currentSong.artist }}{{ currentSong.album ? ' · ' + currentSong.album : '' }}</div>
             </div>
             <div class="quality-row">
               <label for="quality-select">音质</label>
               <select id="quality-select" v-model="selectedQuality" title="选择播放和下载音质" @change="reloadCurrentSong">
-                <option value="standard">标准（128 kbps MP3）</option>
-                <option value="higher">较高（192 kbps MP3）</option>
-                <option value="exhigh">极高（320 kbps MP3）</option>
-                <option value="lossless">无损（FLAC）</option>
-                <option value="hires">Hi-Res（高清高解析度）</option>
-                <option value="jymaster" selected>母带（Master）</option>
-                <option value="sky">天空音效（Sky）</option>
-                <option value="jyeffect">动态音效（Effect）</option>
+                <option value="standard">标准</option>
+                <option value="higher">较高</option>
+                <option value="exhigh">极高</option>
+                <option value="lossless">无损</option>
+                <option value="hires">Hi-Res</option>
+                <option value="jymaster">母带</option>
+                <option value="sky">天空音效</option>
+                <option value="jyeffect">动态音效</option>
               </select>
-              <span class="q-status">{{ qualityStatus }}</span>
+              <span v-if="qualityStatus" class="q-status">{{ qualityStatus }}</span>
             </div>
             <div class="progress-zone">
               <div class="canvas-wrap" aria-label="进度条" @pointerdown="startSeek" @pointermove="moveSeek" @pointerup="endSeek">
@@ -115,7 +111,7 @@
                 <button class="btn" title="下载歌词" aria-label="下载歌词" @click="downloadLyric">♬</button>
               </div>
             </div>
-            <div v-if="isLoadingSong" class="note"><i></i><span>正在取音·连缀古今…</span></div>
+            <div v-if="isLoadingSong" class="note"><i></i><span>正在取音…</span></div>
           </div>
         </div>
       </div>
@@ -123,22 +119,21 @@
       <div class="right">
         <div class="lyric-card panel">
           <div class="l-head">
-            <div class="ll"><div class="dot">♪</div><div><div class="title">詞</div><div class="sub">句句如墨 · 行行成画</div></div></div>
+            <div class="ll"><div class="dot">♪</div><div class="title">詞</div></div>
             <div class="seal-mini brush">印</div>
           </div>
           <div ref="lyricBody" class="l-body" tabindex="0" @wheel="handleLyricWheel" @scroll="handleLyricScroll">
             <div v-if="lyricLines.length===0" class="l-empty">
               <div class="brush empty-title">静待一曲</div>
-              <p>水墨未干，音未起时，留白最是撩人。<br/>播放后，歌词如卷轴展开。</p>
+              <p>播放后，歌词随卷展开</p>
             </div>
             <div v-else class="l-list">
               <div v-for="(line,index) in lyricLines" :key="`${line.time}-${index}`" :data-index="index" class="l-line" :class="{on:index===activeLyric}" tabindex="0" @click="seekLyric(line.time)" @keydown.enter.prevent="seekLyric(line.time)">
                 <div class="t">{{ line.text }}</div><div v-if="line.trans" class="tr">{{ line.trans }}</div>
               </div>
-              <div class="lyric-end">— 曲终 · 墨未尽 —</div>
+              <div class="lyric-end">— 曲终 —</div>
             </div>
           </div>
-          <div class="l-foot"><span>水墨 · 留白 · 呼吸</span></div>
         </div>
       </div>
     </div>
@@ -159,10 +154,11 @@ const WAVE_FALLBACK = { active: 'rgba(26,26,26,0.22)', idle: 'rgba(26,26,26,0.08
 // 播放队列上限：无节制地导入歌单/追加歌曲会让队列无限增长
 const MAX_QUEUE_SIZE = 200
 
+// 音质名和下拉里的档位名保持一致：同一个东西不该有两种叫法
 const QUALITY_NAMES = {
   standard: '标准 128kbps', higher: '较高 192kbps', exhigh: '极高 320kbps',
-  lossless: '无损 FLAC', hires: 'Hi-Res 高清高解析度', jymaster: '母带 Master',
-  sky: '天空音效 Sky', jyeffect: '动态音效 Effect'
+  lossless: '无损 FLAC', hires: 'Hi-Res', jymaster: '母带',
+  sky: '天空音效', jyeffect: '动态音效'
 }
 
 function extractArtists(track) {
@@ -413,7 +409,7 @@ export default {
           actualQuality = data?.level || ''
         }
         this.currentAudioUrl = musicUrl
-        this.qualityStatus = actualQuality ? (QUALITY_NAMES[actualQuality] || actualQuality) : ''
+        this.qualityStatus = actualQuality && actualQuality !== this.selectedQuality ? `降为 ${QUALITY_NAMES[actualQuality] || actualQuality}` : ''
         if (musicUrl) {
           this.audio.src = musicUrl
           await this.audio.play().catch(() => {})
@@ -670,14 +666,14 @@ export default {
 .logo{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
 .logo-mark{width:38px;height:38px;flex-shrink:0;background:var(--verm);color:var(--on-verm);display:grid;place-items:center;font-size:20px;box-shadow:2px 2px 0 var(--ink);transform:rotate(-2deg);border-radius:2px}
 .logo-text{min-width:0;flex:1}
-.logo-text .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+
 .logo-text h1{font-size:clamp(18px,2.4vw,22px);letter-spacing:0.18em;line-height:1;margin:0;white-space:nowrap}
-.logo-text small{font-size:12px;letter-spacing:0.16em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.logo-text p{font-size:12px;letter-spacing:0.1em;color:var(--muted);margin:3px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hero-right{display:flex;align-items:center;gap:12px;font-size:12.5px;letter-spacing:0.14em;color:var(--muted-2);flex-shrink:0;white-space:nowrap}
-.hero-right .sep{opacity:.25}
-@media(max-width:900px){.hero-right{display:none}}
-@media(max-width:600px){.hero-inner{padding-top:calc(8px + var(--safe-t));padding-bottom:8px}.logo-text p{display:none}}
+
+
+
+
+
+@media(max-width:600px){.hero-inner{padding-top:calc(8px + var(--safe-t));padding-bottom:8px}}
 
 /* === 三栏：等高靠 stretch + 列内 flex，只有歌单与歌词滚动 === */
 .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr;gap:clamp(12px,1.4vw,20px);align-items:stretch;padding-top:clamp(12px,1.6vw,22px);padding-bottom:clamp(12px,1.6vw,22px)}
@@ -797,7 +793,7 @@ export default {
 
 /* 音质选择：与进度条同一行节奏，状态就地显示 */
 .quality-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--muted-2);flex-shrink:0}
-.quality-row select{max-width:230px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--veil-3);color:var(--ink);font-size:12.5px;outline:none}
+.quality-row select{max-width:150px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--veil-3);color:var(--ink);font-size:12.5px;outline:none}
 .q-status{font-size:12.5px;letter-spacing:0.04em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* 进度：加粗的朱砂条，整条可点可拖 */
@@ -852,7 +848,7 @@ export default {
 .l-head .ll > div:last-child{min-width:0}
 .l-head .dot{width:28px;height:28px;flex-shrink:0;border-radius:50%;border:1px solid var(--line);color:var(--muted-2);display:grid;place-items:center;font-size:12px}
 .l-head .title{font-size:13px;letter-spacing:0.2em;white-space:nowrap}
-.l-head .sub{font-size:12px;color:var(--muted);letter-spacing:0.08em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 .seal-mini{width:26px;height:26px;flex-shrink:0;border-radius:3px;border:1px solid rgba(var(--verm-rgb),0.32);color:var(--verm);display:grid;place-items:center;font-size:12px;box-shadow:1px 1px 0 rgba(var(--verm-rgb),0.16)}
 /* 词卷自身滚动；上下缘渐隐，滚动时不会硬切 */
 .l-body{flex:1 1 520px;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px clamp(10px,1.4vw,16px);overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(var(--ink-rgb),0.16) transparent;isolation:isolate;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%)}
@@ -873,7 +869,7 @@ export default {
 .l-line .tr{font-size:12.5px;margin-top:4px;line-height:1.6;color:var(--lyric-dim-2);white-space:pre-wrap;word-break:break-word}
 .l-line.on .tr{color:var(--lyric-dim)}
 .lyric-end{text-align:center;padding:18px 0 6px;font-size:12px;letter-spacing:0.24em;color:var(--lyric-dim-2)}
-.l-foot{padding:10px clamp(12px,1.6vw,18px) calc(10px + var(--safe-b));border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;letter-spacing:0.1em;color:var(--muted);flex-shrink:0}
+
 
 /* === 页脚 === */
 .music-page footer{position:relative;z-index:1;max-width:1600px;margin:0 auto;width:100%;padding:14px clamp(12px,2vw,28px) calc(26px + var(--safe-b));text-align:center;overflow:clip}

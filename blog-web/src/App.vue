@@ -72,6 +72,9 @@ export default {
       const extra = config.extra || {}
       this.$store.commit('setVisitorAccess', extra.visitorCount)
       this.$store.commit('setSiteAccess', extra.blogViewsCount)
+    } else {
+      // 没拿到配置也要置位：首屏封面据此从「等配置」切到「后台没配」，回退内置图
+      this.$store.commit('markSiteInfoLoaded')
     }
     if (notice && notice.data) {
       this.$store.commit('SET_NOTICE', notice.data)

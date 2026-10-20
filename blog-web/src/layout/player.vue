@@ -8,7 +8,7 @@
     :data-state="open ? 'open' : 'capsule'"
     :data-playing="paused ? 'false' : 'true'"
     :data-mode="playMode"
-    :data-single="singleLoop ? 'true' : 'false'"
+    :data-lyrics="lyricsOpen ? 'true' : 'false'"
     :data-loading="busy ? 'true' : 'false'"
     :data-muted="muted ? 'true' : 'false'"
     :data-docked="docked && !open ? 'true' : 'false'"
@@ -81,7 +81,7 @@
       <div class="cp__top">
         <span class="cp__art cp__cover" :class="{ 'has-img': coverReady }" :style="artStyle" aria-hidden="true"></span>
         <h2 class="cp__title" :title="panelTitle">{{ panelTitle }}</h2>
-        <p class="cp__artist">{{ panelArtist }}</p>
+        <p v-if="panelArtist" class="cp__artist">{{ panelArtist }}</p>
       </div>
 
       <div class="cp__lyrics">
@@ -102,29 +102,28 @@
               <circle cx="6.5" cy="18" r="2.5" />
               <circle cx="16.5" cy="16" r="2.5" />
             </svg>
-            <span>{{ lyricLoading ? '歌词载入中…' : '纯音乐，暂无歌词' }}</span>
+            <span>{{ lyricLoading ? '歌词载入中…' : '暂无歌词' }}</span>
           </div>
         </div>
       </div>
 
-      <div class="cp__time">
-        <span>{{ formatTime(currentTime) }}</span>
-        <span>{{ formatTime(duration) }}</span>
+      <!-- 进度条与时间压成一行：卡片的竖向余量本来就接近零，少一行就少一层拥挤 -->
+      <div class="cp__prog">
+        <input
+          class="cp__rng cp__scrub"
+          data-nodrag
+          type="range"
+          min="0"
+          max="1000"
+          step="1"
+          :value="scrubValue"
+          :style="{ '--p': scrubPct, '--b': bufferedPct }"
+          aria-label="播放进度"
+          @input="onScrubInput"
+          @change="onScrubChange"
+        />
+        <span class="cp__prog-time">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
       </div>
-
-      <input
-        class="cp__rng cp__scrub"
-        data-nodrag
-        type="range"
-        min="0"
-        max="1000"
-        step="1"
-        :value="scrubValue"
-        :style="{ '--p': scrubPct, '--b': bufferedPct }"
-        aria-label="播放进度"
-        @input="onScrubInput"
-        @change="onScrubChange"
-      />
 
       <div class="cp__ctrl">
         <button
@@ -132,12 +131,19 @@
           class="cp__btn cp__toggle cp__mode"
           data-nodrag
           :title="playModeTitle"
-          :aria-label="playModeTitle"
+          :aria-label="playModeLabel"
           @click="cyclePlayMode"
         >
+          <!-- 环 = 会回环重复，环心里的短横/1 区分列表与单曲；直线箭头 = 播完就停；交叉箭头 = 乱序 -->
           <svg v-if="playMode === 'loop'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M17 3l3 3-3 3" /><path d="M4 11V9a3 3 0 0 1 3-3h13" />
             <path d="M7 21l-3-3 3-3" /><path d="M20 13v2a3 3 0 0 1-3 3H4" />
+            <path d="M9.5 10.6h5" /><path d="M9.5 13.4h5" />
+          </svg>
+          <svg v-else-if="playMode === 'single'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 3l3 3-3 3" /><path d="M4 11V9a3 3 0 0 1 3-3h13" />
+            <path d="M7 21l-3-3 3-3" /><path d="M20 13v2a3 3 0 0 1-3 3H4" />
+            <path d="M11 10.2l1.4-.9v5.7" />
           </svg>
           <svg v-else-if="playMode === 'order'" class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 6h9" /><path d="M4 12h9" /><path d="M4 18h9" />
@@ -170,21 +176,25 @@
           <svg class="cp__ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 5v14" /><path d="M5 5.8v12.4L15 12z" /></svg>
         </button>
 
+        <!-- 歌词开关：三行居中的短横 = 歌词文本，收起后整块歌词区让位给封面 -->
         <button
           type="button"
-          class="cp__btn cp__toggle cp__single"
+          class="cp__btn cp__toggle cp__lyrics-btn"
           data-nodrag
-          :title="singleLoopTitle"
-          :aria-label="singleLoopTitle"
-          :aria-pressed="singleLoop ? 'true' : 'false'"
-          @click="toggleSingleLoop"
+          :title="lyricsToggleTitle"
+          :aria-label="lyricsToggleTitle"
+          :aria-pressed="lyricsOpen ? 'true' : 'false'"
+          @click="toggleLyrics"
         >
           <svg class="cp__ico" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M17 3l3 3-3 3" /><path d="M4 11V9a3 3 0 0 1 3-3h13" />
-            <path d="M7 21l-3-3 3-3" /><path d="M20 13v2a3 3 0 0 1-3 3H4" />
-            <path d="M11 10.2l1.4-.9v5.7" />
+            <path d="M5 7h14" /><path d="M8 12h8" /><path d="M10.5 17h3" />
           </svg>
         </button>
+
+        <!-- 切模式后的浮层提示：绝对定位挂在控制排下方，不参与布局 -->
+        <transition name="cp-tip">
+          <p v-if="modeTipOn" class="cp__tip" role="status">{{ modeTip }}</p>
+        </transition>
       </div>
 
       <hr class="cp__rule" />
@@ -216,7 +226,6 @@
 
       <section class="cp__sheet" :inert="!showList" aria-label="播放队列">
         <div class="cp__sheet-head">
-          <h3>Queue</h3>
           <p>{{ queueMeta }}</p>
         </div>
         <div ref="qList" class="cp__q-list" @scroll.passive="onQueueScroll">
@@ -233,7 +242,7 @@
             <span class="cp__art cp__q-art" :class="{ 'has-img': !!song.cover && song.coverLoaded }" :style="qArtStyle(song)" aria-hidden="true"></span>
             <span class="cp__q-text">
               <span class="cp__q-title">{{ song.name }}</span>
-              <span class="cp__q-artist">{{ song.artist || '—' }}</span>
+              <span class="cp__q-artist">{{ song.artist }}</span>
             </span>
             <span class="cp__q-dur">{{ String(i + 1).padStart(2, '0') }}</span>
             <span class="cp__eq" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -262,8 +271,10 @@ const M = 16
 const RING_C = 2 * Math.PI * 17
 const POS_KEY = 'cp-pos'
 const PLAY_MODE_KEY = 'cp-play-mode'
+// 旧版本的单曲循环开关，只读不写：读到就把播放模式迁到 'single'
 const SINGLE_LOOP_KEY = 'cp-single-loop'
 const VOL_KEY = 'cp-vol'
+const LYRICS_KEY = 'cp-lyrics-open'
 const DOCK_DELAY = 2000   // 空闲多久后吸附到侧边（毫秒）
 
 
@@ -311,10 +322,13 @@ export default {
       volume: 0.7,
       muted: false,
       prevVolume: 0.7,
-      // 播放模式三态：loop 循环播放 / order 顺序播放 / random 随机播放
+      // 播放模式四态：loop 列表循环 / single 单曲循环 / order 顺序播放（播完即停）/ random 随机播放
       playMode: 'loop',
-      // 单曲循环独立成开关，和播放模式互不覆盖
-      singleLoop: false,
+      // 歌词区是否展开：收起后封面放大、内容居中，整张卡只剩「唱片」
+      lyricsOpen: true,
+      // 切模式后浮出的提示：文案 + 显隐，1.6s 后自动收起
+      modeTip: '',
+      modeTipOn: false,
       buffering: false,
       lyricLines: [],
       activeLine: 0,
@@ -378,15 +392,15 @@ export default {
     capArtist() {
       if (this.buffering) return '正在缓冲…'
       if (this.isLoading) return '正在为你准备歌单'
-      return this.capLine || '—'
+      return this.capLine || ''
     },
     panelTitle() {
       if (this.currentSong) return this.currentSong.name
       return this.isLoading ? '曲库载入中…' : '暂无曲目'
     },
     panelArtist() {
-      if (this.currentSong) return this.currentSong.artist || '—'
-      return this.isLoading ? '正在为你准备歌单' : '—'
+      if (this.currentSong) return this.currentSong.artist || ''
+      return this.isLoading ? '正在为你准备歌单' : ''
     },
     // 曲库还没来 / 当前曲目在等数据，两种情况都让按钮转圈
     busy() {
@@ -400,24 +414,27 @@ export default {
     lyricOn() {
       return !this.paused && this.lyricLines.length > 0 && this.activeLine >= 0
     },
+    // 开关只说这次点击会发生什么，不描述当前状态
+    lyricsToggleTitle() {
+      return this.lyricsOpen ? '隐藏歌词' : '显示歌词'
+    },
+    // 按钮提示只留「现在是什么 → 点了变成什么」，悬停一秒能读完
     playModeTitle() {
-      const next = { loop: '顺序播放', order: '随机播放', random: '循环播放' }[this.playMode]
-      // 单曲循环优先级最高，开着的时候这个按钮不生效，提示里要说清楚
-      if (this.singleLoop) {
-        return `${this.playModeMeta}（单曲循环已开启，暂不生效；点击切换为${next}）`
-      }
-      return `${this.playModeMeta}（点击切换为${next}）`
+      return `${this.playModeMeta} → ${this.nextPlayModeMeta}`
     },
-    singleLoopTitle() {
-      return this.singleLoop ? '单曲循环（点击关闭）' : '单曲循环（点击开启）'
+    // 读屏没有箭头语境，换成一句完整但同样简短的话
+    playModeLabel() {
+      return `${this.playModeMeta}，点击切换为${this.nextPlayModeMeta}`
     },
+    // 队列头只留曲目数：现在是什么模式，底部那个按钮的图标已经写着，重复一遍是噪音
     queueMeta() {
-      // 单曲循环开启时播放模式不生效，队列头里就别再并排写着两个模式了
-      const mode = this.singleLoop ? '单曲循环' : this.playModeMeta
-      return `${mode} · ${this.audio.length} 首`
+      return `${this.audio.length} 首`
     },
     playModeMeta() {
-      return { loop: '循环播放', order: '顺序播放', random: '随机播放' }[this.playMode]
+      return { loop: '列表循环', single: '单曲循环', order: '顺序播放', random: '随机播放' }[this.playMode]
+    },
+    nextPlayModeMeta() {
+      return { loop: '单曲循环', single: '随机播放', random: '顺序播放', order: '列表循环' }[this.playMode]
     },
     rootStyle() {
       return {
@@ -449,12 +466,14 @@ export default {
     this._lastPos = 0
     // 抑制拖拽后补发 click 的 60ms 计时器，卸载时要清掉
     this._suppressTimer = 0
+    // 模式提示的自动收起计时器
+    this._tipTimer = 0
     // 歌单是异步请求，$nextTick 回调可能在组件卸载后才执行，用它兜住
     this._isUnmounted = false
 
-    // 记住的播放模式 / 单曲循环 / 音量
+    // 记住的播放模式 / 音量
     const savedMode = readStore(PLAY_MODE_KEY)
-    if (['loop', 'order', 'random'].includes(savedMode)) {
+    if (['loop', 'single', 'order', 'random'].includes(savedMode)) {
       this.playMode = savedMode
     } else if (readStore('cp-shuffle') === '1') {
       // 旧版本把「随机」「循环」拆成两个键存，这里读一次做迁移
@@ -462,12 +481,14 @@ export default {
     } else if (readStore('cp-repeat') === 'none') {
       this.playMode = 'order'
     }
+    // 更旧的版本把单曲循环存成独立开关，合并进四态；
+    // 旧版里它压得过三态模式，所以放在最后落地
     const savedSingle = readStore(SINGLE_LOOP_KEY)
-    if (savedSingle !== null) {
-      this.singleLoop = savedSingle === '1'
-    } else if (readStore('cp-repeat') === 'one') {
-      this.singleLoop = true
+    if (savedSingle === '1' || (savedSingle === null && readStore('cp-repeat') === 'one')) {
+      this.playMode = 'single'
     }
+    // 歌词区默认展开，只有上一次明确收起来过才默认收起
+    if (readStore(LYRICS_KEY) === '0') this.lyricsOpen = false
     const savedVol = parseFloat(readStore(VOL_KEY))
     if (Number.isFinite(savedVol)) {
       this.volume = Math.min(1, Math.max(0, savedVol))
@@ -554,6 +575,7 @@ export default {
     clearTimeout(this._idleTimer)
     clearTimeout(this._snapTimer)
     clearTimeout(this._suppressTimer)
+    clearTimeout(this._tipTimer)
     clearInterval(this._bufferTimer)
     if (this.player) {
       const audio = this.player.audio
@@ -866,25 +888,35 @@ export default {
       this.updateActiveLine()
       this._seeking = false
     },
-    // 一个按钮管三态：循环播放 → 顺序播放 → 随机播放
+    // 切完模式后浮一行提示说明「现在是什么模式」。
+    // 连点时不叠加：同一行文案刷新 + 重置计时，避免提示排队刷屏。
+    showModeTip(text) {
+      this.modeTip = text
+      this.modeTipOn = true
+      clearTimeout(this._tipTimer)
+      this._tipTimer = setTimeout(() => {
+        this.modeTipOn = false
+      }, 1600)
+    },
+    // 收起/展开歌词区：只改状态，让位与放大都由 data-lyrics 上的样式做
+    toggleLyrics() {
+      this.lyricsOpen = !this.lyricsOpen
+      writeStore(LYRICS_KEY, this.lyricsOpen ? '1' : '0')
+    },
+    // 一个按钮管四态：列表循环 → 单曲循环 → 随机播放 → 顺序播放
     cyclePlayMode() {
-      this.playMode = { loop: 'order', order: 'random', random: 'loop' }[this.playMode]
+      this.playMode = { loop: 'single', single: 'random', random: 'order', order: 'loop' }[this.playMode]
       this.applyPlayMode()
       writeStore(PLAY_MODE_KEY, this.playMode)
-    },
-    toggleSingleLoop() {
-      this.singleLoop = !this.singleLoop
-      this.applyPlayMode()
-      writeStore(SINGLE_LOOP_KEY, this.singleLoop ? '1' : '0')
+      this.showModeTip(this.playModeMeta)
     },
     // APlayer 内部只有 order(list/random) + loop(all/one/none) 两个开关，
-    // 这里把「播放模式 + 单曲循环」两个按钮翻译过去
+    // 四个播放模式正好是这两个开关的四个组合
     engineOrder() {
       return this.playMode === 'random' ? 'random' : 'list'
     },
     engineLoop() {
-      if (this.singleLoop) return 'one'
-      return this.playMode === 'order' ? 'none' : 'all'
+      return { loop: 'all', single: 'one', order: 'none', random: 'all' }[this.playMode]
     },
     applyPlayMode() {
       const player = this.player
@@ -1559,10 +1591,11 @@ $cd-art:
 // ── 歌词 ──
 .cp__lyrics {
   position: relative;
-  height: 108px;
+  // 卡片竖向余量接近零，所以歌词区承担弹性：省下的行高自动变成多看一行歌词
+  flex: 1 1 auto;
+  min-height: 108px;
   margin-top: 12px;
   overflow: hidden;
-  flex: none;
 }
 
 .cp__ly-list {
@@ -1646,12 +1679,27 @@ $cd-art:
 }
 
 // ── 进度 / 音量滑杆 ──
-.cp__time {
+// 进度条和时间同一行：时间收成「当前 / 总长」一个标签挂在条右边，
+// 比原来左右两端各飘一个数字更省地方，也更像一条时间轴。
+.cp__prog {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
   margin-top: 12px;
+
+  .cp__scrub {
+    flex: 1;
+    min-width: 0;
+    width: auto;
+    margin-top: 0;
+  }
+}
+
+.cp__prog-time {
+  flex: none;
   font-family: $font-mono;
-  font-size: 12.5px;
+  font-size: 12px;
+  line-height: 1;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
@@ -1745,10 +1793,15 @@ $cd-art:
 }
 
 // ── 控制排 ──
+// 播放键必须严格居中：上一曲/播放/下一曲三键用 flex 居中成组，模式键绝对定位钉到左边缘，
+// 模式键宽窄都不参与居中计算，所以播放键永远是内容区中点，左右两键天然对称。
+// 控制排同时是模式提示的定位基准：提示贴在它下方，跨断点位置一致。
 .cp__ctrl {
+  position: relative;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 14px;
   margin-top: 14px;
 
   .cp__btn {
@@ -1763,10 +1816,53 @@ $cd-art:
   .cp__small {
     color: var(--text-primary);
   }
+
+  .cp__mode {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+  }
 }
 
 .cp__ctrl .cp__big:hover {
   background: var(--accent);
+}
+
+// 歌词开关钉在控制排右端，和左端的模式键左右对称，同样不参与居中计算
+.cp__ctrl .cp__lyrics-btn {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+}
+
+// 和模式键同一套语言：只有偏离默认（歌词收起了）才点亮
+.cp[data-lyrics='false'] .cp__lyrics-btn {
+  color: var(--accent);
+}
+
+.cp[data-lyrics='false'] .cp__lyrics-btn::after {
+  opacity: 1;
+  transform: none;
+}
+
+// ── 收起歌词 ──
+// 卡片是固定高度的 flex 列，歌词区一撤就得有人接住这块高度：
+// 让封面块 flex 撑开并居中，唱片变大、上下留白均分，看起来像一张「唱片卡」。
+.cp[data-lyrics='false'] .cp__lyrics {
+  display: none;
+}
+
+.cp[data-lyrics='false'] .cp__top {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding-top: 0;
+}
+
+.cp[data-lyrics='false'] .cp__cover {
+  width: 190px;
+  height: 190px;
 }
 
 .cp__big {
@@ -1810,23 +1906,50 @@ $cd-art:
   }
 }
 
-// 单曲循环优先级最高：开着的时候播放模式暂不生效，按钮也就不该再亮着，
-// 否则两个按钮同时高亮，用户会以为模式还在起作用。
-.cp[data-mode='loop']:not([data-single='true']) .cp__mode,
-.cp[data-mode='random']:not([data-single='true']) .cp__mode,
-.cp[data-single='true'] .cp__single {
+// 图标本身已经写明当前模式，高亮只留给「偏离默认」的那三态：
+// 列表循环是默认，不点亮，免得一个按钮常亮着像状态灯。
+.cp:not([data-mode='loop']) .cp__mode {
   color: var(--accent);
 }
 
-.cp[data-mode='loop']:not([data-single='true']) .cp__mode::after,
-.cp[data-mode='random']:not([data-single='true']) .cp__mode::after,
-.cp[data-single='true'] .cp__single::after {
+.cp:not([data-mode='loop']) .cp__mode::after {
   opacity: 1;
   transform: none;
 }
 
-.cp[data-single='true'] .cp__mode {
-  opacity: 0.5;
+// ── 模式切换提示 ──
+// 卡片是固定 560 高的 flex 列，元素高度加起来已经排满，没有竖向余量，
+// 所以这行提示用绝对定位悬浮在控制排和音量排之间，不参与布局，也不改卡片尺寸。
+.cp__tip {
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 1px);
+  z-index: 3;
+  margin: 0;
+  padding: 5px 10px;
+  max-width: 100%;
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--rule), 0 10px 20px -14px rgba(0, 0, 0, 0.6);
+  color: var(--text-primary);
+  font-size: 12.5px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  transform: translate(-50%, 0);
+}
+
+.cp-tip-enter-active,
+.cp-tip-leave-active {
+  transition: opacity 0.18s, transform 0.22s cubic-bezier(0.3, 0.8, 0.25, 1);
+}
+
+.cp-tip-enter-from,
+.cp-tip-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 4px);
 }
 
 .cp__rule {
@@ -1885,22 +2008,16 @@ $cd-art:
   transition: opacity 0.22s, transform 0.3s cubic-bezier(0.3, 0.8, 0.25, 1), visibility 0s;
 }
 
+// 队列头只留一行曲目数：浮层本身就是队列，再挂一个「Queue」标题属于装饰
 .cp__sheet-head {
-  padding: 0 40px 12px;
+  padding: 20px 40px 10px;
   text-align: center;
 
-  h3 {
-    margin: 0;
-    font-family: $font-serif;
-    font-weight: 700;
-    font-size: 24px;
-    line-height: 34px;
-  }
-
   p {
-    margin: 2px 0 0;
+    margin: 0;
     font-size: 12.5px;
     color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -2056,7 +2173,7 @@ $cd-art:
   }
 
   .cp__lyrics {
-    height: 96px;
+    min-height: 96px;
   }
 }
 
@@ -2064,7 +2181,9 @@ $cd-art:
   .cp,
   .cp.is-snap,
   .cp__open,
-  .cp__sheet {
+  .cp__sheet,
+  .cp-tip-enter-active,
+  .cp-tip-leave-active {
     transition-duration: 0.01s !important;
     transition-delay: 0s !important;
   }

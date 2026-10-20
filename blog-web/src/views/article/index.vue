@@ -142,7 +142,7 @@
         <!-- 文章内容 -->
         <article class="article-content">
           <!-- 免费内容 -->
-          <div v-if="article.readType === 1 || article.readType === 0" v-html="$sanitize(article.content)"></div>
+          <div v-if="article.readType === 1 || article.readType === 0" v-html="articleContentHtml"></div>
 
           <!-- 会员内容 -->
           <div v-else-if="article.readType === 2" class="locked-content member">
@@ -439,6 +439,7 @@ import PaymentDialog from '@/components/PaymentDialog/index.vue'
 import MembershipDialog from '@/components/MembershipDialog/index.vue'
 import { marked } from 'marked'
 import { escapeHtml } from '@/utils/sanitize'
+import { upgradeAttachmentLinks } from '@/utils/attachment'
 
 export default {
   name: 'Article',
@@ -494,6 +495,13 @@ export default {
     }
   },
   computed: {
+    /**
+     * 正文 HTML：先过 XSS 白名单，再把带「附件：」标记的链接升级成下载卡片
+     * （markdown 存不下 class，卡片结构只能在渲染时补）
+     */
+    articleContentHtml() {
+      return upgradeAttachmentLinks(this.$sanitize(this.article.content || ''))
+    },
     currentUrl() {
       // 永久链接只取 origin + pathname：query 里可能带敏感参数，
       // 而它会被拼进第三方分享/二维码接口，不能外传
@@ -837,6 +845,12 @@ export default {
         event.preventDefault()
         event.stopPropagation()
         this.$message.warning('该链接使用了不安全的协议，已阻止打开')
+        return
+      }
+
+      // 附件卡片的「下载」按钮靠 response-content-disposition 触发原生下载，
+      // 交给 window.open 只会留下一个白页标签，因此放行默认行为
+      if (link.classList.contains('article-attachment__download')) {
         return
       }
 
@@ -1571,6 +1585,89 @@ export default {
     }
   }
 
+  // 附件下载卡片：markdown 只存链接，卡片结构由 upgradeAttachmentLinks() 渲染时补，
+  // 因此只能按 class 命中，不能依赖 inline style（DOMPurify 会剔除 style 标签与属性）
+  :deep(.article-attachment) {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    margin: $spacing-md 0;
+    padding: $spacing-sm $spacing-md;
+    border: 1px solid var(--rule);
+    border-radius: $border-radius-md;
+    background: var(--surface);
+    transition: border-color 0.2s ease, background 0.2s ease;
+
+    &:hover {
+      border-color: var(--accent);
+      background: var(--hover-bg);
+    }
+  }
+
+  // 卡体：点击打开原文件（html 这类由浏览器直接预览）
+  :deep(.article-attachment__link) {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: $spacing-sm;
+    border-bottom: none;
+    text-decoration: none;
+    text-align: left;
+  }
+
+  // 下载：URL 上挂了 response-content-disposition，任何类型都强制存盘
+  :deep(.article-attachment__download) {
+    flex: 0 0 auto;
+    padding: 2px 10px;
+    border: 1px solid var(--rule-strong);
+    border-radius: $border-radius-sm;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 0.8em;
+    white-space: nowrap;
+    text-decoration: none;
+    border-bottom: none;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+
+    &:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+  }
+
+  :deep(.article-attachment__badge) {
+    flex: 0 0 auto;
+    padding: 2px 6px;
+    border-radius: $border-radius-sm;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-family: $font-mono;
+    font-size: 0.72em;
+    letter-spacing: 0.04em;
+    border-bottom: none;
+  }
+
+  :deep(.article-attachment__name) {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+    font-family: $font-mono;
+    font-size: 0.92em;
+    border-bottom: none;
+  }
+
+  :deep(.article-attachment__size) {
+    flex: 0 0 auto;
+    color: var(--text-tertiary);
+    font-size: 0.8em;
+    border-bottom: none;
+  }
+
   :deep(blockquote) {
     margin: $spacing-lg 0;
     padding: $spacing-md $spacing-lg;
@@ -1618,12 +1715,12 @@ export default {
     font-size: 0.9em;
     line-height: 1.5;
     position: relative;
-    color: #e05d6d;
+    color: var(--code-inline);
     background: rgba($primary, 0.08);
     border-radius: $border-radius-sm;
     padding: 0.15em 0.4em;
     margin: 0 0.2em;
-    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', #{$font-mono};
   }
 
   /* 代码窗口是全文唯一的「深色器皿」，底色不跟主题翻白；但夜里正文就铺在
@@ -1633,20 +1730,28 @@ export default {
   --code-window-border: rgba(255, 255, 255, 0.08);
   --code-window-shadow: 0 12px 30px rgba(17, 20, 26, 0.16);
   // atom-one-dark 里唯一低于 AA 的一档：注释/引用 #5c6370 在窗底上只有 2.4–2.7:1，
-  // 还带斜体，中文注释尤其糊。按窗底色分别提亮（浅窗 4.38:1 / 深窗 4.90:1），其余 token 不动。
-  --code-comment: #7a8494;
+  // 还带斜体，中文注释尤其糊。按窗底色分别提亮到 AA 以上（以各自窗底实测：
+  // 浅窗 4.93:1 / 深窗 4.90:1），其余 token 不动。
+  --code-comment: #828d9d;
+  // 行内代码：#e05d6d 叠在琥珀淡底上只有 3.19:1，正文里读不清；浅色压到 #b3314a
+  // （5.51:1）。深色模式下淡底本身压得更深，#e05d6d 已有 4.60:1，保持原色。
+  --code-inline: #b3314a;
 
   :root[data-theme='dark'] & {
     --code-window-bg: #23282f;
     --code-window-border: rgba(255, 255, 255, 0.14);
     --code-window-shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
     --code-comment: #8b95a5;
+    --code-inline: #e05d6d;
   }
 
   // hljs 的 token span 在代码块深处，scoped 下要 :deep 才穿得进去
   :deep(.hljs-comment),
   :deep(.hljs-quote) {
     color: var(--code-comment);
+    // atom-one-dark 把注释设成斜体，但等宽字体没有真斜体，中文注释被浏览器合成倾斜后发虚。
+    // 改回正体，靠颜色而不是倾斜来区分注释。
+    font-style: normal;
   }
 
   :deep(pre) {
@@ -1740,7 +1845,8 @@ export default {
       font-size: 14px;
       padding: 1em 0;
       text-align: right;
-      color: rgba(255, 255, 255, 0.26);
+      // 0.26 白在窗底上只有 2.35:1，等于没有；抬到 0.36（3.32:1）仍明显弱于代码正文
+      color: rgba(255, 255, 255, 0.36);
       border-right: 1px solid rgba(255, 255, 255, 0.06);
       background: transparent;
       user-select: none;
@@ -1785,7 +1891,10 @@ export default {
         }
       }
 
-      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+      // 只有 JetBrains Mono / Fira Code / Consolas 三档且没有系统兜底时，未装这三款的
+      // 机器会落到 generic monospace（Safari 上是 Courier），中文再落到别的字体上。
+      // 接上项目等宽令牌 $font-mono（ui-monospace → SF Mono → Menlo → Consolas）。
+      font-family: 'JetBrains Mono', 'Fira Code', #{$font-mono};
       font-size: 14px;
       line-height: 1.6;
       position: relative;
@@ -1843,7 +1952,8 @@ export default {
       font-family: $font-mono;
       font-size: 0.72rem;
       letter-spacing: 0.04em;
-      color: rgba(255, 255, 255, 0.42);
+      // 0.42 白在标题栏上只有 3.1:1，语言名是有效信息，抬到 0.55
+      color: rgba(255, 255, 255, 0.55);
       text-transform: lowercase;
       pointer-events: none;
       white-space: nowrap;

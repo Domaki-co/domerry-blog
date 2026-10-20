@@ -65,5 +65,4 @@ deploy/docker/target.crt
 unpackage/
 /.zcodeignore
 /design-previews/
-/deploy/
 /.agents/

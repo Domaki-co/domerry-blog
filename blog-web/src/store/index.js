@@ -48,6 +48,11 @@ export default createStore({
     webSiteInfo: {
       showList:[]
     },
+    /**
+     * 站点配置是否已经落定（拿到结果或请求失败）。首屏封面靠它判断
+     * 「配置还没来」还是「后台确实没配」—— 前者不能先渲染内置回退图
+     */
+    siteInfoLoaded: false,
     token: getToken() || '',
     searchVisible: false,
     mobileMenuVisible: false,
@@ -77,6 +82,14 @@ export default createStore({
   mutations: {
     setSiteInfo(state, info) {
       state.webSiteInfo = info
+      state.siteInfoLoaded = true
+    },
+    /**
+     * 配置请求失败时也要置位：界面必须从「等配置」切到「就当没配」，
+     * 否则首屏封面会永远停在低清铺底/墨底上
+     */
+    markSiteInfoLoaded(state) {
+      state.siteInfoLoaded = true
     },
     SET_TOKEN(state, token) {
       state.token = token
