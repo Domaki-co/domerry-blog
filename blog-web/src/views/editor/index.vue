@@ -165,6 +165,7 @@ import { uploadFileApi, deleteFileApi } from '@/api/file'
 import { createArticleApi, updateArticleApi, getArticleInfoApi } from '@/api/article'
 import { getTagsApi,getCategoriesApi } from '@/api/tags'
 import { buildAttachmentMarkdown, encodeHref, isImageFile } from '@/utils/attachment'
+import { compressImage, formatSize } from '@/utils/image'
 
 // 文章状态，与后端 sys_dict_data(article_status) 保持一致
 const STATUS = {
@@ -534,14 +535,28 @@ export default {
         /**
          * 封面上传
          */
-        handleCoverUpload(e) {
+        async handleCoverUpload(e) {
             const file = e.target.files[0]
+            // 清空 input 的值，这样可以重复上传同一个文件
+            e.target.value = ''
             if (!file) return
 
-            const formData = new FormData()
-            formData.append('file', file)
+            // 封面在浏览器端压缩后再上传，原图不进对象存储
+            let cover = file
+            try {
+                cover = await compressImage(file)
+                if (cover !== file) {
+                    this.$message.success(`封面已压缩：${formatSize(file.size)} → ${formatSize(cover.size)}`)
+                }
+            } catch (err) {
+                // 压缩失败不阻断上传，退回原图
+                cover = file
+            }
 
-            uploadFileApi(formData,'article-cover').then(res => {
+            const formData = new FormData()
+            formData.append('file', cover)
+
+            uploadFileApi(formData, 'article-cover').then(res => {
                 if (res.code === 200) {
                     this.articleForm.cover = res.data
                     this.$message.success('上传成功')
@@ -551,9 +566,6 @@ export default {
             }).catch(error => {
                 this.$message.error('上传失败，请重试')
             })
-
-            // 清空 input 的值，这样可以重复上传同一个文件
-            e.target.value = ''
         },
         /**
          * 删除封面
