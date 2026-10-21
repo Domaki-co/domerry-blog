@@ -70,8 +70,8 @@ export function deleteAlbumApi(ids: number[] | number) {
 export function verifyAlbumPasswordApi(id : any, password:any) {
     return request({
       url: `/api/album/verify/${id}`,
-      method: 'get',
-      params: {
+      method: 'post',
+      data: {
         password: password
       }
     })

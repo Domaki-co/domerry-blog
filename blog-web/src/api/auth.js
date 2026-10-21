@@ -101,6 +101,20 @@ export function getAuthRenderApi(source) {
   })
 } 
 
+/**
+ * 用第三方登录回调带回的一次性 code 换取 token
+ * code 短时效且用后即焚，换取失败（过期/已用过）后端返回统一 Result 错误
+ */
+export function exchangeCodeApi(code) {
+  return request({
+    url: '/auth/exchangeCode',
+    method: 'post',
+    params: {
+      code
+    }
+  })
+} 
+
 
 // 获取验证码
 export function getCaptchaApi() {

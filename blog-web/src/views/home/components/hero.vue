@@ -1,18 +1,26 @@
 <template>
-  <section class="hero" :class="{ 'is-plain': !showCover }">
+  <section class="hero" :class="{ 'is-plain': !hasVisual }">
     <!--
       首屏 = 一张站点固定封面铺满视口，站名居中压在图上。
       这里是「首页图」，不放任何文章信息：最新一篇只留一枚 Latest 胶囊当入口，
       文章台账要往下滚动才出现。图是纯装饰（站名就在旁边），整层对读屏隐藏。
     -->
     <div class="hero-cover" aria-hidden="true">
+      <!-- 低清铺底：上一次成功加载的封面缩略图（约 1–2KB base64），几乎与 HTML 同帧就位 -->
+      <div
+        v-if="showPlaceholder"
+        class="hero-cover-blur"
+        :style="{ backgroundImage: `url(${lqip})` }"
+      ></div>
       <img
         v-if="showCover"
-        :src="heroCover"
+        :src="coverSrc"
         alt=""
         loading="eager"
         fetchpriority="high"
         decoding="async"
+        :class="{ 'is-painted': coverPainted }"
+        @load="onCoverLoad"
         @error="coverFailed = true"
       >
     </div>
@@ -46,9 +54,56 @@
 </template>
 
 <script>
-// 首屏封面的「内置回退图」：图的正常来源是后台配置（store 的 webSiteInfo.homeCover，
-// 见 computed heroCover）；后台没配（空串 / undefined / null）时回退到这张。
+// 首屏封面的「内置回退图」：图的正常来源是后台配置（store 的 webSiteInfo.homeCover）。
+// 后台确实没配时才回退这张 —— 但只要站点配置还没回来，就一张图都不渲染，
+// 否则会先下默认图、配置到了再换一次（双倍流量 + 肉眼可见的闪换）。
 const HERO_COVER = '/static/img/234.jpg'
+
+// 上一次成功加载过的封面地址，以及由它现算的低清缩略图（约 1–2KB 的 base64）。
+// 作用：刷新页面时不用等 /api/webConfig 就能先发图；缩略图先把首屏铺满，
+// 大图解码完再淡入，中间不会出现一块墨黑。
+// 这两个 key 在 index.html 的预热脚本里也各读一次，改名要同步。
+const COVER_URL_KEY = 'hero-cover-url'
+const COVER_LQIP_KEY = 'hero-cover-lqip'
+const LQIP_WIDTH = 24
+const LQIP_QUALITY = 0.4
+
+function readLocal(key) {
+  try {
+    return localStorage.getItem(key) || ''
+  } catch (e) {
+    // 隐私模式下 localStorage 直接抛错，当作没有缓存
+    return ''
+  }
+}
+
+function writeLocal(key, value) {
+  try {
+    if (value) localStorage.setItem(key, value)
+    else localStorage.removeItem(key)
+  } catch (e) {
+    // 写不进去只是下次少一次预热，不影响页面
+  }
+}
+
+/**
+ * localStorage 里的值任何脚本都能改写，读回来先过滤：
+ * 封面只认 http(s) 与站内绝对路径（排除 //host 形式，免得被写成任意第三方请求）
+ */
+function readCoverUrl() {
+  const url = readLocal(COVER_URL_KEY)
+  if (!url) return ''
+  const sameOrigin = url.charAt(0) === '/' && url.charAt(1) !== '/'
+  return sameOrigin || /^https?:\/\//i.test(url) ? url : ''
+}
+
+/**
+ * 铺底图只认自己造出来的 data:image base64，别的一律丢掉
+ */
+function readLqip() {
+  const dataUrl = readLocal(COVER_LQIP_KEY)
+  return /^data:image\//i.test(dataUrl) ? dataUrl : ''
+}
 
 export default {
   name: 'HomeHero',
@@ -63,7 +118,13 @@ export default {
   data() {
     return {
       // 封面加载失败就撤掉 img，露出 .hero 的墨底，不做占位图回退
-      coverFailed: false
+      coverFailed: false,
+      // 图已经解码完、可以淡入了；淡入之前是低清铺底
+      coverPainted: false,
+      cachedCover: readCoverUrl(),
+      lqip: readLqip(),
+      // 已经为哪个地址算过缩略图：同一个地址不必每次加载都过一遍 canvas
+      lqipUrl: ''
     }
   },
   computed: {
@@ -88,26 +149,109 @@ export default {
       return this.$store.state.webSiteInfo.summary || ''
     },
     /**
-     * 首屏封面：优先后台配置的 webSiteInfo.homeCover，没配（空串 / undefined / null）时回退内置图
+     * 站点配置是否已经落定（成功落库或请求失败都会置位，见 App.vue / store）
      */
-    heroCover() {
-      const info = this.$store.state.webSiteInfo
-      return (info && info.homeCover) || HERO_COVER
+    siteInfoLoaded() {
+      return !!this.$store.state.siteInfoLoaded
     },
     /**
-     * 有图且没加载失败才渲染 img；否则整屏退回墨色，白字照样立得住
+     * 后台配置的封面（没配就是空串）
+     */
+    configuredCover() {
+      const info = this.$store.state.webSiteInfo
+      return (info && info.homeCover) || ''
+    },
+    /**
+     * 封面图：配置过就用配置的，确实没配才回退内置图
+     */
+    heroCover() {
+      return this.configuredCover || HERO_COVER
+    },
+    /**
+     * 实际交给 <img> 的地址：
+     *   配置已落定 → 用配置图（没配就是内置图）
+     *   还没落定   → 用上次成功加载过的地址（浏览器缓存里通常已经有，秒出）
+     * 配置落定前不碰内置图，避免「先下默认图再换掉」这次多余的请求
+     */
+    coverSrc() {
+      return this.siteInfoLoaded ? this.heroCover : this.cachedCover
+    },
+    /**
+     * 有地址且没加载失败才渲染 img
      */
     showCover() {
-      return !!this.heroCover && !this.coverFailed
+      return !!this.coverSrc && !this.coverFailed
+    },
+    /**
+     * 低清铺底只在「大图还没画上去」且「没失败」时出现
+     */
+    showPlaceholder() {
+      return !!this.lqip && !this.coverPainted && !this.coverFailed
+    },
+    /**
+     * 首屏有没有任何画面（真图或缩略图）。都没有才退回纯墨底，
+     * 此时遮罩也要撤掉 —— 它只为「不可预知的图」服务，平墨底上再叠一层只会把底压花
+     */
+    hasVisual() {
+      return this.showCover || this.showPlaceholder
     }
   },
   watch: {
     /**
-     * 换图时清掉上一次的失败标记：coverFailed 一旦置 true 就再没有复位的机会，
+     * 换图时清掉上一次的失败/已画标记：coverFailed 一旦置 true 就再没有复位的机会，
      * 不清的话后台改好的新图会被 v-if 挡在门外，首屏永久停在墨底
      */
-    heroCover() {
+    coverSrc() {
       this.coverFailed = false
+      this.coverPainted = false
+    }
+  },
+  methods: {
+    /**
+     * 图解码完成：淡入，并把地址和缩略图记下来给下次刷新用
+     */
+    onCoverLoad(event) {
+      const img = event.target
+      this.coverPainted = true
+      // 只缓存后台配的那张：内置回退图是本站静态资源、本来就有 HTTP 缓存，
+      // 且一旦把它记成「上次的封面」，下次进站就会先闪一下默认图 —— 正是要避免的
+      if (this.coverSrc && this.coverSrc === this.configuredCover) {
+        this.rememberCover(this.coverSrc, img)
+      }
+    },
+    rememberCover(url, img) {
+      if (!url) return
+      if (url !== this.cachedCover) {
+        this.cachedCover = url
+        writeLocal(COVER_URL_KEY, url)
+      }
+      if (url === this.lqipUrl) return
+      const dataUrl = this.makeLqip(img)
+      if (!dataUrl) return
+      this.lqipUrl = url
+      this.lqip = dataUrl
+      writeLocal(COVER_LQIP_KEY, dataUrl)
+    },
+    /**
+     * 把封面压到 24px 宽再导成 base64，当低清铺底用。
+     * 跨域图没放开 CORS 时 canvas 会被污染、toDataURL 抛错 —— 拿不到就算了，
+     * 首屏退回墨底，主流程不受影响
+     */
+    makeLqip(img) {
+      if (!img.naturalWidth || !img.naturalHeight) return ''
+      try {
+        const width = LQIP_WIDTH
+        const height = Math.max(1, Math.round((width * img.naturalHeight) / img.naturalWidth))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return ''
+        ctx.drawImage(img, 0, 0, width, height)
+        return canvas.toDataURL('image/jpeg', LQIP_QUALITY)
+      } catch (e) {
+        return ''
+      }
     }
   }
 }
@@ -155,6 +299,8 @@ $header-offset: 64px;
 .hero-cover {
   position: absolute;
   inset: 0;
+  // 模糊铺底放大后会溢出到视口外，裁掉省得撑出横向滚动条
+  overflow: hidden;
 
   img {
     display: block;
@@ -163,7 +309,25 @@ $header-offset: 64px;
     // object-position 略偏上：横图默认居中会把天空裁掉一半
     object-fit: cover;
     object-position: center 45%;
+    // 先透明，解码完成后（.is-painted）再淡入 —— 直接置顶会出现一下「突然变脸」
+    opacity: 0;
+    transition: opacity 0.45s ease;
+
+    &.is-painted {
+      opacity: 1;
+    }
   }
+}
+
+// 低清铺底：上一次封面的 24px 缩略图拉满 + 模糊，盖住图还没到的那段时间。
+// 放大一点是为了吃掉 blur 在边缘溢出的透明，否则四周会有一圈暗边
+.hero-cover-blur {
+  position: absolute;
+  inset: 0;
+  background-position: center 45%;
+  background-size: cover;
+  filter: blur(22px);
+  transform: scale(1.08);
 }
 
 // 遮罩：分三段「顶压暗 / 中间全透 / 底压暗」。单层整体压暗是整个画面发浊、暖色被
@@ -201,7 +365,6 @@ $header-offset: 64px;
 .hero.is-plain .hero-scrim {
   display: none;
 }
-
 .hero-inner {
   position: relative;
   z-index: 1;
@@ -343,6 +506,11 @@ a.hero-pill:hover {
   // 「向下」的往复浮动是纯装饰，一并停掉；这里写在动画声明之后，权重相同才盖得住
   .hero-scroll {
     animation: none;
+    transition: none;
+  }
+
+  // 封面淡入同理：关掉过渡直接换图，不做视觉特效
+  .hero-cover img {
     transition: none;
   }
 }

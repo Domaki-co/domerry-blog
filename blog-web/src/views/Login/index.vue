@@ -54,11 +54,10 @@
 
           <div class="third-party-login">
             <div
-              v-for="(item, type) in loginTypes"
+              v-for="(item, type) in thirdPartyLoginTypes"
               :key="type"
               class="login-icon-wrapper"
               @click="handleThirdPartyLogin(type)"
-              v-if="type !== 'wechat'"
             >
               <el-tooltip :content="item.title" placement="top">
                 <div :class="['login-icon', type]">
@@ -281,6 +280,11 @@ import {
 } from "@/api/auth";
 import { setCookie } from "@/utils/cookie";
 import SliderVerify from "./components/SliderVerify.vue";
+
+// 「记住我」的存储键：本实现只记住用户名，不改变 token 有效期
+// （token 仍是 7 天 cookie，由 store 的 SET_TOKEN 决定）
+const REMEMBERED_USERNAME_KEY = "remembered_username";
+
 export default {
   name: "Login",
   components: {
@@ -335,8 +339,12 @@ export default {
       },
       codeSending: false,
       codeButtonText: "发送验证码",
+      // 微信倒计时与邮箱倒计时各自持有句柄：共用 codeTimer 时，任一方的清理都会误杀另一方
       codeTimer: null,
+      emailCodeTimer: null,
       pollingTimer: null,
+      // 微信轮询已执行次数，达到上限即停止，避免用户始终不扫码时无限轮询
+      wechatPollingCount: 0,
       isShowSliderVerify: false,
       sliderVerify: null,
       rules: {
@@ -377,12 +385,33 @@ export default {
     };
   },
 
+  computed: {
+    // 模板里 v-for 与 v-if 同元素时，v-if 拿到的是 _ctx.type（undefined），条件恒真、
+    // 过滤从未生效；改到这里过滤，且必须基于 created() 已按后端 loginTypeList 删过键的
+    // loginTypes 求值，否则会把后端没开放的登录方式又渲染出来
+    thirdPartyLoginTypes() {
+      const types = {};
+      Object.keys(this.loginTypes).forEach((key) => {
+        if (key !== "wechat") {
+          types[key] = this.loginTypes[key];
+        }
+      });
+      return types;
+    },
+  },
+
   created() {
     Object.keys(this.loginTypes).forEach((key) => {
       if (!this.$store.state.webSiteInfo?.loginTypeList?.includes(key)) {
         delete this.loginTypes[key];
       }
     });
+    // 有存档就预填用户名并勾上复选框：本实现只记住用户名，不改变 token 有效期
+    const rememberedUsername = localStorage.getItem(REMEMBERED_USERNAME_KEY);
+    if (rememberedUsername) {
+      this.loginForm.username = rememberedUsername;
+      this.rememberMe = true;
+    }
     this.getWechatLoginCode();
     this.$nextTick(() => {
       disableScroll();
@@ -401,6 +430,12 @@ export default {
       this.loading = true;
       try {
         await this.$store.dispatch("loginAction", this.loginForm);
+        // 勾了就存用户名，没勾就清掉存档，否则用户取消勾选后存档永远删不掉
+        if (this.rememberMe) {
+          localStorage.setItem(REMEMBERED_USERNAME_KEY, this.loginForm.username);
+        } else {
+          localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+        }
         this.$refs.sliderVerify?.verifySuccessEvent();
         this.$message.success("登录成功");
         this.handleClose();
@@ -529,9 +564,10 @@ export default {
         return;
       }
       getAuthRenderApi(type).then((res) => {
-        //将当前地址存到cookie中
-        if (!window.location.href.includes("login")) {
-          setCookie("redirectUrl", window.location.href);
+        //将当前地址存到cookie中：只存同源相对路径（path + query + hash），
+        //不再存整串 href，避免把外部地址写进 cookie 变成开放重定向
+        if (this.$route.path !== "/login") {
+          setCookie("redirectUrl", this.$route.fullPath);
         }
         window.open(res.data, "_self");
       });
@@ -540,6 +576,9 @@ export default {
      * 获取微信登录验证码
      */
     getWechatLoginCode() {
+      // 本方法有三个调用点（created / switchForm / 模板里的刷新图标），
+      // 先清掉上一轮的轮询与倒计时，否则旧句柄被覆盖后再也无法清除
+      this.clearWechatTimer();
       getWechatLoginCodeApi().then((res) => {
         this.wechatForm.code = res.data;
         this.pollingWechatIsLogin();
@@ -548,8 +587,7 @@ export default {
         this.codeTimer = setInterval(() => {
           countdown--;
           if (countdown <= 0) {
-            clearInterval(this.codeTimer);
-            clearInterval(this.pollingTimer);
+            this.clearWechatTimer();
             this.wechatForm.code = "验证码已失效";
           }
         }, 1000);
@@ -559,17 +597,37 @@ export default {
      * 定时轮询获取微信登录状态
      */
     pollingWechatIsLogin() {
-      this.pollingTimer = setInterval(() => {
-        getWechatIsLoginApi(this.wechatForm.code).then((res) => {
-          if (res.code === 200) {
-            this.$store.commit("SET_TOKEN", res.data.token);
-            this.$store.commit("SET_USER_INFO", res.data);
-            clearInterval(this.pollingTimer);
-            this.$message.success("登录成功");
-            this.handleClose();
-          }
-        });
+      const MAX_POLLING_COUNT = 60; // 与验证码 60 秒有效期对齐
+      this.wechatPollingCount = 0;
+      const timer = setInterval(() => {
+        // 句柄已被替换说明轮询被重新发起过，本次轮询自行退出，避免误清新句柄
+        if (this.pollingTimer !== timer) {
+          clearInterval(timer);
+          return;
+        }
+        if (this.wechatPollingCount >= MAX_POLLING_COUNT) {
+          this.clearWechatTimer();
+          this.wechatForm.code = "验证码已失效";
+          return;
+        }
+        this.wechatPollingCount++;
+        getWechatIsLoginApi(this.wechatForm.code)
+          .then((res) => {
+            if (res.code === 200) {
+              this.$store.commit("SET_TOKEN", res.data.token);
+              this.$store.commit("SET_USER_INFO", res.data);
+              // 只清自己持有的句柄，避免清掉后续重新发起的轮询
+              if (this.pollingTimer === timer) {
+                this.clearWechatTimer();
+              }
+              this.$message.success("登录成功");
+              this.handleClose();
+            }
+          })
+          // 未扫码时接口返回非 200，request.js 会 reject，这是轮询的预期结果，忽略即可
+          .catch(() => {});
       }, 1000);
+      this.pollingTimer = timer;
     },
 
     /**
@@ -604,10 +662,11 @@ export default {
           let countdown = 60;
           this.codeButtonText = `${countdown}秒后重试`;
 
-          this.codeTimer = setInterval(() => {
+          this.emailCodeTimer = setInterval(() => {
             countdown--;
             if (countdown <= 0) {
-              clearInterval(this.codeTimer);
+              clearInterval(this.emailCodeTimer);
+              this.emailCodeTimer = null;
               this.codeSending = false;
               this.codeButtonText = "发送验证码";
             } else {
@@ -624,12 +683,25 @@ export default {
     /**
      * 清理定时器
      */
-    clearTimer() {
-      if (this.codeTimer) {
-        clearInterval(this.codeTimer);
-      }
+    clearWechatTimer() {
       if (this.pollingTimer) {
         clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+      }
+      if (this.codeTimer) {
+        clearInterval(this.codeTimer);
+        this.codeTimer = null;
+      }
+    },
+
+    clearTimer() {
+      this.clearWechatTimer();
+      // 邮箱倒计时被提前清掉时同步复位按钮状态，否则 codeSending 会一直为 true，按钮永久禁用
+      if (this.emailCodeTimer) {
+        clearInterval(this.emailCodeTimer);
+        this.emailCodeTimer = null;
+        this.codeSending = false;
+        this.codeButtonText = "发送验证码";
       }
     },
 

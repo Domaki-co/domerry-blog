@@ -1,6 +1,9 @@
 <template>
     <div class="editor-container">
 
+        <!-- 附件上传入口：工具栏「插入附件」触发，不限文件类型 -->
+        <input ref="attachmentInput" type="file" @change="handleAttachmentUpload" style="display: none">
+
         <div class="editor-main">
             <el-form :model="articleForm" :rules="rules" ref="articleForm" label-position="top" size="small">
                 <div class="editor-content">
@@ -161,6 +164,7 @@ import 'vditor/dist/index.css'
 import { uploadFileApi, deleteFileApi } from '@/api/file'
 import { createArticleApi, updateArticleApi, getArticleInfoApi } from '@/api/article'
 import { getTagsApi,getCategoriesApi } from '@/api/tags'
+import { buildAttachmentMarkdown, encodeHref, isImageFile } from '@/utils/attachment'
 
 // 文章状态，与后端 sys_dict_data(article_status) 保持一致
 const STATUS = {
@@ -253,7 +257,26 @@ export default {
                 ],
                 originalUrl: [
                     { required: true, message: '请输入原文地址', trigger: 'blur' },
-                    { type: 'url', message: '请输入有效的URL地址', trigger: 'blur' }
+                    {
+                        // async-validator 的 type: 'url' 只要求出现 "//"，javascript:// 这类伪协议能混过去，故显式校验协议
+                        validator: (rule, value, callback) => {
+                            if (!value) {
+                                callback();
+                                return;
+                            }
+                            try {
+                                const protocol = new URL(value).protocol;
+                                if (protocol === 'http:' || protocol === 'https:') {
+                                    callback();
+                                } else {
+                                    callback(new Error('原文地址只支持 http/https 协议'));
+                                }
+                            } catch (error) {
+                                callback(new Error('请输入有效的URL地址'));
+                            }
+                        },
+                        trigger: 'blur'
+                    }
                 ],
                 keywords: [
                     {
@@ -287,9 +310,13 @@ export default {
     created() {
         getCategoriesApi().then(res => {
             this.categories = res.data
+        }).catch(() => {
+            this.$message.error('获取分类失败')
         })
         getTagsApi().then(res => {
             this.tags = res.data
+        }).catch(() => {
+            this.$message.error('获取标签失败')
         })
         this.articleForm.id = this.$route.query.id
         if (this.articleForm.id) {
@@ -306,6 +333,8 @@ export default {
                         this.vditor.setValue(this.pendingContent)
                     }
                 })
+            }).catch(() => {
+                this.$message.error('获取文章信息失败')
             })
         }
     },
@@ -330,6 +359,12 @@ export default {
             if (this.vditor) return
             const _this = this
             this.vditor = new Vditor('vditor-editor', {
+                // 必须显式给宽度：Vditor 默认 width = "auto"，initUI 会把容器 div 的
+                // inline style 改成 width: auto，而 #vditor-editor 是 .el-form-item__content
+                // （display: flex）里的 flex 项 —— width: auto 于是退化成"按内容收缩"，
+                // 空内容时只剩工具栏的 min-content 宽度（约 650px），右侧留一大片空白，
+                // 直到正文写到足够宽才被撑满（"字数多了框才恢复正常"就是这么来的）
+                width: '100%',
                 height: 500,
                 mode: 'ir',
                 theme: 'classic',
@@ -350,6 +385,15 @@ export default {
                     'headings', 'bold', 'italic', 'strike', '|',
                     'list', 'ordered-list', 'check', 'outdent', 'indent', '|',
                     'link', 'upload', 'table', 'code', 'inline-code', '|',
+                    {
+                        name: 'insert-attachment',
+                        tip: '插入附件',
+                        icon: '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4 1h5l3 3v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm4.5 1.5V4H11L8.5 2.5zM5 6.6h6v1H5v-1zm0 2.5h6v1H5v-1zM5 11.6h4v1H5v-1z"/></svg>',
+                        click: () => {
+                            this.$refs.attachmentInput && this.$refs.attachmentInput.click()
+                        }
+                    },
+                    '|',
                     'fullscreen', 'preview', 'export', 'info'
                 ],
                 upload: {
@@ -436,6 +480,11 @@ export default {
         handleUploadFiles(files) {
             const file = Array.isArray(files) ? files[0] : files
             if (!file) return
+            // 拖拽/粘贴进来的非图片文件不能按图片插入，否则正文里会出现破图
+            if (!isImageFile(file)) {
+                this.uploadAttachmentFile(file)
+                return
+            }
             if (file.size > 5 * 1024 * 1024) {
                 this.$message.error('图片大小不能超过5MB')
                 return
@@ -443,8 +492,35 @@ export default {
             const formdata = new FormData()
             formdata.append('file', file)
             uploadFileApi(formdata, 'article-content').then(res => {
-                const url = res.data
-                this.vditor.insertValue('\n![image](' + url + ')\n')
+                this.vditor.insertValue('\n![' + (file.name || 'image') + '](' + encodeHref(res.data) + ')\n')
+            }).catch(err => {
+                this.$message.error('上传失败: ' + (err.message || '请重试'))
+            })
+        },
+
+        /**
+         * 工具栏「插入附件」选择的文件
+         */
+        handleAttachmentUpload(e) {
+            const file = e.target.files && e.target.files[0]
+            // 清空 input 的值，同一文件可重复选择
+            e.target.value = ''
+            if (!file) return
+            this.uploadAttachmentFile(file)
+        },
+
+        /**
+         * 上传附件并插入下载卡片
+         */
+        uploadAttachmentFile(file) {
+            if (file.size > 20 * 1024 * 1024) {
+                this.$message.error('附件大小不能超过20MB')
+                return
+            }
+            const formdata = new FormData()
+            formdata.append('file', file)
+            uploadFileApi(formdata, 'article-content').then(res => {
+                this.vditor.insertValue('\n' + buildAttachmentMarkdown(res.data, file.name, file.size) + '\n')
             }).catch(err => {
                 this.$message.error('上传失败: ' + (err.message || '请重试'))
             })
@@ -895,7 +971,19 @@ export default {
     --border-color: var(--rule);
     background: var(--surface);
     border-radius: 10px !important;
-    overflow: hidden;
+    // 这里不能写 overflow: hidden 切圆角：工具栏图标的文字提示是
+    // .vditor-tooltipped__n::after（vditor/dist/index.css 里 26 个按钮都用 __n，
+    // 定位在按钮上方 bottom:100%），一旦被裁剪整条提示不显示，用户就只剩一排
+    // 没有说明的图标。圆角由 border-radius 与工具栏自身圆角维持，
+    // 顶层底色与工具栏同色（var(--surface)），不裁剪也不会在角上露出色块。
+    //
+    // overflow: visible 之后必须显式 min-width: 0：.vditor 是
+    // .el-form-item__content（display: flex）的子项，flex 子项的 min-width: auto
+    // 只在 overflow 非 visible 时才收缩到 0，改成 visible 后它的下限变成内容的
+    // min-content 宽度（工具栏 26 个按钮 + 编辑区的宽表格），会把整个编辑器
+    // 撑出内容卡片、盖住右侧栏。
+    width: 100%;
+    min-width: 0;
     border: 1px solid var(--rule) !important;
     transition: border-color 0.2s ease;
 
@@ -903,6 +991,12 @@ export default {
         background-color: var(--surface) !important;
         border-bottom: 1px solid var(--rule) !important;
         padding: 6px 10px;
+        border-radius: 9px 9px 0 0;
+    }
+
+    // 提示文本取自按钮的 aria-label（Vditor 自带中文），默认 11px 偏小
+    :deep(.vditor-tooltipped::after) {
+        font-size: 12px;
     }
 
     &:focus-within {
@@ -910,7 +1004,8 @@ export default {
     }
 }
 
-.vditor-reset {
+// .vditor-reset 由 Vditor 自己创建，没有 scoped 的 data-v 属性，必须走 :deep 才能命中
+:deep(.vditor-reset) {
     color: var(--text-primary);
 }
 

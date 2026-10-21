@@ -13,30 +13,41 @@ spring:
       strict: false
       datasource:
         master:
-          url: jdbc:mysql://${MYSQL_HOST:192.168.1.100}:${MYSQL_PORT:3306}/domerry_blog?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai&tinyInt1isBit=false&allowPublicKeyRetrieval=true
+          url: jdbc:mysql://${MYSQL_HOST:192.168.196.130}:${MYSQL_PORT:33506}/${MYSQL_MASTER_DATABASE:domerry_blog}?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai&tinyInt1isBit=false&allowPublicKeyRetrieval=true
           driver-class-name: com.mysql.cj.jdbc.Driver
           username: ${MYSQL_USERNAME:}
           password: ${MYSQL_PASSWORD:}
         slave:
-          url: jdbc:mysql://${MYSQL_HOST:192.168.1.100}:${MYSQL_PORT:3306}/test?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai&tinyInt1isBit=false&allowPublicKeyRetrieval=true
+          url: jdbc:mysql://${MYSQL_HOST:192.168.196.130}:${MYSQL_PORT:33506}/${MYSQL_SLAVE_DATABASE:test}?characterEncoding=UTF-8&useUnicode=true&useSSL=false&serverTimezone=Asia/Shanghai&tinyInt1isBit=false&allowPublicKeyRetrieval=true
           driver-class-name: com.mysql.cj.jdbc.Driver
           username: ${MYSQL_USERNAME:}
           password: ${MYSQL_PASSWORD:}
 
   redis:
-    host: ${REDIS_HOST:192.168.1.100}
-    port: ${REDIS_PORT:6379}
+    host: ${REDIS_HOST:192.168.196.130}
+    port: ${REDIS_PORT:63579}
     timeout: 10000
     password: ${REDIS_PASSWORD:}
     database: 8
 
-# knife4j的增强配置，不需要增强可以不配
+
+#==============================knife4j配置==============================
 knife4j:
-  enable: false
+  enable: true
   basic:
     enable: false
-  setting:
-    language: zh_cn
+  openapi:
+    title: Domerry 博客接口文档
+    description: 一个专注于技术分享的博客平台
+    url: ''
+    version: v1.0
+    group:
+      test1:
+        group-name: 分组名称
+        api-rule: package
+        api-rule-resources:
+          - com.domerry
+
 #==============================公众号配置==============================
 wechat:
   app-id:
@@ -46,6 +57,9 @@ wechat:
   token:
   # 公众号AES Key
   aesKey:
+
+  appletAppId:
+  appletSecret:
 
 #==============================豆包推理AI配置=======================================
 ai:
@@ -81,9 +95,9 @@ dromara:
         enable-storage: true  # 启用存储
         access-key: ${MINIO_ACCESS_KEY}
         secret-key: ${MINIO_SECRET_KEY}
-        end-point: ${MINIO_ENDPOINT:https://minio.doma.cool/}
+        end-point: ${MINIO_ENDPOINT:https://your-cdn.example/}
         bucket-name: ${MINIO_BUCKET:blog}
-        domain: ${MINIO_DOMAIN:https://minio.doma.cool/blog/} # 访问域名，注意“/”结尾，例如：http://abc.hn-bkt.clouddn.com/
+        domain: ${MINIO_DOMAIN:https://your-cdn.example/blog/} # 访问域名，注意“/”结尾，例如：http://abc.hn-bkt.clouddn.com/
         base-path: blog/ # 基础路径
 
 #==============================邮箱配置=======================================
@@ -92,8 +106,28 @@ mail:
   smtp:
     host: smtp.qq.com
     port: 587
-    email:
+    email: ${MAIL_USERNAME:}
     password: ${MAIL_PASSWORD:}
 jasypt:
   encryptor:
     password: ${JASYPT_ENCRYPTOR_PASSWORD}
+
+#============================第三方登录配置信息===================================
+qq:
+  app-id: ${QQ_APP_ID:}
+  app-secret: ${QQ_APP_SECRET:}
+  redirect-url: ${QQ_REDIRECT_URL:https://your-domain.example/blog/api/auth/callback/qq}
+weibo:
+  app-id: ${WEIBO_APP_ID:}
+  app-secret: ${WEIBO_APP_SECRET:}
+  redirect-url: ${WEIBO_REDIRECT_URL:https://your-domain.example/blog/api/auth/callback/weibo}
+
+gitee:
+  app-id: ${GITEE_APP_ID:}
+  app-secret: ${GITEE_APP_SECRET:}
+  redirect-url: ${GITEE_REDIRECT_URL:https://your-domain.example/blog/api/auth/callback/gitee}
+
+github:
+  app-id: ${GITHUB_APP_ID:}
+  app-secret: ${GITHUB_APP_SECRET:}
+  redirect-url: ${GITHUB_REDIRECT_URL:https://your-domain.example/blog/doma/api/auth/callback/github}

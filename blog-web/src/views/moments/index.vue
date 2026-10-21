@@ -188,6 +188,9 @@ export default {
         })
       } catch (error) {
         console.error('获取说说列表失败:', error)
+        this.$message?.error('获取说说列表失败')
+        // 不置 false 的话滚动到底会不断重试同一个失败请求
+        this.hasMore = false
       } finally {
         this.loading = false
         this.loadingMore = false

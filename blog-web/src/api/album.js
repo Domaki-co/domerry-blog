@@ -36,8 +36,8 @@ export function getAlbumPhotosApi(id) {
 export function verifyAlbumPasswordApi(id, password) {
   return request({
     url: `/api/album/verify/${id}`,
-    method: 'get',
-    params: {
+    method: 'post',
+    data: {
       password: password
     }
   })

@@ -36,7 +36,7 @@
           <el-table-column label="文章标题" align="center" prop="articleTitle" show-overflow-tooltip />
           <el-table-column label="评论内容" width="300" align="center" prop="content" show-overflow-tooltip>
             <template #default="scope">
-                <span v-html="scope.row.content"></span>
+                <span v-html="sanitizeHtml(scope.row.content)"></span>
             </template>
           </el-table-column>
           <el-table-column label="创建时间" align="center" prop="createTime" width="180" />
@@ -72,6 +72,7 @@
   
   <script setup lang="ts">
   import { ElMessage, ElMessageBox } from 'element-plus'
+  import { sanitizeHtml } from '@/utils/sanitize'
   import {
     getCommentListApi,
     deleteCommentApi

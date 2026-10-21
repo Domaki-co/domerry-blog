@@ -7,12 +7,22 @@ import { getToken, setToken, removeToken } from '@/utils/cookie'
  * 从 sessionStorage 恢复登录用户信息
  * 这里加了 try/catch：历史脏数据（比如 "undefined" 这类非 JSON 文本）会让 JSON.parse 直接抛错，
  * 而这里是模块顶层的求值，一抛错整个应用都起不来（白屏），所以宁可丢掉缓存
+ * 只取展示字段：缓存可被任意脚本改写，roles/permissions 这类授权字段一律不认，
+ * 权限判断只信本次会话里接口返回并 SET_USER_INFO 提交进来的 state.userInfo
  */
+const CACHED_DISPLAY_FIELDS = ['id', 'username', 'nickname', 'avatar', 'userSettings']
+
 function readCachedUser() {
   const raw = sessionStorage.getItem("user")
   if (!raw) return null
   try {
-    return JSON.parse(raw) || null
+    const parsed = JSON.parse(raw)
+    if (!parsed || typeof parsed !== 'object') return null
+    const display = {}
+    CACHED_DISPLAY_FIELDS.forEach(key => {
+      if (parsed[key] !== undefined) display[key] = parsed[key]
+    })
+    return display
   } catch (e) {
     sessionStorage.removeItem("user")
     return null
@@ -38,6 +48,11 @@ export default createStore({
     webSiteInfo: {
       showList:[]
     },
+    /**
+     * 站点配置是否已经落定（拿到结果或请求失败）。首屏封面靠它判断
+     * 「配置还没来」还是「后台确实没配」—— 前者不能先渲染内置回退图
+     */
+    siteInfoLoaded: false,
     token: getToken() || '',
     searchVisible: false,
     mobileMenuVisible: false,
@@ -53,6 +68,8 @@ export default createStore({
     },
     /**
      * 是否管理员（后端 /auth/info 返回 roles 数组）
+     * roles 只可能来自接口响应：sessionStorage 的缓存在 readCachedUser 里已被剥掉授权字段，
+     * 伪造缓存不会让这里变 true
      */
     isAdmin(state) {
       const info = state.userInfo
@@ -65,6 +82,14 @@ export default createStore({
   mutations: {
     setSiteInfo(state, info) {
       state.webSiteInfo = info
+      state.siteInfoLoaded = true
+    },
+    /**
+     * 配置请求失败时也要置位：界面必须从「等配置」切到「就当没配」，
+     * 否则首屏封面会永远停在低清铺底/墨底上
+     */
+    markSiteInfoLoaded(state) {
+      state.siteInfoLoaded = true
     },
     SET_TOKEN(state, token) {
       state.token = token

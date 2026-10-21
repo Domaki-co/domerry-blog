@@ -126,11 +126,17 @@ export default {
     submitUpload() {
       this.$refs.uploadForm.validate((valid) => {
         if (valid) {
+          this.uploading = true;
           addResourceApi(this.uploadForm).then(res => {
             this.$message.success("资源上传成功，等待博主审核！");
             // 重置表单
             this.$refs.uploadForm.resetFields();
             this.handleClose();
+          }).catch(err => {
+            // 失败时不关弹窗：表单内容还在，用户可以直接改完重试
+            this.$message.error(err.message || '资源上传失败，请重试');
+          }).finally(() => {
+            this.uploading = false;
           })
         }
       });

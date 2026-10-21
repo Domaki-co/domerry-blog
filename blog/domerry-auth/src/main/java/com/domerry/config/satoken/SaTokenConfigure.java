@@ -18,6 +18,7 @@ public class SaTokenConfigure implements WebMvcConfigurer {
                         "/auth/login",
                         "/auth/logout",
                         "/auth/verify",
+                        "/auth/exchangeCode",   // 第三方登录换取 token：此时前端还没有 token
                         "/swagger-ui/**",          // knife4j接口文档
                         "/webjars/**",        // knife4j相关资源
                         "/v3/api-docs/**",     // openapi接口文档
@@ -30,5 +31,11 @@ public class SaTokenConfigure implements WebMvcConfigurer {
                         "/localFile/**",
                         "/third/**"
                 );
+
+        // 注解校验和上面那个 auth 回调在同一个 preHandle 里，被 excludePathPatterns 放行的路径
+        // 连 @SaCheckLogin 都不会触发；所以留言提交单独挂一个只做注解校验的拦截器
+        // （无参构造 = 空 auth 回调 + 注解校验），它不参与上面的排除名单
+        registry.addInterceptor(new SaInterceptor())
+                .addPathPatterns("/api/message/add");
     }
 }

@@ -96,13 +96,17 @@ export default {
     },
     scrollToCategory(categoryName) {
       this.activeCategory = categoryName
-      const element = this.$refs[categoryName][0]
+      // 分类数据先于 DOM 到达，ref 可能尚未挂载，直接解引用会抛错中断滚动
+      const element = this.$refs[categoryName]?.[0]
+      if (!element) return
       element.scrollIntoView({ behavior: 'smooth', block: 'start' })
     },
     handleScroll() {
       const categories = this.categories
       for (let i = categories.length - 1; i >= 0; i--) {
-        const element = this.$refs[categories[i].name][0]
+        // scroll 事件在挂载前后都会触发，缺守卫时一次解引用失败就会打断整个循环
+        const element = this.$refs[categories[i].name]?.[0]
+        if (!element) continue
         const rect = element.getBoundingClientRect()
         if (rect.top <= 100) {
           this.activeCategory = categories[i].name
@@ -112,8 +116,13 @@ export default {
     }
   },
   async created() {
-    const res = await getCategoriesApi()
-    this.categories = res.data
+    try {
+      const res = await getCategoriesApi()
+      this.categories = res.data
+    } catch (error) {
+      // 未捕获的 reject 会让页面停在空列表且没有任何提示
+      this.$message.error('获取分类列表失败')
+    }
   },
   mounted() {
     // 监听滚动以更新激活的分类

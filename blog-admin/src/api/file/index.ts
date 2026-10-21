@@ -25,8 +25,8 @@ export function uploadApi(data: any, source: string) {
 export function deleteFileApi(url: string) {
   return request({
     url: `/file/delete`,
-    method: 'get',
-    params: { url:url }
+    method: 'post',
+    data: { url:url }
   })
 }
 

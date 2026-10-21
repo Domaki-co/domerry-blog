@@ -28,8 +28,8 @@ export function addResourceApi(data) {
 export function verifyCodeApi(data) {
   return request({
     url: '/api/resource/verify',
-    method: 'get',
-    params: data
+    method: 'post',
+    data
   })
 }
 

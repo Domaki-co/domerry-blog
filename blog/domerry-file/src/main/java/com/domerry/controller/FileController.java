@@ -6,6 +6,7 @@ import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.domerry.common.Constants;
 import com.domerry.common.Result;
+import com.domerry.dto.file.FileDeleteDto;
 import com.domerry.entity.FileDetail;
 import com.domerry.entity.SysFileOss;
 import com.domerry.exception.ServiceException;
@@ -93,13 +94,13 @@ public class FileController {
         return Result.success(fileInfo.getUrl());
     }
 
-    @GetMapping("/delete")
+    @PostMapping("/delete")
     @ApiOperation(value = "删除文件")
     @SaCheckPermission("sys:file:delete")
-    public Result<Boolean> delete(String url) {
-        boolean flag = fileStorageService.delete(url);
+    public Result<Boolean> delete(@RequestBody FileDeleteDto fileDeleteDto) {
+        boolean flag = fileStorageService.delete(fileDeleteDto.getUrl());
         if (flag) {
-            fileDetailService.delete(url);
+            fileDetailService.delete(fileDeleteDto.getUrl());
         }
         return Result.success();
     }

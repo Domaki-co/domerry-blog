@@ -223,6 +223,14 @@ export default {
         window.removeEventListener('resize', this.resizeHandler)
       }
     }
+  },
+  beforeUnmount() {
+    // el-dialog 的 @close 要等 afterLeave 才触发，弹窗还开着就导航离开时 closeDialog 不会执行，
+    // 这里兜底解绑，否则每次打开弹窗都会留下一个实例和它缓存的 previews dataURL
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler)
+      this.resizeHandler = null
+    }
   }
 }
 </script>

@@ -8,6 +8,7 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
+import { buildAttachmentMarkdown, encodeHref, isImageFile } from './attachment'
 
 interface UploadSuccMap {
   errFiles: string[]
@@ -33,6 +34,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'videoClick', vditorInstance: any): void
+  (e: 'attachmentClick', vditorInstance: any): void
 }>()
 
 const editorRef = ref<HTMLElement | null>(null)
@@ -80,7 +82,10 @@ const buildUploadHandler = () => {
       const successResults = results.filter((item) => item.url)
       if (successResults.length) {
         restoreEditorRange(savedRange)
-        const markdown = successResults.map((item) => `![image](${item.url})\n`).join('')
+        // 图片仍走 markdown，其他文件插附件链接，否则会被渲染成破图
+        const markdown = successResults.map((item) => (isImageFile(item.file)
+          ? `![${item.file.name || 'image'}](${encodeHref(item.url)})\n`
+          : `\n${buildAttachmentMarkdown(item.url, item.file.name, item.file.size)}\n`)).join('')
         vditor.value?.insertValue(`\n${markdown}`)
       }
       const errFiles = results.filter((item) => !item.url).map((item) => item.file.name)
@@ -120,6 +125,14 @@ onMounted(() => {
         click: (instance: any) => {
           emit('videoClick', instance)
         }
+      },
+      {
+        name: 'insert-attachment',
+        tip: '插入附件',
+        icon: '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M4 1h5l3 3v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm4.5 1.5V4H11L8.5 2.5zM5 6.6h6v1H5v-1zm0 2.5h6v1H5v-1zM5 11.6h4v1H5v-1z"/></svg>',
+        click: (instance: any) => {
+          emit('attachmentClick', instance)
+        }
       }
     ],
     upload: props.uploadHandler ? {
@@ -158,7 +171,10 @@ defineExpose({
   instance: vditor,
   getValue: () => vditor.value?.getValue(),
   getHtml: () => vditor.value?.getHTML(),
-  insertHtml: (html: string) => vditor.value?.insertValue(html)
+  insertHtml: (html: string) => vditor.value?.insertValue(html),
+  // 前后留空行，链接才会被当成独立块而不是接在上一段末尾
+  insertAttachment: (url: string, name?: string, size?: number) =>
+    vditor.value?.insertValue(`\n${buildAttachmentMarkdown(url, name, size)}\n`)
 })
 </script>
 

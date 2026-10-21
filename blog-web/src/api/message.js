@@ -30,7 +30,7 @@ export function getNotificationsApi(params) {
 export function markNotificationAsReadApi(id) {
   return request({
     url: `/notifications/read/${id}`,
-    method: 'get'
+    method: 'post'
   })
 }
 
@@ -38,7 +38,7 @@ export function markNotificationAsReadApi(id) {
 export function markAllNotificationsAsReadApi() {
   return request({
     url: '/notifications/read/all',
-    method: 'get'
+    method: 'post'
   })
 }
 

@@ -18,7 +18,16 @@
               var old = document.querySelectorAll("link[rel*='icon']");
               old.forEach(function(el) { el.remove(); });
               var link = document.createElement('link');
-              link.type = 'image/x-icon';
+              // 按扩展名给 MIME：后台现在允许传 png/svg/webp 图标，
+              // 一律写 image/x-icon 会让这些图标在部分浏览器里不显示
+              var ICON_TYPES = {
+                ico: 'image/x-icon', png: 'image/png', svg: 'image/svg+xml',
+                gif: 'image/gif', webp: 'image/webp', jpg: 'image/jpeg',
+                jpeg: 'image/jpeg', bmp: 'image/bmp', avif: 'image/avif'
+              };
+              var m = /\.([a-z0-9]+)(?:[?#]|$)/i.exec(icon);
+              var type = m && ICON_TYPES[m[1].toLowerCase()];
+              if (type) link.type = type;
               link.rel = 'shortcut icon';
               link.href = icon;
               document.head.appendChild(link);

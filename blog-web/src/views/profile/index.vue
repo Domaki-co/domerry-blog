@@ -308,7 +308,7 @@
               class="feedback-form">
               <el-form-item label="反馈类型" prop="type">
                 <el-select v-model="feedbackForm.type" placeholder="请选择反馈类型">
-                  <el-option v-for="item in feedbackTypes" :label="item.label" :value="item.value"></el-option>
+                  <el-option v-for="item in feedbackTypes" :key="item.value" :label="item.label" :value="item.value"></el-option>
                 </el-select>
               </el-form-item>
               <el-form-item label="反馈内容" prop="content">
@@ -331,17 +331,17 @@
                 <el-card v-for="feedback in myFeedbacks" :key="feedback.id" class="feedback-item">
                   <div class="feedback-header">
                     <div class="feedback-info">
-                      <el-tag v-if="item.value === feedback.type" v-for="item in feedbackTypes" :type="item.style">
-                        {{ item.label }}
+                      <el-tag v-if="feedbackTypeMap[feedback.type]" :type="feedbackTypeMap[feedback.type].style">
+                        {{ feedbackTypeMap[feedback.type].label }}
                       </el-tag>
                       <span class="feedback-time">
                         <i class="far fa-clock"></i>
                         {{ feedback.createTime }}
                       </span>
                     </div>
-                    <el-tag v-if="item.value === String(feedback.status)" v-for="item in feedbackStatus"
-                      :type="item.style">
-                      {{ item.label }}
+                    <el-tag v-if="feedbackStatusMap[String(feedback.status)]"
+                      :type="feedbackStatusMap[String(feedback.status)].style">
+                      {{ feedbackStatusMap[String(feedback.status)].label }}
                     </el-tag>
                   </div>
                   <div class="feedback-content">
@@ -530,6 +530,22 @@ export default {
     }
   },
 
+  computed: {
+    // 字典查找表：模板里不能再写 v-if + v-for（Vue 3 会把 v-if 编译到 v-for 作用域外，item 为 undefined）
+    feedbackTypeMap() {
+      return this.feedbackTypes.reduce((map, item) => {
+        map[item.value] = item
+        return map
+      }, {})
+    },
+    feedbackStatusMap() {
+      return this.feedbackStatus.reduce((map, item) => {
+        map[String(item.value)] = item
+        return map
+      }, {})
+    },
+  },
+
   watch: {
     '$store.state.userInfo': {
       handler(newVal, oldVal) {
@@ -583,6 +599,8 @@ export default {
     getUserInfoApi().then(res => {
       this.userInfo = res.data.sysUser
       Object.assign(this.profileForm, res.data.sysUser)
+    }).catch(() => {
+      this.$message.error('获取用户信息失败')
     })
 
     this.getFeedbackDict()
@@ -605,10 +623,14 @@ export default {
     getFeedbackDict() {
       getDictDataApi(['feedback_type']).then(res => {
         this.feedbackTypes = res.data
+      }).catch(() => {
+        this.$message.error('获取反馈类型失败')
       })
 
       getDictDataApi(['feedback_status']).then(res => {
         this.feedbackStatus = res.data
+      }).catch(() => {
+        this.$message.error('获取反馈状态失败')
       })
     },
     /**
@@ -617,8 +639,10 @@ export default {
     getMyComment() {
       this.loading = true
       getMyCommentApi(this.params).then(res => {
-        this.myComments = res.data.records
-        this.total = res.data.total
+        this.myComments = res.data?.records || []
+        this.total = res.data?.total || 0
+      }).catch(() => {
+        this.$message.error('获取我的评论失败')
       }).finally(() => {
         this.loading = false
       })
@@ -644,8 +668,10 @@ export default {
     getMyArticle() {
       this.loading = true
       getMyArticleApi(this.params).then(res => {
-        this.posts = res.data.records
-        this.total = res.data.total
+        this.posts = res.data?.records || []
+        this.total = res.data?.total || 0
+      }).catch(() => {
+        this.$message.error('获取我的文章失败')
       }).finally(() => {
         this.loading = false
       })
@@ -803,6 +829,8 @@ export default {
         delMyCommentApi(id).then(res => {
           this.$message.success('删除成功')
           this.getMyComment()
+        }).catch(() => {
+          this.$message.error('删除失败')
         })
       }).catch(() => { })
     },
@@ -818,6 +846,8 @@ export default {
         delMyCommentApi(id).then(res => {
           this.$message.success('删除成功')
           this.getMyReplies()
+        }).catch(() => {
+          this.$message.error('删除失败')
         })
       }).catch(() => { })
     },
@@ -834,6 +864,8 @@ export default {
         likeArticleApi(id).then(res => {
           this.$message.success('已取消点赞')
           this.getMyLikes()
+        }).catch(() => {
+          this.$message.error('取消点赞失败')
         })
       }).catch(() => { })
     },
@@ -848,6 +880,8 @@ export default {
           addFeedbackApi(this.feedbackForm).then(res => {
             this.$message.success('感谢您的反馈！')
             this.feedbackForm = { ...{} }
+          }).catch(() => {
+            this.$message.error('提交反馈失败')
           }).finally(() => {
             this.loading = false
           })
@@ -895,8 +929,10 @@ export default {
     getMyReplies() {
       this.loading = true
       getMyReplyApi(this.params).then(res => {
-        this.myReplies = res.data.records
-        this.total = res.data.total
+        this.myReplies = res.data?.records || []
+        this.total = res.data?.total || 0
+      }).catch(() => {
+        this.$message.error('获取我的回复失败')
       }).finally(() => {
         this.loading = false
       })
@@ -914,8 +950,10 @@ export default {
     getMyLikes() {
       this.loading = true
       getMyLikeApi(this.params).then(res => {
-        this.myLikes = res.data.records
-        this.total = res.data.total
+        this.myLikes = res.data?.records || []
+        this.total = res.data?.total || 0
+      }).catch(() => {
+        this.$message.error('获取我的点赞失败')
       }).finally(() => {
         this.loading = false
       })
@@ -937,8 +975,10 @@ export default {
         source: 'PC'
       }
       getMyFeedbackApi(params).then(res => {
-        this.myFeedbacks = res.data.records
-        this.total = res.data.total
+        this.myFeedbacks = res.data?.records || []
+        this.total = res.data?.total || 0
+      }).catch(() => {
+        this.$message.error('获取我的反馈失败')
       }).finally(() => {
         this.loading = false
       })
@@ -957,6 +997,8 @@ export default {
     getSignInStatus() {
       getSignInStatusApi().then(res => {
         this.signInStatus = res.data
+      }).catch(() => {
+        this.$message.error('获取签到状态失败')
       })
     },
 
@@ -966,6 +1008,8 @@ export default {
     getSignInStats() {
       getSignInStatsApi().then(res => {
         this.signInStats = res.data
+      }).catch(() => {
+        this.$message.error('获取签到统计失败')
       })
     },
 

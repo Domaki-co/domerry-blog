@@ -10,8 +10,9 @@ export default defineConfig(({ command, mode }) => {
     const env = loadEnv(mode, process.cwd());
     return {
         server: {
-            // 允许IP访问
-            host: "0.0.0.0",
+            // 默认只绑本机回环地址，避免开发服务被同网段其它主机直接访问；
+            // 需要局域网/真机调试时在 .env.local 里设 VITE_APP_DEV_HOST=0.0.0.0 显式放开。
+            host: env.VITE_APP_DEV_HOST || 'localhost',
             // 应用端口 (默认:3000)
             port: Number(env.VITE_APP_PORT),
             // 运行是否自动打开浏览器

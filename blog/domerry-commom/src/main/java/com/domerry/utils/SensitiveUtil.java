@@ -69,6 +69,8 @@ public class SensitiveUtil {
             if (subNode == null) {
                 // 初始化子节点
                 subNode = new TrieNode();
+                // 记录从根到该节点的路径是否全为东亚文字：决定"词内跳过符号"是否安全
+                subNode.setCjkOnly(tempNode.isCjkOnly() && isCjk(c));
                 tempNode.addSubNode(c, subNode);
             }
 
@@ -90,11 +92,6 @@ public class SensitiveUtil {
      */
     public static String filter(String text) {
 
-        //包含img标签则不过滤
-        if (text.contains("<img")) {
-            return text;
-        }
-
         if (StringUtils.isBlank(text)) {
             return null;
         }
@@ -110,15 +107,38 @@ public class SensitiveUtil {
         while (position < text.length()) {
             char c = text.charAt(position);
 
-            // 跳过符号
+            // 符号的处理分三种情况，核心是"不要跨符号匹配 ASCII 词"
             if (isSymbol(c)) {
-                // 若指针1处于根节点,将此符号计入结果,让指针2向下走一步
+                // 1) 前缀树里正好有这个符号（如 "G-M"、"F_U_C_K"）：符号是词的一部分，正常推进
+                TrieNode symbolNode = tempNode.getSubNode(c);
+                if (symbolNode != null) {
+                    tempNode = symbolNode;
+                    if (tempNode.isKeywordEnd()) {
+                        sb.append(REPLACEMENT);
+                        begin = ++position;
+                        tempNode = ROOT_NODE;
+                    } else {
+                        position++;
+                    }
+                    continue;
+                }
+                // 2) 不在匹配中：符号原样计入结果，指针2向下走一步
                 if (tempNode == ROOT_NODE) {
                     sb.append(c);
                     begin++;
+                    position++;
+                    continue;
                 }
-                // 无论符号在开头或中间,指针3都向下走一步
-                position++;
+                // 3) 匹配中途遇到符号：只有全中文词允许跳过（"法 轮 功" 这类拆字规避），
+                //    ASCII 词不允许——否则 "https://baidubox..." 里的 "s://b" 会命中 "sb"，
+                //    把正常 URL 打成 "http***aidubox..."
+                if (tempNode.isCjkOnly()) {
+                    position++;
+                    continue;
+                }
+                sb.append(text.charAt(begin));
+                position = ++begin;
+                tempNode = ROOT_NODE;
                 continue;
             }
 
@@ -161,6 +181,16 @@ public class SensitiveUtil {
         return !isAsciiAlphanumeric(c) && (c < 0x2E80 || c > 0x9FFF);
     }
 
+    /**
+     * 判断是否为东亚文字（与 isSymbol 的范围互为补集）
+     *
+     * @param c 字符
+     * @return 判断
+     */
+    private static boolean isCjk(Character c) {
+        return c >= 0x2E80 && c <= 0x9FFF;
+    }
+
     public static boolean isAsciiAlpha(char ch) {
         return isAsciiAlphaUpper(ch) || isAsciiAlphaLower(ch);
     }
@@ -189,6 +219,9 @@ public class SensitiveUtil {
         // 关键词结束标识
         private boolean isKeywordEnd = false;
 
+        // 从根到本节点的路径是否全为东亚文字
+        private boolean cjkOnly = true;
+
         // 子节点(key是下级字符,value是下级节点)
         private final Map<Character, TrieNode> subNodes = new HashMap<>();
 
@@ -198,6 +231,14 @@ public class SensitiveUtil {
 
         public void setKeywordEnd(boolean keywordEnd) {
             isKeywordEnd = keywordEnd;
+        }
+
+        public boolean isCjkOnly() {
+            return cjkOnly;
+        }
+
+        public void setCjkOnly(boolean cjkOnly) {
+            this.cjkOnly = cjkOnly;
         }
 
         // 添加子节点

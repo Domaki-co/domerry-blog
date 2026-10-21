@@ -20,14 +20,14 @@ import '@/styles/elmentui.scss'
 // （Element Plus 的 icon prop 类型包含 String，会按全局组件名解析）。
 import {
   ArrowRight, Back, Calendar, Camera, ChatLineRound, ChatLineSquare, Check, Clock,
-  Close, CoffeeCup, Collection, DArrowRight, Delete, Document, Edit, Key, Link,
+  Close, CoffeeCup, Collection, DArrowLeft, DArrowRight, Delete, Document, Edit, Key, Link,
   Lock, Menu, Message, Minus, Notebook, Plus, Reading, Refresh, RefreshLeft,
   RefreshRight, Search, Star, Top, Upload, User, UserFilled, VideoPause, VideoPlay, View
 } from '@element-plus/icons-vue'
 
 const globalIcons = {
   ArrowRight, Back, Calendar, Camera, ChatLineRound, ChatLineSquare, Check, Clock,
-  Close, CoffeeCup, Collection, DArrowRight, Delete, Document, Edit, Key, Link,
+  Close, CoffeeCup, Collection, DArrowLeft, DArrowRight, Delete, Document, Edit, Key, Link,
   Lock, Menu, Message, Minus, Notebook, Plus, Reading, Refresh, RefreshLeft,
   RefreshRight, Search, Star, Top, Upload, User, UserFilled, VideoPause, VideoPlay, View
 }

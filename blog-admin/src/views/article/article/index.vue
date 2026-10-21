@@ -295,7 +295,8 @@
 
         <el-form-item label="文章内容" prop="contentMd" class="mb-20">
           <VditorEditor ref="mdRef" v-model="form.contentMd" placeholder="输入文章内容..." height="500px"
-            :upload-handler="uploadImage" @video-click="handleVideoClick" />
+            :upload-handler="uploadImage" @video-click="handleVideoClick"
+            @attachment-click="attachmentDialogVisible = true" />
         </el-form-item>
       </el-form>
 
@@ -354,6 +355,27 @@
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="dialogVisible = false">关 闭</el-button>
+        </div>
+      </template>
+    </el-dialog>
+
+    <!-- 插入附件对话框 -->
+    <el-dialog center title="插入附件" v-model="attachmentDialogVisible" width="min(640px, 92%)">
+      <div class="video-upload-row">
+        <el-upload style="display: inline-block" :show-file-list="false" :http-request="uploadAttachment">
+          <el-button type="primary" icon="Upload">上传附件文件</el-button>
+        </el-upload>
+      </div>
+      <el-divider>或</el-divider>
+      <el-input v-model="attachmentUrl" placeholder="输入已有文件地址（文件名取地址末尾）">
+        <template #append>
+          <el-button type="primary" @click="addAttachmentByUrl">插入地址</el-button>
+        </template>
+      </el-input>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="attachmentDialogVisible = false">关 闭</el-button>
         </div>
       </template>
     </el-dialog>
@@ -465,6 +487,8 @@ const isStickLocked = (row: any) =>
 
 const dialogVisible = ref(false)
 const videoInput = ref('')
+const attachmentDialogVisible = ref(false)
+const attachmentUrl = ref('')
 
 const tagName = ref('')
 const categoryName = ref('')
@@ -589,6 +613,36 @@ const insertVideo = (src: string) => {
   mdRef.value?.insertHtml(`<video height=100% width=100% controls autoplay src="${src}"></video>`)
   dialogVisible.value = false
   videoInput.value = ''
+}
+
+// 上传附件文件：成功后在光标处插入下载卡片（图片不会走到这里，图片走 uploadImage）
+const uploadAttachment = (param: any) => {
+  const loading = ElLoading.service({
+    lock: true,
+    text: '上传中',
+    background: 'rgba(0, 0, 0, 0.7)',
+  })
+  const formData = new FormData()
+  formData.append('file', param.file)
+  return uploadApi(formData, 'article-content').then((res) => {
+    mdRef.value?.insertAttachment(res.data, param.file.name, param.file.size)
+    attachmentDialogVisible.value = false
+    return res
+  }).finally(() => {
+    loading.close()
+  })
+}
+
+// 插入已有文件地址（MinIO 里早先上传过的文件）
+const addAttachmentByUrl = () => {
+  const url = attachmentUrl.value.trim()
+  if (!url) {
+    ElMessage.warning('请输入附件地址')
+    return
+  }
+  mdRef.value?.insertAttachment(url)
+  attachmentUrl.value = ''
+  attachmentDialogVisible.value = false
 }
 
 /**

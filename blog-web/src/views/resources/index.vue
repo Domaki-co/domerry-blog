@@ -6,19 +6,12 @@
       <div class="shell hero-inner">
         <div class="logo">
           <div class="logo-mark brush">听</div>
-          <div class="logo-text">
-            <div class="top"><h1>墨澜</h1><small>KAZAM</small></div>
-            <p>一曲清音 · 水墨成诗</p>
-          </div>
-        </div>
-        <div class="hero-right" role="group" aria-label="面板显示">
-          <button type="button" class="view-toggle" :class="{ on: showList }" :aria-pressed="showList ? 'true' : 'false'" @click="showList = !showList">歌单</button>
-          <button type="button" class="view-toggle" :class="{ on: showLyric }" :aria-pressed="showLyric ? 'true' : 'false'" @click="showLyric = !showLyric">歌词</button>
+          <div class="logo-text"><h1>墨澜</h1></div>
         </div>
       </div>
     </section>
 
-    <div class="wrap shell" :class="{ 'no-left': !showList, 'no-right': !showLyric }">
+    <div class="wrap shell">
       <div class="left">
         <div class="panel">
           <div class="s-head">
@@ -41,15 +34,15 @@
             <button :class="{on:activeTab==='queue'}" role="tab" @click="activeTab='queue'">队列 {{ queue.length }}</button>
           </div>
           <div ref="list" class="list">
-            <div v-if="listLoading" class="empty"><div class="spinner"></div><div class="sm">{{ activeTab==='search' ? '墨正研开…' : '正引入歌单…' }}</div></div>
-            <div v-else-if="visibleSongs.length===0" class="empty"><div class="big brush">无声处听惊雷</div><div class="sm">试试搜「周杰伦 / 陈奕迅 / 许嵩」<br/>或点右上角 ≡ 粘贴歌单链接</div></div>
+            <div v-if="listLoading" class="empty"><div class="spinner"></div><div class="sm">{{ activeTab==='search' ? '搜索中…' : '引入中…' }}</div></div>
+            <div v-else-if="visibleSongs.length===0" class="empty"><div class="big brush">无声处听惊雷</div><div class="sm">试试搜歌手名，或点右上角 ≡ 引入歌单</div></div>
             <div v-for="(song,index) in visibleSongs" v-else :key="`${song.id}-${index}`" class="song" :class="{on:isCurrent(song)}" tabindex="0" :aria-label="song.name" @click="playFromList(index)" @keydown.enter.prevent="playFromList(index)" @keydown.space.prevent="playFromList(index)">
               <span class="bar"></span>
               <div class="song-cover">
                 <img v-if="song.cover" :src="song.cover" loading="lazy" alt="" />
                 <div v-else class="cover-placeholder">♪</div>
               </div>
-              <div class="song-meta"><div class="t">{{ song.name }}</div><div class="a">{{ songSubline(song) }}</div></div>
+              <div class="song-meta"><div class="t">{{ song.name }}</div><div class="a">{{ song.artist }}{{ song.album ? ' · ' + song.album : '' }}</div></div>
               <div v-if="isCurrent(song)&&isPlaying" class="eq" aria-hidden="true"><span></span><span></span><span></span></div>
               <div class="song-acts">
                 <button v-if="activeTab==='search'" type="button" class="song-act" :class="{added:inQueue(song)}" :title="inQueue(song)?'已在队列':'加入队列'" :aria-label="inQueue(song)?'已在队列':'加入队列'" @click.stop="addToQueue(song)" @keydown.enter.stop @keydown.space.stop>{{ inQueue(song)?'✓':'＋' }}</button>
@@ -73,13 +66,27 @@
                     <div v-else class="cover-placeholder large">♪</div>
                     <div class="grain"></div><div class="spindle"></div>
                   </div></div>
+                  <div class="seal brush" :class="{live:isPlaying}">澜</div>
                 </div>
-                <div class="seal brush" :class="{live:isPlaying}">澜</div>
               </div>
             </div>
             <div class="meta-center">
               <h2>{{ currentSong ? currentSong.name : '未在播放' }}</h2>
-              <div class="sub">{{ currentSongSub }}</div>
+              <div v-if="currentSong" class="sub">{{ currentSong.artist }}{{ currentSong.album ? ' · ' + currentSong.album : '' }}</div>
+            </div>
+            <div class="quality-row">
+              <label for="quality-select">音质</label>
+              <select id="quality-select" v-model="selectedQuality" title="选择播放和下载音质" @change="reloadCurrentSong">
+                <option value="standard">标准</option>
+                <option value="higher">较高</option>
+                <option value="exhigh">极高</option>
+                <option value="lossless">无损</option>
+                <option value="hires">Hi-Res</option>
+                <option value="jymaster">母带</option>
+                <option value="sky">天空音效</option>
+                <option value="jyeffect">动态音效</option>
+              </select>
+              <span v-if="qualityStatus" class="q-status">{{ qualityStatus }}</span>
             </div>
             <div class="progress-zone">
               <div class="canvas-wrap" aria-label="进度条" @pointerdown="startSeek" @pointermove="moveSeek" @pointerup="endSeek">
@@ -89,20 +96,6 @@
               </div>
               <div class="time-row"><span>{{ formatTime(currentTime) }}</span><span>{{ formatTime(audioDuration) }}</span></div>
             </div>
-            <div class="quality-row">
-              <label for="quality-select" class="sr-only">音质</label>
-              <select id="quality-select" v-model="selectedQuality" aria-label="音质" title="选择播放和下载音质" @change="reloadCurrentSong">
-                <option value="standard">标准（128 kbps MP3）</option>
-                <option value="higher">较高（192 kbps MP3）</option>
-                <option value="exhigh">极高（320 kbps MP3）</option>
-                <option value="lossless">无损（FLAC）</option>
-                <option value="hires">Hi-Res（高清高解析度）</option>
-                <option value="jymaster" selected>母带（Master）</option>
-                <option value="sky">天空音效（Sky）</option>
-                <option value="jyeffect">动态音效（Effect）</option>
-              </select>
-              <span v-if="qualityHint" class="q-status">{{ qualityHint }}</span>
-            </div>
             <div class="ctrls">
               <div class="ctrl-left">
                 <button class="btn" :title="playModeTitle" :aria-label="playModeTitle" @click="switchPlayMode">{{ playModeIcon }}</button>
@@ -110,7 +103,7 @@
               </div>
               <div class="ctrl-mid">
                 <button class="btn" aria-label="上一首" @click="playPrevious">⏮</button>
-                <button class="btn btn-big" :aria-label="isPlaying?'暂停':'播放'" @click="togglePlay"><span style="margin-left:2px">{{ isPlaying?'⏸':'▶' }}</span></button>
+                <button class="btn btn-big" :aria-label="isPlaying?'暂停':'播放'" @click="togglePlay"><span class="ico" :class="{ play: !isPlaying }">{{ isPlaying?'⏸':'▶' }}</span></button>
                 <button class="btn" aria-label="下一首" @click="playNext">⏭</button>
               </div>
               <div class="ctrl-right">
@@ -118,7 +111,7 @@
                 <button class="btn" title="下载歌词" aria-label="下载歌词" @click="downloadLyric">♬</button>
               </div>
             </div>
-            <div v-if="isLoadingSong" class="note"><i></i><span>正在取音·连缀古今…</span></div>
+            <div v-if="isLoadingSong" class="note"><i></i><span>正在取音…</span></div>
           </div>
         </div>
       </div>
@@ -127,17 +120,18 @@
         <div class="lyric-card panel">
           <div class="l-head">
             <div class="ll"><div class="dot">♪</div><div class="title">詞</div></div>
+            <div class="seal-mini brush">印</div>
           </div>
           <div ref="lyricBody" class="l-body" tabindex="0" @wheel="handleLyricWheel" @scroll="handleLyricScroll">
             <div v-if="lyricLines.length===0" class="l-empty">
               <div class="brush empty-title">静待一曲</div>
-              <p>播放后，歌词如卷轴展开。</p>
+              <p>播放后，歌词随卷展开</p>
             </div>
             <div v-else class="l-list">
               <div v-for="(line,index) in lyricLines" :key="`${line.time}-${index}`" :data-index="index" class="l-line" :class="{on:index===activeLyric}" tabindex="0" @click="seekLyric(line.time)" @keydown.enter.prevent="seekLyric(line.time)">
                 <div class="t">{{ line.text }}</div><div v-if="line.trans" class="tr">{{ line.trans }}</div>
               </div>
-              <div class="lyric-end">— 曲终 · 墨未尽 —</div>
+              <div class="lyric-end">— 曲终 —</div>
             </div>
           </div>
         </div>
@@ -145,7 +139,7 @@
     </div>
 
     <footer>
-      <div class="foot-line"><div class="l"></div><span class="brush">墨澜 KAZAM — 星缘新风 — F-Droid 特别版</span><div class="l"></div></div>
+      <div class="foot-line"><div class="l"></div><span class="brush">墨澜 · 星缘新风</span><div class="l"></div></div>
     </footer>
     <audio ref="audio" crossorigin="anonymous" preload="metadata" playsinline></audio>
   </div>
@@ -157,10 +151,14 @@ import { getLyricApi, getMusicApi, getPlaylistApi, searchSongsApi } from '@/api/
 // 波形描边的兜底值：CSS 变量读不到时（SSR / 极老浏览器）仍能画出来
 const WAVE_FALLBACK = { active: 'rgba(26,26,26,0.22)', idle: 'rgba(26,26,26,0.08)', verm: 'rgba(192,53,43,0.16)' }
 
+// 播放队列上限：无节制地导入歌单/追加歌曲会让队列无限增长
+const MAX_QUEUE_SIZE = 200
+
+// 音质名和下拉里的档位名保持一致：同一个东西不该有两种叫法
 const QUALITY_NAMES = {
   standard: '标准 128kbps', higher: '较高 192kbps', exhigh: '极高 320kbps',
-  lossless: '无损 FLAC', hires: 'Hi-Res 高清高解析度', jymaster: '母带 Master',
-  sky: '天空音效 Sky', jyeffect: '动态音效 Effect'
+  lossless: '无损 FLAC', hires: 'Hi-Res', jymaster: '母带',
+  sky: '天空音效', jyeffect: '动态音效'
 }
 
 function extractArtists(track) {
@@ -198,33 +196,20 @@ export default {
   data() {
     return {
       keyword: '许嵩', playlistInput: '', importOpen: false, searchResults: [], queue: [], currentIndex: -1,
-      showList: true, showLyric: true,
-      searchAbortController: null,
+      searchAbortController: null, playlistRequestToken: 0,
       activeTab: 'search', listLoading: false, isLoadingSong: false, isPlaying: false,
       currentTime: 0, audioDuration: 0, volume: 0.85, selectedQuality: 'jymaster',
       qualityStatus: '', currentAudioUrl: '', lyricRaw: { lrc: '', tlrc: '' },
       lyricLines: [], activeLyric: 0, playMode: 'loop', isSeeking: false,
-      lyricProgrammatic: false, userScrollingLyric: false, lyricPauseTimer: null,
+      lyricProgrammatic: false, userScrollingLyric: false, lyricPauseTimer: null, lyricProgrammaticTimer: null,
       waveAnimationId: 0, waveTime: 0, waveRunning: true, songLoadToken: 0,
-      waveColors: null, themeObserver: null
+      waveColors: null, themeObserver: null, audioHandlers: null
     }
   },
   computed: {
     visibleSongs() { return this.activeTab === 'search' ? this.searchResults : this.queue },
     currentSong() { return this.currentIndex >= 0 ? this.queue[this.currentIndex] : null },
     progressPercent() { return this.audioDuration ? Math.min(100, (this.currentTime / this.audioDuration) * 100) : 0 },
-    // 副标题只说新的信息：专辑与歌名相同时，只留歌手
-    currentSongSub() {
-      const song = this.currentSong
-      if (!song) return '寻一首心动，染半纸流云'
-      const album = (song.album || '').trim()
-      return album && album !== '单曲' && album !== song.name ? `${song.artist} · ${album}` : song.artist
-    },
-    // 音质：请求值和实际值不同才提示，相同时不再重复一遍
-    qualityHint() {
-      const asked = QUALITY_NAMES[this.selectedQuality]
-      return this.qualityStatus && this.qualityStatus !== asked ? this.qualityStatus : ''
-    },
     playModeIcon() { return { loop: '↻', shuffle: '⇄', one: '①' }[this.playMode] },
     playModeTitle() { return { loop: '循环模式', shuffle: '随机播放', one: '单曲循环' }[this.playMode] },
     audio() { return this.$refs.audio }
@@ -256,16 +241,16 @@ export default {
     window.removeEventListener('resize', this.resizeWave)
     window.removeEventListener('keydown', this.handleKeydown)
     clearTimeout(this.lyricPauseTimer)
+    clearTimeout(this.lyricProgrammaticTimer)
+    // 卸载后搜索响应仍会写死实例的 searchResults / listLoading，导航前先掐掉在途请求；
+    // 取消抛出的 AbortError 已由 handleSearch 的 catch 按名字放行，不会弹错误提示。
+    if (this.searchAbortController) { this.searchAbortController.abort(); this.searchAbortController = null }
     this.songLoadToken += 1
+    this.unbindAudioEvents()
     if (this.audio) { this.audio.pause(); this.audio.removeAttribute('src') }
   },
   methods: {
     isCurrent(song) { return Boolean(this.currentSong && String(this.currentSong.id) === String(song.id)) },
-    songSubline(song) {
-      if (!song) return ''
-      const album = (song.album || '').trim()
-      return album && album !== '未知' && album !== song.name ? `${song.artist} · ${album}` : song.artist
-    },
     formatTime(time) {
       if (!time || Number.isNaN(time)) return '0:00'
       const minutes = Math.floor(time / 60)
@@ -330,9 +315,12 @@ export default {
       if (!input) return
       const match = input.match(/(?:playlist\?id=|id=)(\d+)/) || input.match(/(\d{5,})/)
       const playlistId = match ? match[1] : input
+      // 请求令牌：连续导入时只有最后一次请求的结果能落地，过期响应直接丢弃
+      const token = ++this.playlistRequestToken
       this.activeTab = 'search'; this.listLoading = true
       try {
         const body = await getPlaylistApi(playlistId)
+        if (token !== this.playlistRequestToken) return
         let tracks = []
         if (body?.data) {
           if (Array.isArray(body.data)) tracks = body.data
@@ -341,12 +329,22 @@ export default {
         if (tracks.length === 0 && body.tracks) tracks = body.tracks
         const songs = tracks.map(normalizeSong)
         if (songs.length > 0) {
-          this.queue = [...songs, ...this.queue]
+          // 新歌插到队首：被保留的旧歌整体后移 prepended 位，currentIndex 必须同步偏移，
+          // 否则正在播放的歌会指向别的条目（超上限时丢弃队尾）
+          const prepended = Math.min(songs.length, MAX_QUEUE_SIZE)
+          const kept = this.queue.slice(0, Math.max(0, MAX_QUEUE_SIZE - prepended))
+          this.queue = [...songs.slice(0, prepended), ...kept]
+          if (this.currentIndex >= 0) this.currentIndex += prepended
           this.searchResults = songs
           this.playlistInput = ''
           this.importOpen = false
         }
-      } catch (error) {} finally { this.listLoading = false }
+      } catch (error) {
+        if (token !== this.playlistRequestToken) return
+        this.$message?.error(error?.message || '歌单导入失败，请检查链接或稍后重试')
+      } finally {
+        if (token === this.playlistRequestToken) this.listLoading = false
+      }
     },
     playFromList(index) {
       if (this.activeTab === 'search') {
@@ -354,7 +352,11 @@ export default {
         if (!song) return
         const existingIndex = this.queue.findIndex(item => String(item.id) === String(song.id))
         if (existingIndex >= 0) this.currentIndex = existingIndex
-        else { this.queue = [song, ...this.queue]; this.currentIndex = 0 }
+        else {
+          // 同 fetchPlaylist：插到队首时旧歌整体后移，正在播放的下标要跟着 +1
+          this.queue = [song, ...this.queue.slice(0, MAX_QUEUE_SIZE - 1)]
+          this.currentIndex = 0
+        }
         this.loadSong(song)
       } else { this.playAt(index) }
     },
@@ -366,6 +368,10 @@ export default {
     inQueue(song) { return this.queue.some(item => String(item.id) === String(song.id)) },
     addToQueue(song) {
       if (!song || this.inQueue(song)) return
+      if (this.queue.length >= MAX_QUEUE_SIZE) {
+        this.$message?.warning(`播放队列最多 ${MAX_QUEUE_SIZE} 首，请先移除部分歌曲`)
+        return
+      }
       this.queue = [...this.queue, song]
     },
     removeFromQueue(index) {
@@ -403,7 +409,7 @@ export default {
           actualQuality = data?.level || ''
         }
         this.currentAudioUrl = musicUrl
-        this.qualityStatus = actualQuality ? (QUALITY_NAMES[actualQuality] || actualQuality) : ''
+        this.qualityStatus = actualQuality && actualQuality !== this.selectedQuality ? `降为 ${QUALITY_NAMES[actualQuality] || actualQuality}` : ''
         if (musicUrl) {
           this.audio.src = musicUrl
           await this.audio.play().catch(() => {})
@@ -454,26 +460,41 @@ export default {
       if (!this.audio || !this.audioDuration) return
       this.audio.currentTime = Math.max(0, Math.min(this.audioDuration, (this.audio.currentTime || 0) + seconds))
     },
+    // 处理器句柄存在实例上：bindAudioEvents 是公开方法，二次调用若不解绑就会在同一元素上重复注册
+    // （timeupdate 翻倍、ended 连跳两首）。先解绑再绑定，重复调用天然幂等，卸载时也能成对移除。
     bindAudioEvents() {
-      this.audio.addEventListener('timeupdate', () => {
-        this.currentTime = this.audio.currentTime || 0
-        this.audioDuration = this.audio.duration || this.audioDuration
-        if (!this.lyricLines.length) return
-        let index = 0
-        this.lyricLines.forEach((line, lineIndex) => { if (this.currentTime >= line.time) index = lineIndex })
-        if (index !== this.activeLyric) {
-          this.activeLyric = index
-          if (!this.userScrollingLyric) this.$nextTick(() => this.scrollLyricTo(index, true))
+      this.unbindAudioEvents()
+      const handlers = {
+        timeupdate: () => {
+          this.currentTime = this.audio.currentTime || 0
+          this.audioDuration = this.audio.duration || this.audioDuration
+          if (!this.lyricLines.length) return
+          let index = 0
+          this.lyricLines.forEach((line, lineIndex) => { if (this.currentTime >= line.time) index = lineIndex })
+          if (index !== this.activeLyric) {
+            this.activeLyric = index
+            if (!this.userScrollingLyric) this.$nextTick(() => this.scrollLyricTo(index, true))
+          }
+        },
+        loadedmetadata: () => { this.audioDuration = this.audio.duration },
+        play: () => { this.isPlaying = true },
+        pause: () => { this.isPlaying = false },
+        ended: () => {
+          if (this.playMode === 'one') { this.audio.currentTime = 0; this.audio.play() }
+          else if (this.playMode === 'shuffle') this.playAt(Math.floor(Math.random() * this.queue.length))
+          else this.playNext()
         }
-      })
-      this.audio.addEventListener('loadedmetadata', () => { this.audioDuration = this.audio.duration })
-      this.audio.addEventListener('play', () => { this.isPlaying = true })
-      this.audio.addEventListener('pause', () => { this.isPlaying = false })
-      this.audio.addEventListener('ended', () => {
-        if (this.playMode === 'one') { this.audio.currentTime = 0; this.audio.play() }
-        else if (this.playMode === 'shuffle') this.playAt(Math.floor(Math.random() * this.queue.length))
-        else this.playNext()
-      })
+      }
+      this.audioHandlers = handlers
+      Object.entries(handlers).forEach(([type, handler]) => this.audio.addEventListener(type, handler))
+    },
+    unbindAudioEvents() {
+      const handlers = this.audioHandlers
+      if (!handlers) return
+      this.audioHandlers = null
+      const audio = this.audio
+      if (!audio) return
+      Object.entries(handlers).forEach(([type, handler]) => audio.removeEventListener(type, handler))
     },
     seekTo(clientX) {
       if (!this.audioDuration) return
@@ -507,7 +528,10 @@ export default {
       const max = container.scrollHeight - container.clientHeight
       this.lyricProgrammatic = true
       container.scrollTo({ top: Math.max(0, Math.min(desired, max)), behavior: smooth ? 'smooth' : 'auto' })
-      setTimeout(() => { this.lyricProgrammatic = false }, smooth ? 600 : 50)
+      // 先清掉上一个：滚动是连续的，旧定时器会在新的平滑滚动还没走完时就放开标志位，
+      // 于是 handleLyricScroll 把程序滚动误判成用户滚动，自动跟随白停 3.5 秒。
+      clearTimeout(this.lyricProgrammaticTimer)
+      this.lyricProgrammaticTimer = setTimeout(() => { this.lyricProgrammatic = false }, smooth ? 600 : 50)
     },
     async downloadAudio() {
       if (!this.currentAudioUrl || !this.currentSong) return
@@ -642,18 +666,14 @@ export default {
 .logo{display:flex;align-items:center;gap:12px;min-width:0;flex:1}
 .logo-mark{width:38px;height:38px;flex-shrink:0;background:var(--verm);color:var(--on-verm);display:grid;place-items:center;font-size:20px;box-shadow:2px 2px 0 var(--ink);transform:rotate(-2deg);border-radius:2px}
 .logo-text{min-width:0;flex:1}
-.logo-text .top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;min-width:0}
+
 .logo-text h1{font-size:clamp(18px,2.4vw,22px);letter-spacing:0.18em;line-height:1;margin:0;white-space:nowrap}
-.logo-text small{font-size:12px;letter-spacing:0.16em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.logo-text p{font-size:12px;letter-spacing:0.1em;color:var(--muted);margin:3px 0 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* 面板开关：宽屏才出现，替掉原来那行「星缘改版」说明 */
-.hero-right{display:none;align-items:center;gap:6px;flex-shrink:0}
-@media(min-width:1280px){.hero-right{display:flex}}
-.view-toggle{height:30px;padding:0 13px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--muted-3);font-size:12.5px;letter-spacing:0.14em;transition:.18s;white-space:nowrap}
-.view-toggle:hover{color:var(--ink);border-color:rgba(var(--ink-rgb),0.14)}
-.view-toggle.on{color:var(--ink);border-color:rgba(var(--ink-rgb),0.2);background:var(--veil-2)}
-.view-toggle:focus-visible{outline:2px solid rgba(var(--verm-rgb),0.5);outline-offset:2px}
-@media(max-width:600px){.hero-inner{padding-top:calc(8px + var(--safe-t));padding-bottom:8px}.logo-text p{display:none}}
+
+
+
+
+
+@media(max-width:600px){.hero-inner{padding-top:calc(8px + var(--safe-t));padding-bottom:8px}}
 
 /* === 三栏：等高靠 stretch + 列内 flex，只有歌单与歌词滚动 === */
 .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr;gap:clamp(12px,1.4vw,20px);align-items:stretch;padding-top:clamp(12px,1.6vw,22px);padding-bottom:clamp(12px,1.6vw,22px)}
@@ -675,14 +695,8 @@ export default {
   .left{order:1}.center{order:2}.right{order:3}
 }
 @media(min-width:1280px){
-  .wrap{grid-template-columns:minmax(0,320px) minmax(0,1fr) minmax(0,360px);transition:grid-template-columns .26s ease}
+  .wrap{grid-template-columns:minmax(0,360px) minmax(0,1fr) minmax(0,400px)}
   .right{grid-column:auto}
-  /* 面板可收起：收起后播放器接管空出来的宽度 */
-  .wrap.no-left{grid-template-columns:minmax(0,1fr) minmax(0,360px)}
-  .wrap.no-right{grid-template-columns:minmax(0,320px) minmax(0,1fr)}
-  .wrap.no-left.no-right{grid-template-columns:minmax(0,1fr)}
-  .wrap.no-left .left,.wrap.no-right .right{display:none}
-  .wrap.no-left.no-right .center{width:100%;max-width:900px;margin:0 auto}
 }
 
 /* === 左栏：搜索 + 歌单导入 === */
@@ -710,12 +724,9 @@ export default {
 .tabs button{flex:1;min-width:0;height:32px;border-radius:999px;border:0;background:transparent;color:var(--muted-2);font-size:13px;letter-spacing:0.1em;transition:.2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tabs button.on{background:var(--ink);color:var(--ink-contrast);box-shadow:0 2px 8px rgba(0,0,0,0.15)}
 
-.list{flex:1 1 420px;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px 8px 14px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:transparent transparent}
-/* 滚动条平时隐去，悬停才浮现：留白不该被一条灰线打断 */
-.list:hover{scrollbar-color:rgba(var(--ink-rgb),0.16) transparent}
+.list{flex:1 1 420px;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px 8px 14px;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
 .list::-webkit-scrollbar{width:4px;height:4px}
-.list::-webkit-scrollbar-thumb{background:transparent;border-radius:999px}
-.list:hover::-webkit-scrollbar-thumb{background:rgba(var(--ink-rgb),0.14)}
+.list::-webkit-scrollbar-thumb{background:rgba(var(--ink-rgb),0.14);border-radius:999px}
 @media(max-width:799px){.list{max-height:min(52vh,420px)}}
 .empty{padding:40px 12px;text-align:center}
 .empty .big{font-size:clamp(18px,5vw,24px);opacity:0.24;line-height:1.3}
@@ -754,10 +765,10 @@ export default {
 
 /* === 中栏：唱片 + 进度 + 走带 === */
 .center-card{border-radius:clamp(16px,2vw,26px);position:relative}
-.c-inner{flex:1;display:flex;flex-direction:column;min-height:0;width:100%;max-width:920px;margin:0 auto;padding:clamp(16px,2.2vw,28px) clamp(14px,2vw,28px) 16px}
+.c-inner{flex:1;display:flex;flex-direction:column;min-height:0;padding:clamp(16px,2.2vw,28px) clamp(14px,2vw,28px) 16px}
 .disk-area{flex:1 1 auto;display:grid;place-items:center;min-height:0;width:100%;padding:2px 0}
 /* 唱片吃掉可用空间：跟着视口高度伸缩，但不超过栏宽 */
-.disk-wrap{position:relative;width:min(100%,clamp(220px,42vh,460px));aspect-ratio:1;margin:0 auto}
+.disk-wrap{position:relative;width:min(100%,clamp(200px,38vh,400px));aspect-ratio:1;margin:0 auto}
 @media(max-height:820px) and (min-width:1280px){.disk-wrap{width:min(100%,clamp(180px,31vh,330px))}}
 .ring{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(var(--ink-rgb),0.07);pointer-events:none}
 .ring2{position:absolute;inset:-6%;border-radius:50%;border:1px dashed rgba(var(--ink-rgb),0.09);pointer-events:none}
@@ -769,7 +780,7 @@ export default {
 .disk-cover .grain{position:absolute;inset:0;opacity:0.045;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none}
 .spindle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:14%;aspect-ratio:1;border-radius:50%;background:var(--ink);border:3px solid var(--ink-contrast);box-shadow:0 2px 8px rgba(0,0,0,0.3);display:grid;place-items:center}
 .spindle::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--verm);display:block}
-.seal{position:absolute;right:1%;bottom:5%;width:clamp(40px,11%,52px);aspect-ratio:1;background:var(--verm);color:var(--on-verm);display:grid;place-items:center;font-size:clamp(14px,3.5vw,18px);transform:rotate(3deg);box-shadow:2px 2px 0 var(--ink);mix-blend:multiply;pointer-events:none;border-radius:2px;z-index:2}
+.seal{position:absolute;bottom:11%;right:11%;width:18%;aspect-ratio:1;background:var(--verm);color:var(--on-verm);display:grid;place-items:center;font-size:clamp(14px,3.5vw,18px);transform:rotate(3deg);box-shadow:2px 2px 0 var(--ink);mix-blend:multiply;pointer-events:none;border-radius:2px}
 /* 「澜」印在播放时会动 */
 .seal.live{animation:sealwobble 3.2s ease-in-out infinite}
 @keyframes sealwobble{0%,100%{transform:rotate(3deg) translate(0,0)}50%{transform:rotate(-4deg) translate(-2px,-2px)}}
@@ -780,44 +791,51 @@ export default {
 .meta-center h2{font-size:clamp(18px,1.8vw,24px);font-weight:700;letter-spacing:0.08em;line-height:1.3;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .meta-center .sub{margin-top:6px;font-size:13px;letter-spacing:0.1em;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* 音质：不占一整行胶囊，收成进度条右下角一枚小字签 */
-.quality-row{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:2px;min-height:22px;font-size:11.5px;letter-spacing:0.08em;color:var(--muted-3);flex-shrink:0}
-.quality-row select{max-width:100%;padding:2px 16px 2px 2px;border:0;border-radius:0;background-color:transparent;color:var(--muted-2);font-size:11.5px;letter-spacing:0.08em;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;text-overflow:ellipsis;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='6' viewBox='0 0 8 6'%3E%3Cpath d='M1 1l3 3 3-3' fill='none' stroke='%238a8a80' stroke-width='1.2' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 2px center}
-.quality-row select:hover{color:var(--ink)}
-.quality-row select:focus-visible{outline:2px solid rgba(var(--verm-rgb),0.4);outline-offset:2px}
-.q-status{font-size:11.5px;letter-spacing:0.04em;color:var(--muted-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 音质选择：与进度条同一行节奏，状态就地显示 */
+.quality-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--muted-2);flex-shrink:0}
+.quality-row select{max-width:150px;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--veil-3);color:var(--ink);font-size:12.5px;outline:none}
+.q-status{font-size:12.5px;letter-spacing:0.04em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* 进度：加粗的朱砂条，整条可点可拖 */
 .progress-zone{margin-top:clamp(10px,1.6vw,18px);width:100%;min-width:0;flex-shrink:0}
 .canvas-wrap{position:relative;height:34px;cursor:pointer;width:100%;overflow:clip;border-radius:8px;touch-action:none}
 .canvas-wrap canvas{position:absolute;inset:0;width:100%;height:100%}
-.track{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:3px;border-radius:999px;background:rgba(var(--ink-rgb),0.1);pointer-events:none}
-.fill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:3px;border-radius:999px;background:var(--verm);pointer-events:none;max-width:100%}
+.track{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:4px;border-radius:999px;background:rgba(var(--ink-rgb),0.1);pointer-events:none}
+.fill{position:absolute;left:0;top:50%;transform:translateY(-50%);height:6px;border-radius:999px;background:var(--verm);pointer-events:none;max-width:100%}
 .thumb{position:absolute;top:50%;transform:translate(-50%,-50%);pointer-events:none}
 @media(prefers-reduced-motion:no-preference){.thumb{transition:left .12s linear}}
-.thumb-box{width:11px;height:11px;border-radius:50%;background:var(--verm);box-shadow:0 0 0 4px rgba(var(--verm-rgb),0.12)}
+.thumb-box{width:14px;height:14px;border-radius:50%;background:var(--verm);box-shadow:0 0 0 3px rgba(var(--verm-rgb),0.16)}
 .thumb-box i{display:none}
 .time-row{display:flex;justify-content:space-between;font-size:12.5px;letter-spacing:0.1em;color:var(--muted);margin-top:4px;padding:0 2px}
 
 /* 走带：防溢出 + 大触靶 */
-.ctrls{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;width:100%;min-width:0;flex-shrink:0}
-/* 走带：只有「上一首 / 播放 / 下一首」带壳；循环、音量、下载一律幽灵图标 */
-.ctrl-left,.ctrl-right{display:flex;align-items:center;gap:2px;flex-shrink:0}
-.ctrl-mid{display:flex;align-items:center;gap:18px;flex:1;justify-content:center;min-width:0}
-.btn{width:38px;height:38px;flex-shrink:0;border-radius:50%;border:0;background:transparent;color:var(--muted-2);display:grid;place-items:center;transition:.18s;font-size:14px;line-height:1}
-@media(max-width:600px){.btn{width:42px;height:42px}}
-.btn:hover{color:var(--ink);background:rgba(var(--ink-rgb),0.05)}
+/* 左右两列等宽（1fr），中间列按内容定宽：播放键永远落在行的正中心，不受两侧按钮数量影响 */
+.ctrls{margin-top:14px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;column-gap:clamp(20px,1.8vw,28px);width:100%;min-width:0;flex-shrink:0}
+/* 两侧列等宽（1fr）才能让播放键落在正中心；因此两侧组必须「撑满自己那一列再让内容收缩」，
+   若按内容取宽（start/end 对齐），窄档里音量胶囊会溢出列宽、把 1fr 的列间距吃掉，上一曲就贴上音量 */
+.ctrl-left,.ctrl-right{display:flex;align-items:center;gap:8px;min-width:0}
+.ctrl-left{justify-self:stretch}
+.ctrl-right{justify-self:stretch;justify-content:flex-end}
+.ctrl-mid{display:flex;align-items:center;justify-content:center;gap:clamp(8px,1vw,12px);min-width:0}
+.btn{width:40px;height:40px;flex-shrink:0;border-radius:50%;border:1px solid var(--line);background:var(--veil-2);display:grid;place-items:center;transition:.18s;font-size:13px;line-height:1;color:var(--ink)}
+@media(max-width:600px){.btn{width:38px;height:38px}.ctrl-mid{gap:10px}}
+.btn:hover{border-color:rgba(var(--ink-rgb),0.22);background:var(--surface)}
 .btn:active{transform:scale(0.96)}
-.ctrl-mid .btn{color:var(--ink);border:1px solid var(--line);background:transparent}
-.ctrl-mid .btn:hover{background:var(--surface);border-color:rgba(var(--ink-rgb),0.22)}
-.btn-big{width:64px;height:64px;background:var(--ink);color:var(--ink-contrast);border:0;box-shadow:0 10px 26px rgba(0,0,0,0.22);font-size:20px}
+.btn-big{width:64px;height:64px;background:var(--ink);color:var(--ink-contrast);border:0;box-shadow:0 8px 24px rgba(0,0,0,0.24);font-size:22px}
+.btn-big .ico{display:block;line-height:1;transform:translateY(0)}
+/* ▶ 三角的重心偏左，只有播放态补 2px；⏸ 对称，严格居中 */
+.btn-big .ico.play{margin-left:2px}
 .btn-big:hover,.btn-big:focus,.btn-big:active{background:var(--ink);color:var(--ink-contrast)}
-@media(max-width:600px){.btn-big{width:58px;height:58px}}
-.vol{display:flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:0 6px;height:34px;background:transparent;color:var(--muted-2)}
-.vol:hover{background:rgba(var(--ink-rgb),0.05);color:var(--ink)}
-.vol input{width:60px;accent-color:var(--ink);opacity:.75}
-.vol:hover input{opacity:1}
+@media(max-width:600px){.btn-big{width:58px;height:58px;font-size:20px}}
+@media(max-width:400px){.btn{width:34px;height:34px}.btn-big{width:54px;height:54px}.ctrl-mid{gap:8px}.ctrl-left,.ctrl-right{gap:6px}}
+.vol{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:0 10px;height:40px;background:var(--veil-1);min-width:0;flex:0 1 auto}
+/* 滑杆可收缩（下限 34px）：列宽不足时音量胶囊自己变窄，而不是顶出去撞到上一曲 */
+.vol input{width:64px;min-width:34px;flex:0 1 auto;accent-color:var(--ink)}
 @media(max-width:760px){.vol{display:none}}
+/* 两栏最窄档：中栏内宽 382–473px，音量胶囊塞不进侧列，让位 */
+@media(min-width:800px) and (max-width:899px){.vol{display:none}}
+/* 三栏最窄的一档：中栏内宽 380–480px，容不下「循环 + 音量 + 三个走带键 + 两个下载」，音量让位避免裁切 */
+@media(min-width:1280px) and (max-width:1399px){.vol{display:none}}
 .note{margin-top:10px;text-align:center;font-size:12.5px;letter-spacing:0.12em;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
 .note i{width:12px;height:12px;border:1.5px solid rgba(var(--ink-rgb),0.2);border-top-color:var(--ink);border-radius:50%;display:inline-block;animation:spin .7s linear infinite;flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -829,14 +847,14 @@ export default {
 .l-head .ll{display:flex;align-items:center;gap:10px;min-width:0}
 .l-head .ll > div:last-child{min-width:0}
 .l-head .dot{width:28px;height:28px;flex-shrink:0;border-radius:50%;border:1px solid var(--line);color:var(--muted-2);display:grid;place-items:center;font-size:12px}
-.l-head .title{font-size:13px;letter-spacing:0.24em;white-space:nowrap}
+.l-head .title{font-size:13px;letter-spacing:0.2em;white-space:nowrap}
+
+.seal-mini{width:26px;height:26px;flex-shrink:0;border-radius:3px;border:1px solid rgba(var(--verm-rgb),0.32);color:var(--verm);display:grid;place-items:center;font-size:12px;box-shadow:1px 1px 0 rgba(var(--verm-rgb),0.16)}
 /* 词卷自身滚动；上下缘渐隐，滚动时不会硬切 */
-.l-body{flex:1 1 520px;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px clamp(10px,1.4vw,16px);overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:transparent transparent;isolation:isolate;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%)}
-.l-body:hover{scrollbar-color:rgba(var(--ink-rgb),0.16) transparent}
+.l-body{flex:1 1 520px;min-height:0;overflow-y:auto;overflow-x:hidden;padding:8px clamp(10px,1.4vw,16px);overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(var(--ink-rgb),0.16) transparent;isolation:isolate;-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0,#000 12%,#000 88%,transparent 100%)}
 .l-body::-webkit-scrollbar{width:4px}
 .l-body::-webkit-scrollbar-track{background:transparent}
-.l-body::-webkit-scrollbar-thumb{background:transparent;border-radius:999px}
-.l-body:hover::-webkit-scrollbar-thumb{background:rgba(var(--ink-rgb),0.14)}
+.l-body::-webkit-scrollbar-thumb{background:rgba(var(--ink-rgb),0.14);border-radius:999px}
 @media(max-width:799px){.l-body{max-height:min(62vh,520px)}}
 .l-empty{min-height:280px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px 12px;color:var(--muted-2)}
 .empty-title{font-size:clamp(22px,6vw,28px);letter-spacing:0.15em;opacity:.55}
@@ -845,31 +863,30 @@ export default {
 /* 当前句放大居中，其余压成弱色 */
 .l-line{position:relative;padding:9px 12px;border-radius:10px;transition:.22s;margin-bottom:4px;cursor:pointer;text-align:center}
 .l-line:hover{background:rgba(var(--ink-rgb),0.04)}
-.l-line.on{background:transparent}
-.l-line.on::before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:2px;height:1.7em;border-radius:2px;background:var(--verm)}
-.l-line .t{font-size:14px;line-height:1.7;letter-spacing:0.02em;color:var(--lyric-dim-2);white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word}
+.l-line.on{background:rgba(var(--verm-rgb),0.07)}
+.l-line .t{font-size:14px;line-height:1.7;letter-spacing:0.02em;color:var(--lyric-dim);white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word}
 .l-line.on .t{font-size:clamp(17px,1.5vw,21px);font-weight:600;line-height:1.5;color:var(--lyric-fg)}
 .l-line .tr{font-size:12.5px;margin-top:4px;line-height:1.6;color:var(--lyric-dim-2);white-space:pre-wrap;word-break:break-word}
 .l-line.on .tr{color:var(--lyric-dim)}
 .lyric-end{text-align:center;padding:18px 0 6px;font-size:12px;letter-spacing:0.24em;color:var(--lyric-dim-2)}
-.lyric-card .l-body{padding-bottom:calc(14px + var(--safe-b))}
+
 
 /* === 页脚 === */
 .music-page footer{position:relative;z-index:1;max-width:1600px;margin:0 auto;width:100%;padding:14px clamp(12px,2vw,28px) calc(26px + var(--safe-b));text-align:center;overflow:clip}
-.music-page footer .foot-line{display:flex;align-items:center;justify-content:center;gap:12px;opacity:0.46;flex-wrap:wrap}
+.music-page footer .foot-line{display:flex;align-items:center;justify-content:center;gap:12px;opacity:0.4;flex-wrap:wrap}
 .music-page footer .foot-line .l{width:40px;height:1px;background:var(--ink);flex-shrink:0}
 .music-page footer .foot-line span{font-size:clamp(13px,3vw,15px);letter-spacing:0.05em;white-space:nowrap}
-
-/* 只给读屏软件看的标签 */
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
 /* === 极窄屏 === */
 @media(max-width:340px){
   .hero-inner{padding-top:calc(8px + var(--safe-t));padding-bottom:8px}
   .logo-mark{width:32px;height:32px;font-size:16px}
   .disk-wrap{width:min(100%,200px)}
-  .ctrls{justify-content:center}
-  .ctrl-left{order:2}.ctrl-mid{order:1;width:100%}.ctrl-right{order:3}
+  /* 极窄屏改单列堆叠：走带键独占一行居中，两侧键排到下面 */
+  .ctrls{grid-template-columns:1fr;row-gap:10px;justify-items:center}
+  .ctrl-mid{order:1;gap:12px}
+  .ctrl-left{order:2;justify-self:center}
+  .ctrl-right{order:3;justify-self:center}
 }
 
 /* === 减少动效 === */

@@ -5,7 +5,7 @@
       <span class="head-meta">{{ albums.length }} 个相册</span>
     </header>
     <div class="photos-grid">
-      <div v-for="(album, index) in albums" :key="index" class="album-card" @click="openAlbum(album)">
+      <div v-for="album in albums" :key="album.id" class="album-card" @click="openAlbum(album)">
         <div class="album-cover">
           <img v-lazy="album.cover" :key="album.cover" :alt="album.name">
           <div v-if="album.isLock === 1" class="lock-icon">
@@ -44,6 +44,9 @@ export default {
     getAlbumList() {
       getAlbumListApi().then(res => {
         this.albums = res.data
+      }).catch(() => {
+        // 失败时 albums 保持空数组，页面落到「暂无相册」的空态
+        this.$message.error('获取相册列表失败')
       })
     },
     /**

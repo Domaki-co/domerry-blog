@@ -189,7 +189,6 @@ export default {
         /mac|iphone|ipad/i.test(navigator.platform || navigator.userAgent || ''),
       searchQuery: '',
       showSearchPanel: false,
-      showMobileSearch: false,
       lastScrollTop: 0,
       isHeaderVisible: true,
       // 顶栏是否正压在首屏大图上：图上摘掉玻璃壳换白字，滚出大图再恢复（见 .is-over-hero）
@@ -316,15 +315,10 @@ export default {
       this.$router.push('/login')
     },
     closeAllPanels() {
-      this.showMobileSearch = false
+      // 原本只写 showMobileSearch，该标志已随死代码清理删除
     },
     closeMobileSearch() {
-      this.showMobileSearch = false
       this.searchQuery = ''
-    },
-    handleMobileSearch(tag) {
-      this.searchQuery = tag
-      this.$refs.mobileSearchInput.focus()
     },
     handleMouseEnter(item) {
       if (item.children) {

@@ -240,7 +240,10 @@ export default {
           //通知父组件刷新置顶快捷栏
           this.$emit('stick-changed')
         })
-        .catch(() => {})
+        .catch(() => {
+          // 静默失败会让按钮看起来「点了没反应」，这里必须给出可见反馈
+          this.$message.error(next === 1 ? '置顶失败，请稍后重试' : '取消置顶失败，请稍后重试')
+        })
         .finally(() => {
           this.stickLoadingId = null
         })

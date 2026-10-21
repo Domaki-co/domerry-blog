@@ -143,11 +143,14 @@ export default {
      * 获取相册图片
      */
     getAlbumPhotos() {
-      getAlbumPhotosApi(this.album.id).then(res => {
-        this.photos = res.data
-        this.images = res.data.map(item => item.url)
-      }).finally(() => {
+      return getAlbumPhotosApi(this.album.id).then(res => {
+        const list = Array.isArray(res.data) ? res.data : []
+        this.photos = list
+        this.images = list.map(item => item.url)
+        // 只有真正拿到照片才算解锁：放在 finally 里会让请求失败也显示成"空相册"
         this.isAuthenticated = true
+      }).catch(error => {
+        this.$message.error(error.message || '获取相册图片失败')
       })
     },
     /**
@@ -157,11 +160,12 @@ export default {
       try {
         await verifyAlbumPasswordApi(this.album.id, password)
         this.getAlbumPhotos()
-        // this.$refs.passwordDialog.visible = false
         callback()
       } catch (error) {
         this.$message.error(error.message || '密码错误')
-        this.$refs.passwordDialog.loading = false
+        // 失败时也要复位子组件的 loading（弹窗保持打开以便重试）；
+        // 传 false 让子组件知道这次没成功，父组件不再伸手改它的 data
+        callback(false)
       }
     },
     /**
