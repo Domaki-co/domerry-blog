@@ -359,6 +359,12 @@ export default {
             if (this.vditor) return
             const _this = this
             this.vditor = new Vditor('vditor-editor', {
+                // 必须显式给宽度：Vditor 默认 width = "auto"，initUI 会把容器 div 的
+                // inline style 改成 width: auto，而 #vditor-editor 是 .el-form-item__content
+                // （display: flex）里的 flex 项 —— width: auto 于是退化成"按内容收缩"，
+                // 空内容时只剩工具栏的 min-content 宽度（约 650px），右侧留一大片空白，
+                // 直到正文写到足够宽才被撑满（"字数多了框才恢复正常"就是这么来的）
+                width: '100%',
                 height: 500,
                 mode: 'ir',
                 theme: 'classic',
@@ -998,7 +1004,8 @@ export default {
     }
 }
 
-.vditor-reset {
+// .vditor-reset 由 Vditor 自己创建，没有 scoped 的 data-v 属性，必须走 :deep 才能命中
+:deep(.vditor-reset) {
     color: var(--text-primary);
 }
 
