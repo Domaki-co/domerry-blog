@@ -35,7 +35,7 @@ import { Plus } from '@element-plus/icons-vue'
 import type { UploadProps, UploadUserFile } from 'element-plus'
 import { getToken } from '@/utils/auth'
 import { uploadApi,deleteFileApi } from '@/api/file'
-import { compressImage, formatSize } from '@/utils/image-compress'
+import { compressImage } from '@/utils/image-compress'
 const props = defineProps({
   modelValue: {
     type: [String, Array],
@@ -175,12 +175,8 @@ const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
   if (props.source !== 'article-cover') return true
 
   try {
-    const compressed = await compressImage(file)
-    if (compressed !== file) {
-      ElMessage.success(`封面已压缩：${formatSize(file.size)} → ${formatSize(compressed.size)}`)
-    }
     // 返回 File 让 el-upload 上传压缩后的文件
-    return compressed
+    return await compressImage(file)
   } catch (err) {
     // 压缩失败不阻断上传，退回原图
     return true

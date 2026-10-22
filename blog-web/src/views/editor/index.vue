@@ -165,7 +165,7 @@ import { uploadFileApi, deleteFileApi } from '@/api/file'
 import { createArticleApi, updateArticleApi, getArticleInfoApi } from '@/api/article'
 import { getTagsApi,getCategoriesApi } from '@/api/tags'
 import { buildAttachmentMarkdown, encodeHref, isImageFile } from '@/utils/attachment'
-import { compressImage, formatSize } from '@/utils/image'
+import { compressImage } from '@/utils/image'
 
 // 文章状态，与后端 sys_dict_data(article_status) 保持一致
 const STATUS = {
@@ -545,9 +545,6 @@ export default {
             let cover = file
             try {
                 cover = await compressImage(file)
-                if (cover !== file) {
-                    this.$message.success(`封面已压缩：${formatSize(file.size)} → ${formatSize(cover.size)}`)
-                }
             } catch (err) {
                 // 压缩失败不阻断上传，退回原图
                 cover = file

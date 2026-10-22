@@ -53,5 +53,3 @@ export const compressImage = async (file: File, maxEdge = MAX_EDGE, quality = QU
   return new File([blob], name, { type: mime, lastModified: Date.now() })
 }
 
-export const formatSize = (bytes: number) =>
-  bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.round(bytes / 1024)}KB`

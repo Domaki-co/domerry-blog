@@ -51,7 +51,3 @@ export async function compressImage(file, maxEdge = MAX_EDGE, quality = QUALITY)
   const name = file.name.replace(/\.[^.]+$/, '') + (mime === 'image/png' ? '.png' : '.jpg')
   return new File([blob], name, { type: mime, lastModified: Date.now() })
 }
-
-export function formatSize(bytes) {
-  return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)}MB` : `${Math.round(bytes / 1024)}KB`
-}
