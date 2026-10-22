@@ -3,10 +3,17 @@
     <!-- 作者块：头像 + 昵称 + 签名，下面一条三格站点统计 -->
     <section class="block author-block">
       <div class="author">
+        <!--
+          头像来自 MinIO 外链：地址为空不渲染、解码完才淡入，取不到仍走
+          handleAvatarError（先退游客头像，再彻底隐藏），避免闪破图标
+        -->
         <img
+          v-if="$store.state.webSiteInfo.authorAvatar"
           class="avatar"
           :src="$store.state.webSiteInfo.authorAvatar"
           :alt="$store.state.webSiteInfo.author"
+          :class="{ 'is-painted': avatarPainted }"
+          @load="avatarPainted = true"
           @error="handleAvatarError"
         >
         <div class="who">
@@ -114,7 +121,9 @@ export default {
       tags: [],
       announcements: [],
       // 文章总数：接口回来前保持 null，用来区分「没回来」与「真的是 0」
-      articleTotal: null
+      articleTotal: null,
+      // 头像解码完才淡入（见模板注释）
+      avatarPainted: false
     }
   },
   computed: {
@@ -293,6 +302,13 @@ export default {
     flex: none;
     box-shadow: 0 0 0 3px var(--accent-soft);
     animation: avatar-breathe 4.6s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+    // 只有淡入不参与 keyframes（那套只动 box-shadow），加载中/失败都不留破图标
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    &.is-painted {
+      opacity: 1;
+    }
   }
 
   .who {
