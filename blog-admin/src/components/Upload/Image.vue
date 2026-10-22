@@ -35,6 +35,7 @@ import { Plus } from '@element-plus/icons-vue'
 import type { UploadProps, UploadUserFile } from 'element-plus'
 import { getToken } from '@/utils/auth'
 import { uploadApi,deleteFileApi } from '@/api/file'
+import { compressImage } from '@/utils/image-compress'
 const props = defineProps({
   modelValue: {
     type: [String, Array],
@@ -154,8 +155,8 @@ const getExtension = (name?: string) => {
   return index > -1 ? fileName.slice(index + 1).toLowerCase() : ''
 }
 
-// 上传前的校验
-const beforeUpload: UploadProps['beforeUpload'] = (file) => {
+// 上传前的校验（文章封面在浏览器端压缩后再上传，原图不进对象存储）
+const beforeUpload: UploadProps['beforeUpload'] = async (file) => {
   // 部分浏览器对 ico/svg 给出的 MIME 不一致，扩展名优先，MIME 兜底
   const isImage = IMAGE_EXTS.includes(getExtension(file.name))
     || (!!file.type && file.type.startsWith('image/'))
@@ -169,7 +170,17 @@ const beforeUpload: UploadProps['beforeUpload'] = (file) => {
     ElMessage.error(`图片大小不能超过 ${props.fileSize}MB!`)
     return false
   }
-  return true
+
+  // 只有文章封面做压缩，其他 source（相册、站点配置等）原样上传
+  if (props.source !== 'article-cover') return true
+
+  try {
+    // 返回 File 让 el-upload 上传压缩后的文件
+    return await compressImage(file)
+  } catch (err) {
+    // 压缩失败不阻断上传，退回原图
+    return true
+  }
 }
 
 // 监听modelValue变化

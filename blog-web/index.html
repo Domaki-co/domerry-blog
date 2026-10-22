@@ -22,6 +22,32 @@
       crossorigin="anonymous"
     />
     <!--
+      图标字体提前拉：工具栏/菜单的 <i class="fas …"> 在字体就绪前是空白方块（有的浏览器
+      会先显示 .notdef 或干脆跳一下），预取这三个 woff2 能省掉一次 CSS→字体串行等待。
+      只预取实际用到的三个：fas（主）、far、fab。
+    -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/webfonts/fa-solid-900.woff2"
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/webfonts/fa-regular-400.woff2"
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin="anonymous"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/webfonts/fa-brands-400.woff2"
+    />
+    <!--
       主题必须在首屏绘制前落到 <html> 上，否则深色模式会先闪一下浅色底。
       这段逻辑和 src/utils/theme.js 的 getThemeMode 保持一致，改一处要同步另一处。
     -->

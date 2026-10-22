@@ -111,12 +111,20 @@ export default {
     updateFavicon(url) {
       if (!url) return
       let icon = document.querySelector("link[rel~='icon']")
-      if (!icon) {
-        icon = document.createElement('link')
-        icon.rel = 'icon'
-        document.head.appendChild(icon)
+      if (icon && icon.href === url) return
+      // 先预加载再换标签页图标：直接改 href 时，若这张图加载慢或取不到，
+      // 标签页会先退成「无图标」的默认页图标，闪一下很显眼。加载成功才替换，
+      // 失败就保持 index.html 里构建时写死的那枚不动
+      const probe = new Image()
+      probe.onload = () => {
+        if (!icon) {
+          icon = document.createElement('link')
+          icon.rel = 'icon'
+          document.head.appendChild(icon)
+        }
+        icon.href = url
       }
-      icon.href = url
+      probe.src = url
     },
 
     /**

@@ -7,7 +7,8 @@
   >
     <div class="mobile-menu">
       <div class="menu-header">
-        <img :src="$store.state.webSiteInfo.logo" alt="logo" class="logo">
+        <!-- 配置回来前不渲染：空 src 会先画一枚破图标（同 Header 的处理） -->
+        <img v-if="logoSrc && !logoFailed" :src="logoSrc" alt="logo" class="logo" @error="logoFailed = true">
         <h2 class="site-name">{{ $store.state.webSiteInfo.name }}</h2>
       </div>
       <div class="menu-content">
@@ -37,7 +38,9 @@ export default {
   name: 'MobileMenu',
   data() {
     return {
-      visible: false
+      visible: false,
+      // 取不到站标就整张撤掉，不留破图标（地址本身来自 store，见 computed.logoSrc）
+      logoFailed: false
     }
   },
   watch: {
@@ -51,9 +54,17 @@ export default {
       if (val !== this.$store.state.mobileMenuVisible) {
         this.$store.commit('setMobileMenuVisible', val)
       }
+    },
+    // 后台换站标后重新给这张图一次机会，否则失败标记会一直压着它
+    logoSrc() {
+      this.logoFailed = false
     }
   },
   computed: {
+    // 站点配置（/api/webConfig）回来前是 undefined；空串会给 <img> 一个坏地址
+    logoSrc() {
+      return this.$store.state.webSiteInfo.logo || ''
+    },
     routes() {
       const rootRoute = this.$router.options.routes.find(route => route.path === '/')
       if (!rootRoute || !rootRoute.children) return []

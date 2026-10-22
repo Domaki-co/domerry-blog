@@ -12,7 +12,19 @@
       <div class="nav-left">
         <router-link to="/" class="logo">
           <span class="logo-mark">~/</span>
-          <img :src="$store.state.webSiteInfo.logo" :alt="$store.state.webSiteInfo.name">
+          <!--
+            站标是 MinIO 上的外链图：加载没完成时浏览器会先占住这块 30x30 的位子，
+            地址为空或取不到时就画一枚「图找不到」的破图标，而它正好在页面最显眼处。
+            所以三件事——地址为空不渲染、解码完才淡入、取不到就整张撤掉，只留「~/」+ 站名。
+          -->
+          <img
+            v-if="logoSrc && !logoFailed"
+            :src="logoSrc"
+            :alt="$store.state.webSiteInfo.name"
+            :class="{ 'is-painted': logoPainted }"
+            @load="logoPainted = true"
+            @error="logoFailed = true"
+          >
           <span class="logo-text">{{$store.state.webSiteInfo.name}}</span>
         </router-link>
       </div>
@@ -193,6 +205,9 @@ export default {
       isHeaderVisible: true,
       // 顶栏是否正压在首屏大图上：图上摘掉玻璃壳换白字，滚出大图再恢复（见 .is-over-hero）
       overHero: false,
+      // 站标加载态：解码完才淡入，取不到就先撤掉（见模板注释），避免闪一下破图标
+      logoPainted: false,
+      logoFailed: false,
       menuItems: [
         {
           name: '首页',
@@ -271,6 +286,10 @@ export default {
     }
   },
   computed: {
+    // 站点配置（/api/webConfig）回来前是 undefined；空串会给 <img> 一个坏地址
+    logoSrc() {
+      return this.$store.state.webSiteInfo.logo || ''
+    },
     filteredMenuItems() {
       return this.menuItems.map(item => ({
         ...item,
@@ -294,7 +313,12 @@ export default {
     },
     // 面板开合会改变「是否强制按非图上态渲染」
     '$store.state.searchVisible': 'updateOverHero',
-    '$store.state.mobileMenuVisible': 'updateOverHero'
+    '$store.state.mobileMenuVisible': 'updateOverHero',
+    // 后台换了站标要重新开始：失败标记不清掉，新图就永远不显示
+    logoSrc() {
+      this.logoPainted = false
+      this.logoFailed = false
+    }
   },
   methods: {
     handleMusicToggle(val) {
@@ -560,6 +584,13 @@ $header-pill-gap: 8px;
       width: 30px;
       border-radius: $border-radius-sm;
       object-fit: cover;
+      // 解码完才淡入（见模板注释）：加载中与失败都不留下一枚破图标
+      opacity: 0;
+      transition: opacity 0.2s ease;
+
+      &.is-painted {
+        opacity: 1;
+      }
     }
 
     // 终端提示符式的记号，呼应「工程笔记」的取向
