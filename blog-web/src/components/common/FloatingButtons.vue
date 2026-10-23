@@ -18,6 +18,12 @@
 </template>
 
 <script>
+import { sheetPeek } from '@/utils/scroll'
+
+// 首页首屏那条「窗帘」边（大图比视口矮的那一条），JS 侧从 global.scss 的
+// --sheet-peek 读，挂载 / resize 时刷新，滚动回调里不读
+let peek = 0
+
 export default {
   name: 'FloatingButtons',
   data() {
@@ -47,8 +53,14 @@ export default {
         this.overHero = false
         return
       }
-      // 大图高度就是视口高度，滚出大图后按钮再出现
-      this.overHero = window.pageYOffset < window.innerHeight - 120
+      // 大图是 sticky 钉住的、比视口矮 --sheet-peek 那一条，所以按「大图下缘
+      // 滑到这条线以下」算。多减的 120 是给首屏「向下」提示留的余量，
+      // 它贴在同一个角上；判据和 Header 同源（utils/scroll.js 的 sheetPeek）
+      this.overHero = window.pageYOffset < window.innerHeight - peek - 120
+    },
+    handleResize() {
+      peek = sheetPeek()
+      this.updateOverHero()
     }
   },
   watch: {
@@ -57,11 +69,14 @@ export default {
     }
   },
   mounted() {
+    peek = sheetPeek()
     window.addEventListener('scroll', this.handleScroll)
+    window.addEventListener('resize', this.handleResize)
     this.updateOverHero()
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll)
+    window.removeEventListener('resize', this.handleResize)
   }
 }
 </script>

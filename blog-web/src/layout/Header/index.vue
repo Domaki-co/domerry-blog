@@ -183,11 +183,15 @@
 
 <script>
 import { getThemeMode, setThemeModeWithTransition, prefersReducedMotion } from '@/utils/theme'
+import { sheetPeek } from '@/utils/scroll'
 
 // 顶栏高度。这个数在仓库里有多份副本：本组件样式里的 $header-height、
 // src/styles/global.scss:17 的 #app padding-top、home/index.vue 的 $header-offset，
 // 以及这里的常量。改一处必须四处同步。
 const HEADER_HEIGHT = 64
+// 首页窗帘面板底部露出那条边，JS 侧从 global.scss 的 --sheet-peek 读（见 utils/scroll.js），
+// 这里先给个初值，挂载和 resize 时再刷新 —— 滚动回调里不能再读样式
+let peek = 0
 
 export default {
   name: 'TheHeader',
@@ -447,7 +451,8 @@ export default {
     // 顶栏此刻是否压在首屏大图上。
     // 判据只有两条，都不查 DOM：
     //   1) 满屏大图只在首页（hero.vue 的 .hero 是那一页的局部组件）；
-    //   2) 大图严格一屏（min-height: 100svh），所以「滚过一屏减顶栏高」它就离开顶栏了。
+    //   2) 大图是 sticky 钉住的、高度为「一屏减一条边」（min-height: calc(100svh - --sheet-peek)），
+    //      所以「滚过 一屏 - 那条边 - 顶栏高」它的下缘就滑到顶栏下面了。
     // 这里曾经用 document.querySelector('.hero').getBoundingClientRect() 直接量，
     // 会在路由切换时骗人：布局的页面过渡是 <transition mode="out-in">（layout/index.vue:8，
     // 0.3s），路由一换就量，离场的那一页还挂在 DOM 上、新页面还没挂载 —— 从首页点进
@@ -457,12 +462,22 @@ export default {
     // el-dialog、移动端菜单是占左半屏的 el-drawer，两者都盖住顶栏所在的区域）。
     updateOverHero() {
       const panelOpen = this.$store.state.searchVisible || this.$store.state.mobileMenuVisible
-      const heroGone = window.pageYOffset >= window.innerHeight - HEADER_HEIGHT
+      // 大图是 sticky 钉住的、比视口矮 --sheet-peek 那一条，所以「它离开顶栏」
+      // 发生在「面板顶边滑到顶栏下缘」那一刻：scrollY >= 大图高度 - HEADER_HEIGHT
+      const heroGone = window.pageYOffset >= window.innerHeight - peek - HEADER_HEIGHT
       this.overHero = !panelOpen && this.$route.path === '/' && !heroGone
+    },
+    // 视口尺寸变了：重读窗帘边长（它可能跟着断点变），再重算图上态。
+    // 顺序不能反 —— updateOverHero 用的是重读后的值
+    handleResize() {
+      peek = sheetPeek()
+      this.updateOverHero()
     }
   },
   mounted() {
     this.isDark = getThemeMode() === 'dark'
+    // 首屏那条「窗帘」边可能有响应式取值，挂载时读一次真值
+    peek = sheetPeek()
     // 监听全局 data-theme 变更（与 FloatingButtons/右键菜单状态双向同步）
     this.themeObserver = new MutationObserver(() => {
       this.isDark = document.documentElement.getAttribute('data-theme') === 'dark'
@@ -475,7 +490,7 @@ export default {
     // 添加滚动事件监听
     window.addEventListener('scroll', this.handleScroll)
     // 视口高度变了，大图下边缘的位置跟着变，图上态要重算
-    window.addEventListener('resize', this.updateOverHero)
+    window.addEventListener('resize', this.handleResize)
     // 进站 / 从文章页返回时先算一次：只靠滚动事件会留下一帧玻璃壳压在图上的错帧
     this.updateOverHero()
 
@@ -495,7 +510,7 @@ export default {
     clearTimeout(this.themePulseTimer)
     // 移除滚动和点击事件监听
     window.removeEventListener('scroll', this.handleScroll)
-    window.removeEventListener('resize', this.updateOverHero)
+    window.removeEventListener('resize', this.handleResize)
     if (this.handleDocumentClick) {
       document.removeEventListener('click', this.handleDocumentClick)
     }

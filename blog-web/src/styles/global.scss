@@ -216,6 +216,24 @@ html {
   --theme-duration: 560ms;
   --theme-ease: cubic-bezier(0.22, 1, 0.36, 1);
 
+  // ── 首页「窗帘」结构的那一条边（与主题无关，两套主题共用）──
+  // 首屏大图 sticky 钉在视口顶上，文章面板（home/index.vue 的 .home-sheet）
+  // 从底部往上盖住它。这个值 = 静止时面板露在折线以上的高度：
+  //   0    → 大图正好占满一屏，面板完全在折线以下，滚起来才盖上（当前取值）
+  //   84px → 底部先露一条面板边，当作「下面还有内容」的提示
+  // 三处消费它：hero.vue 的大图高度（CSS var）、layout/Header/index.vue 的图上态判据、
+  // components/common/FloatingButtons.vue 的悬浮按钮判据 —— 后两者经
+  // src/utils/scroll.js 的 sheetPeek() 读同一个值，改这里一处即可。
+  --sheet-peek: 0px;
+  // 那条边上的 1px 分隔线：深色档下天空几乎全黑，面板边和底色糊在一起，
+  // 光靠 box-shadow 的黑色投影看不出来，需要一道反向的亮线才读得出「这里叠了一层」
+  --sheet-edge: #{rgba(#12161c, 0.1)};
+
+  // 首屏大图的主题压暗色（压在 .hero-scrim 上，见 hero.vue）。
+  // 大图是一张照片，换主题时它原本一点变化都没有，看不出「刚才那一下点生效了」——
+  // 深色档把它整体压暗一点，主题切换就在首屏看得见。白天不压。
+  --hero-dim: #{rgba(#0b0f14, 0)};
+
   // ── 氛围层配色（html::before 天空 / html::after 星空，见文件末尾）──
   // 白天：暖阳从右上打下来，左下用冷调补光找平，云是很淡的白。
   // --sky-top / --sky-bottom 是不透明的（已经把底色 --background 合进去了），
@@ -270,6 +288,12 @@ html {
   --sky-cloud: #{rgba(#dfe8f5, 0.045)};
   --star: #{rgba(#e8f0fa, 0.85)};
   --sky-stars: 1;
+
+  // 夜里天空压到近黑，面板顶边换成一道冷白的细线（白天是深色细线，见 :root）
+  --sheet-edge: #{rgba(#e8f0fa, 0.1)};
+
+  // 深色档把首屏大图压暗一点，主题切换在首屏可见（见 :root 的说明）
+  --hero-dim: #{rgba(#0b0f14, 0.22)};
 
   --about-me: var(--surface);
   --reply-message-bg: #{rgba(map-get($dark, 'border'), 0.5)};
@@ -389,26 +413,22 @@ html::after {
   transition: opacity var(--theme-duration) var(--theme-ease);
 }
 
+/*
+  天空 / 星空的画法在 styles/mixins.scss（sky-paint / star-paint）—— 因为首页的
+  窗帘面板 .home-sheet 也要在自己身上重铺同一套，混入放在 mixins.scss 才能被
+  组件样式引用。这里只负责把它们挂在 <html> 的伪元素上铺满全站。
+*/
+
 // 天空：日/月光晕 + 对侧补光 + 两团云 + 一条上下渐变的底色
 html::before {
-  background-image: radial-gradient(70% 55% at 82% 4%, var(--sky-glow) 0%, transparent 62%),
-    radial-gradient(55% 45% at 10% 94%, var(--sky-glow-2) 0%, transparent 66%),
-    radial-gradient(46% 30% at 24% 18%, var(--sky-cloud) 0%, transparent 72%),
-    radial-gradient(40% 26% at 70% 36%, var(--sky-cloud) 0%, transparent 74%),
-    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-bottom) 100%);
+  @include sky-paint;
   // 光晕和云极缓慢地漂，160s 一个来回：单看某一帧察觉不到，但页面是「活」的
   animation: skyDrift 160s ease-in-out infinite alternate;
 }
 
-// 星空：用硬边 radial-gradient 铺星点，靠 background-size 错开周期，只在天黑时淡入
+// 星空：只在天黑时淡入
 html::after {
-  background-image: radial-gradient(1.6px 1.6px at 18% 26%, var(--star) 50%, transparent 51%),
-    radial-gradient(1.2px 1.2px at 63% 12%, var(--star) 50%, transparent 51%),
-    radial-gradient(1.4px 1.4px at 84% 44%, var(--star) 50%, transparent 51%),
-    radial-gradient(1.1px 1.1px at 36% 68%, var(--star) 50%, transparent 51%),
-    radial-gradient(1.5px 1.5px at 8% 56%, var(--star) 50%, transparent 51%),
-    radial-gradient(1.2px 1.2px at 52% 88%, var(--star) 50%, transparent 51%);
-  background-size: 260px 260px, 340px 340px, 420px 420px, 300px 300px, 480px 480px, 380px 380px;
+  @include star-paint;
   opacity: var(--sky-stars, 0);
 }
 

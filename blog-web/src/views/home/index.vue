@@ -3,64 +3,71 @@
     <!-- 首屏：全屏封面图 + 居中站名，「向下」滚到文章列表 -->
     <Hero :carousels="carouselSlides" @scroll-to-posts="scrollToPosts" />
 
-    <div class="home">
-      <div class="content-layout">
-        <main class="home-main-content">
-          <!-- 侧边栏在 <=1024px 时整体隐藏，这里给移动端补一个折叠式置顶入口 -->
-          <MobileStickyBar :sticks="stickyPosts" />
+    <!--
+      文章面板：一片圆角浅色板，从底部往上盖住 sticky 钉住的封面 —— 首页的「窗帘」。
+      它必须不透明（盖住底下那张图），所以自己把全站的天空 / 星空重铺了一遍，
+      见 .home-sheet 的样式注释。
+    -->
+    <div class="home-sheet">
+      <div class="home">
+        <div class="content-layout">
+          <main class="home-main-content">
+            <!-- 侧边栏在 <=1024px 时整体隐藏，这里给移动端补一个折叠式置顶入口 -->
+            <MobileStickyBar :sticks="stickyPosts" />
 
-          <!-- 分类筛选：macOS 胶囊分段选择器 (Segmented Control)。
-               激活态不是各按钮自己涂底色，而是由 .segment-thumb 这一个滑块承担，
-               切换分类时它平移过去，做出系统设置侧栏那种「滑行」的手感 -->
-          <nav class="filters-segmented-wrap">
-            <div class="segmented-track" ref="segmentTrack">
-              <span class="segment-thumb" :style="thumbStyle" aria-hidden="true"></span>
-              <button
-                v-for="category in categories"
-                :key="category.id"
-                type="button"
-                class="segment-item"
-                :class="{ 'is-active': activeName === String(category.id) }"
-                @click="handleClick(category)"
-              >
-                <span class="segment-name">{{ category.name }}</span>
-                <span v-if="categoryCount(category)" class="segment-count">{{ categoryCount(category) }}</span>
-              </button>
-              <router-link
-                to="/categories"
-                class="segment-item segment-more-btn"
-                title="查看全部详细分类"
-              >
-                <span>更多</span>
-                <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <path d="M9 18l6-6-6-6" />
-                </svg>
-              </router-link>
-            </div>
-            <!-- 只在选中具体分类时出现：默认「全部」的篇数在侧栏作者卡的「文章篇数」里已经有一份 -->
-            <div v-if="activeName !== 'all'" class="meta-status-capsule">
-              <span class="status-dot"></span>
-              <span class="total-text">共 {{ total }} 篇</span>
-            </div>
-          </nav>
+            <!-- 分类筛选：macOS 胶囊分段选择器 (Segmented Control)。
+                 激活态不是各按钮自己涂底色，而是由 .segment-thumb 这一个滑块承担，
+                 切换分类时它平移过去，做出系统设置侧栏那种「滑行」的手感 -->
+            <nav class="filters-segmented-wrap">
+              <div class="segmented-track" ref="segmentTrack">
+                <span class="segment-thumb" :style="thumbStyle" aria-hidden="true"></span>
+                <button
+                  v-for="category in categories"
+                  :key="category.id"
+                  type="button"
+                  class="segment-item"
+                  :class="{ 'is-active': activeName === String(category.id) }"
+                  @click="handleClick(category)"
+                >
+                  <span class="segment-name">{{ category.name }}</span>
+                  <span v-if="categoryCount(category)" class="segment-count">{{ categoryCount(category) }}</span>
+                </button>
+                <router-link
+                  to="/categories"
+                  class="segment-item segment-more-btn"
+                  title="查看全部详细分类"
+                >
+                  <span>更多</span>
+                  <svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </router-link>
+              </div>
+              <!-- 只在选中具体分类时出现：默认「全部」的篇数在侧栏作者卡的「文章篇数」里已经有一份 -->
+              <div v-if="activeName !== 'all'" class="meta-status-capsule">
+                <span class="status-dot"></span>
+                <span class="total-text">共 {{ total }} 篇</span>
+              </div>
+            </nav>
 
-          <!-- 列表只渲染一次,筛选器仅改查询条件,避免每个分类面板重复挂一份完整列表 -->
-          <div ref="postsSection" class="posts-section">
-            <ArticleList
-              :articles="articleList"
-              :loading="loading"
-              :total="total"
-              :params="params"
-              :transition-phase="transitionPhase"
-              :min-height="lockedMinHeight"
-              @article-click="goToPost"
-              @page-change="changePage"
-              @stick-changed="getStickArticles"
-              class="article-list"
-            />
-          </div>
-        </main>
-        <Sidebar :sticks="stickyPosts" />
+            <!-- 列表只渲染一次,筛选器仅改查询条件,避免每个分类面板重复挂一份完整列表 -->
+            <div ref="postsSection" class="posts-section">
+              <ArticleList
+                :articles="articleList"
+                :loading="loading"
+                :total="total"
+                :params="params"
+                :transition-phase="transitionPhase"
+                :min-height="lockedMinHeight"
+                @article-click="goToPost"
+                @page-change="changePage"
+                @stick-changed="getStickArticles"
+                class="article-list"
+              />
+            </div>
+          </main>
+          <Sidebar :sticks="stickyPosts" />
+        </div>
       </div>
     </div>
   </div>
@@ -563,6 +570,62 @@ $header-offset: 64px;
 // 留出顶栏高度 + 一小段呼吸距离，落点正好在顶栏下缘往下一点点
 .posts-section {
   scroll-margin-top: calc(#{$header-offset} + #{$spacing-sm});
+}
+
+// 文章面板：首页的「窗帘」。
+// 大图（hero.vue 的 .hero）sticky 钉在视口顶上、z-index: 1；这一层 z-index: 2，
+// 整块从底部往上盖住它 —— 往下滚时图不动、面板滑上来，接缝处一道圆角 + 一道投影。
+// 大图因此比视口矮 --sheet-peek（84px），首屏露出的那条边就是「下面还有内容」的提示。
+// 面板高度和三处判据都读 global.scss 里同一个变量。
+.home-sheet {
+  position: relative;
+  z-index: 2;
+  // 至少一屏：滑上来之后必须把底下那张图完全盖住
+  min-height: 100vh;
+  min-height: 100svh;
+  // 只有顶边是圆角，下边接着页面往下走
+  border-radius: 32px 32px 0 0;
+  // 投影往上打：面板滑上来时先看到一道阴影压到图上，层次才立得住。
+  // 第二道 1px 是分隔线，取主题相关的 --sheet-edge（深色档下黑投影不起作用，
+  // 全靠这道亮线），否则夜里面板边和底色糊成一片，看不出「滑上来一层」
+  box-shadow: 0 -24px 60px rgba(9, 12, 16, 0.28), 0 -1px 0 var(--sheet-edge);
+  // 兜底底色。面板必须不透明才盖得住图，而整页底色本来是 html::before 那层
+  // fixed 的天空 + html::after 的星空（见 styles/global.scss）—— 一层不透明的底
+  // 会把它们整块挡掉，所以下面把同一套画法在自己身上重铺一遍。
+  background-color: var(--background);
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    // -1：贴在面板内容下面、面板自身之上。.home-sheet 有 z-index，
+    // 已经是个层叠上下文，所以 -1 不会掉到 sticky 大图的后面
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    // 关键：渐变按视口定位而不是按这块很高的面板定位，才会和 html 那层对得
+    // 严丝合缝 —— 面板滑到哪儿，底色都和周围一模一样，看不出「换了一层」
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    // 已知降级：Safari（尤其 iOS）对 fixed 定位背景支持不稳，真机上可能退回按
+    // 面板自身盒子定位，天空会被拉长成一块很淡的色带。不会有硬接缝（面板顶边
+    // 上面一律是图，碰不到 html 那层），只是观感偏淡，可以接受
+  }
+
+  // 天空：与 html::before 同源（styles/mixins.scss 的 sky-paint）。
+  // 这里不接 160s 的漂移：面板刚露头时接缝处只有图、没有底色，看不出相位差；
+  // 等它盖满视口，html 那层本来也整个被挡掉了
+  &::before {
+    @include sky-paint;
+  }
+
+  // 星空：与 html::after 同源，只在天黑时淡入（靠 --sky-stars）
+  &::after {
+    @include star-paint;
+    background-repeat: repeat;
+    opacity: var(--sky-stars, 0);
+  }
 }
 
 .home {
