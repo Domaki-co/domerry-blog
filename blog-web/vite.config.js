@@ -49,8 +49,8 @@ export default defineConfig(({ command, mode }) => {
               scss: {
                 api: 'modern-compiler',
                 additionalData: `
-                  @import "@/styles/variables.scss";
-                  @import "@/styles/mixins.scss";
+                  @use "@/styles/variables.scss" as *;
+                  @use "@/styles/mixins.scss" as *;
                 `
               }
             }

@@ -1,6 +1,8 @@
 
 
 
+@use "sass:map";
+
 /*
   整站底色统一挂在 <html> 上。
   氛围层是 html::before / html::after（position:fixed; z-index:-1），在绘制顺序里排在
@@ -260,22 +262,22 @@ html {
 }
 
 :root[data-theme='dark'] {
-  --text-primary: #{map-get($dark, 'text-primary')};
-  --text-secondary: #{map-get($dark, 'text-secondary')};
-  --text-tertiary: #{map-get($dark, 'text-tertiary')};
-  --background: #{map-get($dark, 'background')};
-  --surface: #{map-get($dark, 'surface')};
-  --rule: #{map-get($dark, 'border')};
-  --rule-strong: #{map-get($dark, 'rule-strong')};
-  --border-color: #{map-get($dark, 'border')};
-  --card-bg: #{map-get($dark, 'card-bg')};
-  --hover-bg: #{map-get($dark, 'hover-bg')};
-  --row-hover: #{map-get($dark, 'hover-bg')};
-  --row-hover-strong: #{map-get($dark, 'hover-bg-strong')};
-  --input-bg: #{map-get($dark, 'input-bg')};
-  --loading-bg: #{map-get($dark, 'loading-bg')};
-  --accent: #{map-get($dark, 'accent')};
-  --accent-soft: #{rgba(map-get($dark, 'accent'), 0.16)};
+  --text-primary: #{map.get($dark, 'text-primary')};
+  --text-secondary: #{map.get($dark, 'text-secondary')};
+  --text-tertiary: #{map.get($dark, 'text-tertiary')};
+  --background: #{map.get($dark, 'background')};
+  --surface: #{map.get($dark, 'surface')};
+  --rule: #{map.get($dark, 'border')};
+  --rule-strong: #{map.get($dark, 'rule-strong')};
+  --border-color: #{map.get($dark, 'border')};
+  --card-bg: #{map.get($dark, 'card-bg')};
+  --hover-bg: #{map.get($dark, 'hover-bg')};
+  --row-hover: #{map.get($dark, 'hover-bg')};
+  --row-hover-strong: #{map.get($dark, 'hover-bg-strong')};
+  --input-bg: #{map.get($dark, 'input-bg')};
+  --loading-bg: #{map.get($dark, 'loading-bg')};
+  --accent: #{map.get($dark, 'accent')};
+  --accent-soft: #{rgba(map.get($dark, 'accent'), 0.16)};
   --surface-rgb: 22, 26, 32;
   --border-color-rgb: 255, 255, 255;
 
@@ -296,7 +298,7 @@ html {
   --hero-dim: #{rgba(#0b0f14, 0.22)};
 
   --about-me: var(--surface);
-  --reply-message-bg: #{rgba(map-get($dark, 'border'), 0.5)};
+  --reply-message-bg: #{rgba(map.get($dark, 'border'), 0.5)};
   --resources-bg: var(--surface);
 }
 

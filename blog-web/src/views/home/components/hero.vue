@@ -69,11 +69,15 @@ const LQIP_WIDTH = 24
 const LQIP_QUALITY = 0.4
 
 /**
- * 首屏退场的进度基准：滚过 hero 高度的 85% 就走完。
- * 0.85 而不是 1，是为了让退场在楼下台账完全进入视口之前收尾 ——
- * 卡在 1 的话，最后 15% 的滚动里文字还剩一点残影压在文章列表上。
+ * 首屏退场的进度基准：滚过 hero 高度的 120% 才走完。
+ *
+ * 0.85 那版跑得太急 —— 手指刚划一下，文字和提示就没了，封面也基本沉完，
+ * 一屏的退场被压进不到一屏的滚动里。放到 1.2 之后，同样的位移摊在更长的
+ * 滚距上，肉眼才跟得上「图在沉、字在退」这件事。
+ * 超过 1 也没问题：面板（.home-sheet）从 0.85 屏左右就开始往上盖，
+ * 后 30% 的进度本来就发生在大图被盖住之后，不影响收尾的干净。
  */
-const PROGRESS_SPAN = 0.85
+const PROGRESS_SPAN = 2
 
 function readLocal(key) {
   try {
@@ -221,7 +225,7 @@ export default {
   },
   methods: {
     /**
-     * 把「首屏滚掉了多少」写进 --hero-p（0 = 顶部，1 = 滚过 hero 高度的 85%），
+     * 把「首屏滚掉了多少」写进 --hero-p（0 = 顶部，1 = 滚过 hero 高度的 120%），
      * 样式块里所有退场效果都只消费这一个变量。
      *
      * 为什么不用 CSS 原生 animation-timeline: scroll()：Chrome/Edge 115+ 有，
@@ -563,21 +567,24 @@ a.hero-pill:hover {
 }
 
 // 三段文字依次浮起
+//   时长 1.15s、位移 22px、缓动 0.2/0.7/0.2/1：原来 0.9s + 14px + 0.22/1/0.36/1
+//   是「一蹭就到位」的观感（曲线头段太陡，前 120ms 冲完大半），拉长之后
+//   站名、副标题、提示词才是依次浮上来，而不是齐刷刷弹出来。
 .reveal {
   opacity: 0;
-  transform: translateY(14px);
-  animation: reveal 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translateY(22px);
+  animation: reveal 1.15s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
 
   &:nth-child(1) {
-    animation-delay: 0.15s;
+    animation-delay: 0.18s;
   }
 
   &:nth-child(2) {
-    animation-delay: 0.28s;
+    animation-delay: 0.36s;
   }
 
   &:nth-child(3) {
-    animation-delay: 0.42s;
+    animation-delay: 0.54s;
   }
 }
 
@@ -592,7 +599,7 @@ a.hero-pill:hover {
 //  首屏退场：往下划时封面沉下去并压暗，文字先淡出缩小
 //
 //  进度只有一个来源：hero.vue 的 setupScrollProgress 用 rAF 把「滚过 hero
-//  高度的 85%」写进 --hero-p（0 → 1），下面全部拿它算。
+//  高度的 120%」写进 --hero-p（0 → 1），下面全部拿它算。
 //  不用 CSS 原生 animation-timeline: scroll() —— Chrome/Edge 115+ 有，
 //  Safari 至今没有。首屏是首页第一眼，不能「换个浏览器就完全不动」，
 //  所以进度自己算，一条代码路径覆盖所有浏览器。
@@ -606,25 +613,24 @@ a.hero-pill:hover {
 // ════════════════════════════════════════════════════════════════
 
 // 文字层：淡出 + 上浮 + 轻微缩小。
-//   1.5 倍速淡出：p≈0.67 就退干净，比位移更早收尾，避免「半透明站名压着
-//   文章列表」；收 8% 的 scale 让文字像往远处走 —— 只做位移的话看起来
-//   更像整块被推上去，少了纵深。
+//   1.15 倍速淡出（原先 1.5）：p≈0.87 才退干净，和位移一起收尾，
+//   不再出现「字已经没了、图还在慢慢沉」的断层；收 8% 的 scale 让文字
+//   像往远处走 —— 只做位移的话看起来更像整块被推上去，少了纵深。
 .hero-inner {
-  opacity: max(0, calc(1 - var(--hero-p, 0) * 1.5));
-  transform: translateY(calc(var(--hero-p, 0) * -70px)) scale(calc(1 - var(--hero-p, 0) * 0.08));
+  opacity: max(0, calc(1 - var(--hero-p, 0) * 1.15));
+  transform: translateY(calc(var(--hero-p, 0) * -80px)) scale(calc(1 - var(--hero-p, 0) * 0.08));
   will-change: transform, opacity;
 }
 
 // 封面：反向缓慢下沉 + 放大，做出「图比字沉、退得更慢」的视差。
-//   · 下沉 60px、放大 12%：位移得和文字的上浮同一个量级才看得出层次。
-//     之前只给 3% 位移 + 4% 放大，肉眼几乎看不出图在动。
+//   · 下沉 70px、放大 14%：位移得和文字的上浮（80px）同一个量级才看得出层次。
 //   · 变换写在 .hero-cover 这一层，img 那一层留给入场时的缓慢推近（heroPush）——
 //     两层各跑各的 transform，不会互相覆盖，这正是 demo 里
 //     .cover-parallax / .cover-zoom 的分工。
 //   · img 的盒子上下各比 .hero 多出 80px（见 .hero-cover img 的 inset），
 //     这个余量大于 60px 的下沉位移，再放大 12% 也不会在边缘露出墨底
 .hero-cover {
-  transform: translateY(calc(var(--hero-p, 0) * 60px)) scale(calc(1 + var(--hero-p, 0) * 0.12));
+  transform: translateY(calc(var(--hero-p, 0) * 70px)) scale(calc(1 + var(--hero-p, 0) * 0.14));
   will-change: transform;
 }
 
@@ -636,15 +642,16 @@ a.hero-pill:hover {
   position: absolute;
   inset: 0;
   background: #000;
-  opacity: calc(var(--hero-p, 0) * 0.45);
+  opacity: calc(var(--hero-p, 0) * 0.5);
   pointer-events: none;
 }
 
-// 「向下」提示：6 倍速先走（p≈0.17 就没了）—— 它贴在视口底部一路跟着滚，
-// 是现在最显眼的瑕疵。hero-bob 是无限循环的时间轴动画、动的是 transform，
-// 这里只接 opacity，两条互不干扰。
+// 「向下」提示：3.2 倍速先走（p≈0.31 才没了）—— 它是第一个该退场的，
+// 但原来 6 倍速划不到 1/6 屏就消失，像被切掉；跟着手指一起淡出才自然。
+// hero-bob 是无限循环的时间轴动画、动的是 transform，这里只接 opacity，
+// 两条互不干扰。
 .hero-scroll {
-  opacity: max(0, calc(1 - var(--hero-p, 0) * 6));
+  opacity: max(0, calc(1 - var(--hero-p, 0) * 3.2));
 }
 
 @include responsive(lg) {

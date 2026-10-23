@@ -8,7 +8,10 @@
       它必须不透明（盖住底下那张图），所以自己把全站的天空 / 星空重铺了一遍，
       见 .home-sheet 的样式注释。
     -->
-    <div class="home-sheet">
+    <div
+      class="home-sheet"
+      :class="{ 'is-revealing-nav': navRevealing }"
+    >
       <div class="home">
         <div class="content-layout">
           <main class="home-main-content">
@@ -18,7 +21,7 @@
             <!-- 分类筛选：macOS 胶囊分段选择器 (Segmented Control)。
                  激活态不是各按钮自己涂底色，而是由 .segment-thumb 这一个滑块承担，
                  切换分类时它平移过去，做出系统设置侧栏那种「滑行」的手感 -->
-            <nav class="filters-segmented-wrap">
+            <nav ref="filtersEl" class="filters-segmented-wrap">
               <div class="segmented-track" ref="segmentTrack">
                 <span class="segment-thumb" :style="thumbStyle" aria-hidden="true"></span>
                 <button
@@ -86,6 +89,36 @@ import {
   getCategoriesApi,
 } from "@/api/article";
 
+/**
+ * 筛选器的入场类名挂多久后摘掉（毫秒）。
+ * 要大于它自己的动画时长（样式里 0.9s），留点余量给慢设备。
+ *
+ * 文章行不再需要这个：它们用 translate 属性进场（hover 走的是 transform），
+ * 两条互不覆盖，类名可以一直留着，不用等动画播完再摘。
+ */
+const REVEAL_HOLD_MS = 1300;
+
+/**
+ * 文章行进场类名挂多久后摘掉（毫秒）：0.9s 的过渡 + 一点余量。
+ *
+ * 必须摘 —— is-pending 上的 transition 声明（特异性比 .entry 高）会把
+ * ArticleList 自己那条 background/transform 0.28s 的过渡整条顶掉，
+ * 留在身上 hover 就变成硬切了。摘掉后回到组件默认样式，和动画终点一致，不跳。
+ */
+const ROW_REVEAL_HOLD_MS = 1000;
+
+/**
+ * 入场触发线：把视口下边往外撑 3%（一条「提前量」），元素顶边还差一点点进视野
+ * 就开始播。
+ *
+ * 这个符号是试出来的，两个方向都试错才有结论：
+ * 收进去（-8%）→ 触发时元素已经露了小半截在屏幕上，动画一挂它先跳成透明再淡入，
+ * 反而闪一下；撑太多（+15%）→ 面板内容离折线只差 40px，等于一进页面就偷偷播完，
+ * 等滚下去只剩静止画面。撑 3%（约 24px）刚好：动画开播时元素还在视口外，
+ * 滚进来时正在浮起的中段。
+ */
+const REVEAL_ROOT_MARGIN = '0px 0px 3% 0px';
+
 export default {
   name: "Home",
   components: {
@@ -136,6 +169,9 @@ export default {
         transform: "translateX(0px)",
         opacity: 0,
       },
+      // 第二屏接力入场的两个开关：各自盯着筛选器 / 台账，快进视野时置 true，
+      // 播完摘掉。不常驻类名，是为了让翻页 / 切分类时只剩 ledger 自己的 is-entering
+      navRevealing: false,
       categories: [
         {
           id: "all",
@@ -406,6 +442,115 @@ export default {
       });
     },
     /**
+     * 第二屏接力入场：筛选器先到位，之后文章「出现一行就动一行」。
+     *
+     * 两块用两套触发方式，因为它们要的不是同一件事：
+     * · 筛选器是一整块导航，视线一扫就过去，盯它一个元素、进场时挂一次类名就够。
+     * · 文章行是「一条一条被读到」的，必须每行各盯各的 —— 只有轮到它的顶边进入
+     *   视口下缘，这一行才开始淡入上浮。参考 demo 就是这么写的：每个 .post 自己
+     *   挂一个 IntersectionObserver，触发后 unobserve 掉。
+     *
+     * 早先那版是盯着整个 .posts-section 挂一个类名、靠 nth-child 排队延迟：十行
+     * 同时开始、第 4 行以后连延迟都一样，看着像整块闪一下；而真正滚下去的时候，
+     * 后半截的行早就演完了，静止躺在那里 —— 这就是「往下划动画不行」的根源。
+     *
+     * 为什么用 IntersectionObserver 而不是跟着 --hero-p 算：这一段发生时首屏已经
+     * 滚完，--hero-p 停在 1 不再变化，没有可用的进度源；入场本身是「一次性事件」，
+     * 不是随滚动连续变化的量，观察器正好表达这件事。
+     */
+    setupSheetReveal() {
+      // 系统开了「减少动态效果」：整段不参与，直接保持静止态
+      if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return;
+      }
+      // 已经滚在页面中间（刷新保留了滚动位置、从详情页返回）就别再演一遍：
+      // 这时候内容多半整块在视口里，补一次入场反而像闪一下
+      if (window.pageYOffset > 8) return;
+
+      this.revealObservers = [];
+      this.revealTimers = [];
+      this.revealEnabled = true;
+      this.armReveal(this.$refs.filtersEl, "navRevealing");
+      // 首屏渲染时列表还没回来，先认领已有的行，后续由 articleList 的 watcher 补
+      this.observeRows();
+    },
+    /**
+     * 认领文章行：给每行打上 is-pending（CSS 里就是「透明 + 下沉 26px」），
+     * 交给共用的观察器；谁的顶边进视野谁被放出来，放出来一次就不再管它。
+     *
+     * 用打标记而不是让 CSS 默认隐藏，是为了「JS 没跑 / 没有观察器」时列表仍然
+     * 正常可见 —— 不该显示的东西不能变成默认状态。切分类、翻页、首屏数据回来
+     * （articleList 一变）都要重新认领一次，新行才有人看着。
+     */
+    observeRows() {
+      if (!this.revealEnabled || typeof IntersectionObserver === "undefined") return;
+      const section = this.$refs.postsSection;
+      if (!section) return;
+      if (!this.rowObserver) {
+        this.rowObserver = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              const row = entry.target;
+              row.classList.add("is-revealed");
+              this.rowObserver.unobserve(row);
+              // 播完把两个类名一起摘掉，把 transition 让回给 .entry 自己
+              this.revealTimers.push(
+                window.setTimeout(() => {
+                  row.classList.remove("is-pending", "is-revealed");
+                }, ROW_REVEAL_HOLD_MS)
+              );
+            });
+          },
+          // 阈值和边距照抄参考 demo：行露出 15% 才开始、再往里 40px 才认，
+          // 免得刚碰到视口下缘就急着演（那会儿只看得见一条边）
+          { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+        );
+        this.revealObservers.push(this.rowObserver);
+      }
+      section.querySelectorAll(".entry").forEach((row) => {
+        // 认领过就不再认领：切分类时 Vue 会按键复用旧行，重复认领会让它
+        // 再消失一次。标记放 dataset 而不是靠 is-pending —— 那个类名播完要摘掉
+        if (row.dataset.revealClaimed === "1") return;
+        row.dataset.revealClaimed = "1";
+        row.classList.add("is-pending");
+        this.rowObserver.observe(row);
+      });
+    },
+    /**
+     * 盯着一个元素，等它的顶边快进视野时把开关打开，播完再关掉
+     * @param {Element} el 目标元素
+     * @param {string} flag 数据里的开关名（navRevealing）
+     */
+    armReveal(el, flag) {
+      if (!el || typeof IntersectionObserver === "undefined") return;
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (!entries.some((entry) => entry.isIntersecting)) return;
+          observer.disconnect();
+          this[flag] = true;
+          // 播完摘掉类名：动画是 both 填充，类名在的时候 .entry 的 transform
+          // 归动画管，hover 的右移会失效，所以不能常驻
+          this.revealTimers.push(
+            window.setTimeout(() => {
+              this[flag] = false;
+            }, REVEAL_HOLD_MS)
+          );
+        },
+        { threshold: 0, rootMargin: REVEAL_ROOT_MARGIN }
+      );
+      observer.observe(el);
+      this.revealObservers.push(observer);
+    },
+    teardownSheetReveal() {
+      (this.revealObservers || []).forEach((observer) => observer.disconnect());
+      this.revealObservers = [];
+      this.rowObserver = null;
+      this.revealEnabled = false;
+      (this.revealTimers || []).forEach((timer) => clearTimeout(timer));
+      this.revealTimers = [];
+    },
+    /**
      * 跳转到文章详情
      * @param {number} id 文章id
      */
@@ -521,6 +666,16 @@ export default {
       }
     },
   },
+  watch: {
+    /**
+     * 列表数据一换（首屏返回、切分类、翻页）就重新认领文章行：
+     * 复用到的旧行带着 is-revealed 直接可见，只有新行才置为待进场。
+     * 必须等 DOM 打完补丁（nextTick），否则摸到的还是上一批 <li>。
+     */
+    articleList() {
+      this.$nextTick(() => this.observeRows());
+    },
+  },
   created() {
     // 首次进入页面，直接进入 loading 骨架屏态，请求返回后平滑淡入
     this.transitionPhase = "loading";
@@ -531,10 +686,13 @@ export default {
   },
   mounted() {
     this.placeSegmentThumb();
+    this.setupSheetReveal();
     window.addEventListener("resize", this.handleViewportResize);
   },
   beforeUnmount() {
     window.removeEventListener("resize", this.handleViewportResize);
+    // 观察器和收尾定时器都会写实例状态，离开页面必须先断掉
+    this.teardownSheetReveal();
     if (this.thumbRaf) {
       window.cancelAnimationFrame(this.thumbRaf);
       this.thumbRaf = null;
@@ -572,10 +730,70 @@ $header-offset: 64px;
   scroll-margin-top: calc(#{$header-offset} + #{$spacing-sm});
 }
 
+// ── 第二屏接力入场 ──
+// 首屏滚走之后，接力的是面板里的内容：筛选器先到位，文章行「出现一行动一行」——
+// 谁的顶边撞进视口下缘，谁才开始淡入上浮（参考 demo 里每个 .post 各挂一个
+// IntersectionObserver 的做法，见 setupSheetReveal / observeRows）。
+//
+// 缓动不用 0.16/1/0.3/1（那是「弹射」曲线：头 150ms 就冲完 90% 的位移，剩下
+// 700ms 几乎不动，看着极快又没有余韵）。0.2/0.7/0.2/1 起步柔、中段匀速、
+// 尾段慢慢收，时长拉长之后才看得出「在浮起来」而不是「闪一下」。
+$reveal-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+.home-sheet {
+  // 筛选器：只走 18px，轻一点 —— 它是「导航」，不该抢文章的戏
+  &.is-revealing-nav .filters-segmented-wrap {
+    animation: sheetRise 0.9s $reveal-ease both;
+  }
+
+  // 文章行：ArticleList 是子组件，scoped 样式必须走 :deep()
+  // 进场用 translate 属性、hover 用 transform，两条互不覆盖 —— 所以类名可以
+  // 一直留着，不像早先那版还得在动画播完摘掉才能让 .entry:hover 生效。
+  :deep(.entry.is-pending) {
+    opacity: 0;
+    translate: 0 26px;
+    // 过渡写在起始态：下一帧打上 .is-revealed 才会补间，否则瞬间到位
+    transition: opacity 0.9s $reveal-ease, translate 0.9s $reveal-ease;
+  }
+
+  :deep(.entry.is-pending.is-revealed) {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes sheetRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// 系统开了「减少动态效果」：这段纯装饰，整段不播
+// （JS 那边也不会挂类名，这里是二道保险，比如系统设置在运行中改掉）
+@media (prefers-reduced-motion: reduce) {
+  .home-sheet {
+    &.is-revealing-nav .filters-segmented-wrap {
+      animation: none;
+    }
+
+    // 文章行：JS 那边不会打 is-pending，这里再兜一道
+    :deep(.entry.is-pending) {
+      opacity: 1;
+      translate: none;
+      transition: none;
+    }
+  }
+}
+
 // 文章面板：首页的「窗帘」。
 // 大图（hero.vue 的 .hero）sticky 钉在视口顶上、z-index: 1；这一层 z-index: 2，
 // 整块从底部往上盖住它 —— 往下滚时图不动、面板滑上来，接缝处一道圆角 + 一道投影。
-// 大图因此比视口矮 --sheet-peek（84px），首屏露出的那条边就是「下面还有内容」的提示。
+// 大图正好一屏（--sheet-peek 为 0），面板从折线以下切进来。
 // 面板高度和三处判据都读 global.scss 里同一个变量。
 .home-sheet {
   position: relative;

@@ -1,3 +1,6 @@
+@use "sass:color";
+@use "./variables.scss" as *;
+
 @mixin flex-center {
   display: flex;
   justify-content: center;
@@ -20,7 +23,7 @@
 }
 
 @function darken($color, $amount) {
-  @return mix(black, $color, $amount);
+  @return color.mix(black, $color, $amount);
 } 
 // ── 台账取向的通用件 ──
 // 层次来自 1px 实线和留白，不用阴影、不做位移。

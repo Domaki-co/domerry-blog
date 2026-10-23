@@ -11,6 +11,7 @@ gsap.registerPlugin(ScrollTrigger)
 
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import 'animate.css'
 import '@/styles/global.scss'
 import '@/styles/elmentui.scss'
 

@@ -241,7 +241,6 @@ export default {
 
 <style lang="scss">
 
-@import 'animate.css';
 // Font Awesome 5.15.4 改由 index.html 的 <link integrity> 引入：CSS 的 @import 没有
 // integrity 字段，从第三方 CDN 拉样式时前端没有任何校验手段
 * {
