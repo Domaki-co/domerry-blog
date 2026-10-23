@@ -1,7 +1,11 @@
 <template>
-  <div class="home-page">
-    <!-- 首屏：全屏封面图 + 居中站名，「向下」滚到文章列表 -->
-    <Hero :carousels="carouselSlides" @scroll-to-posts="scrollToPosts" />
+  <div class="home-page" :class="{ 'is-reading': readingMode }">
+    <!--
+      首屏：全屏封面图 + 居中站名，「向下」滚到文章列表。
+      阅读模式下整块不渲染 —— 不是 v-show 藏起来：Hero 挂载时会拉封面图、
+      LQIP、轮播，还会挂滚动监听写 --hero-p，藏起来等于白跑一遍
+    -->
+    <Hero v-if="!readingMode" :carousels="carouselSlides" @scroll-to-posts="scrollToPosts" />
 
     <!--
       文章面板：一片圆角浅色板，从底部往上盖住 sticky 钉住的封面 —— 首页的「窗帘」。
@@ -69,6 +73,8 @@
               />
             </div>
           </main>
+          <!-- 右栏（作者卡 / 公告 / 置顶推荐 / 标签）阅读模式下照常保留：
+               阅读模式只砍首屏那张整屏大图，栏目结构不动 -->
           <Sidebar :sticks="stickyPosts" />
         </div>
       </div>
@@ -81,6 +87,7 @@ import ArticleList from "@/components/ArticleList/index.vue";
 import Hero from "@/views/home/components/hero.vue";
 import Sidebar from "@/components/Sidebar/index.vue";
 import MobileStickyBar from "@/views/home/components/mobileStickyBar.vue";
+import { readingMode } from "@/utils/reading-mode";
 import {
   getArticlesApi,
   getCarouselArticlesApi,
@@ -302,9 +309,20 @@ export default {
         // 9. 列表淡入、轻微上移复位
         this.transitionPhase = "entering";
 
+        // 翻页 / 换筛选 / 搜索之后回到「列表顶端」，而不是回到页面顶端 ——
+        // 顶端是首屏大图，回去等于逼人重新滚一遍。
+        //
+        // 这里必须用 scrollIntoView，不能算 offsetTop：.posts-section 在
+        // .home-sheet 里面，而 .home-sheet 是 position: relative，所以
+        // offsetTop 拿到的是「相对面板顶」的几十像素，减掉预留后恒为 0，
+        // 于是每次都把页面滚回首图 —— 就是「点下一页自动定位到首图」的成因。
+        // 落点交给样式里的 scroll-margin-top（顶栏高度 + 呼吸距离）。
         if (scrollToTop && this.$refs.postsSection) {
-          const top = Math.max(0, this.$refs.postsSection.offsetTop - 80);
-          window.scrollTo({ top, behavior: "smooth" });
+          const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          this.$refs.postsSection.scrollIntoView({
+            behavior: reduce ? "auto" : "smooth",
+            block: "start",
+          });
         }
 
         this.$nextTick(() => {
@@ -666,7 +684,19 @@ export default {
       }
     },
   },
+  computed: {
+    // 共享 ref 读成 computed：模板里绑 v-if / 类名，watch 里也能盯到它的变化
+    readingMode: () => readingMode.value,
+  },
   watch: {
+    /**
+     * 阅读模式一开一关，首屏那 100vh 整块出现 / 消失，页面高度瞬间变一屏 ——
+     * 保持原来的滚动位置只会落到一个不相干的地方（常见是直接掉进列表底部），
+     * 所以统一回到顶部：开关是「换一种看法」，从同一处开始看才说得通
+     */
+    readingMode() {
+      this.$nextTick(() => window.scrollTo({ top: 0, behavior: "auto" }));
+    },
     /**
      * 列表数据一换（首屏返回、切分类、翻页）就重新认领文章行：
      * 复用到的旧行带着 is-revealed 直接可见，只有新行才置为待进场。
@@ -722,6 +752,20 @@ $header-offset: 64px;
 // 一旦这里变成裁剪容器，负边距那段就会被切掉，露出一条页面底色
 .home-page {
   width: 100%;
+
+  // ── 阅读模式：首屏大图整块不渲染，文章面板就是页面本身 ──
+  // 没有图压在下面了，那圈圆角、「从底部滑上来一层」的投影、以及「至少一屏
+  // 才盖得住图」的最小高度都失去意义 —— 留着反而像一块浮在空中的板
+  &.is-reading {
+    // 没有首屏大图要盖了，面板退回「页面本身」：去掉卡片圆角、上唇边和最小高度，
+    // 否则顶栏底下会平白多出一道圆角发丝线
+    .home-sheet {
+      min-height: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+  }
 }
 
 // 首屏「向下」把列表滚到 y=0，列表顶端会被固定顶栏盖住：

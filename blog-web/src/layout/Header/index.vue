@@ -88,6 +88,21 @@
           <span class="message-count" v-if="showBage()" />
         </router-link>
 
+        <!-- 阅读模式：首页不渲染首屏整屏大图，只留文章列表。
+             它只影响首页，别的页面挂着这枚按钮只会让人以为点了没反应 -->
+        <button
+          v-if="$route.path === '/'"
+          type="button"
+          class="reading-toggle-btn"
+          :class="{ 'is-on': readingMode }"
+          :title="readingMode ? '退出阅读模式' : '进入阅读模式'"
+          :aria-label="readingMode ? '退出阅读模式' : '进入阅读模式'"
+          :aria-pressed="readingMode ? 'true' : 'false'"
+          @click="handleToggleReading"
+        >
+          <i :class="readingMode ? 'fas fa-book-open' : 'fas fa-newspaper'"></i>
+        </button>
+
         <!-- 一键深浅色主题切换按钮 -->
         <button
           ref="themeToggleEl"
@@ -184,6 +199,7 @@
 <script>
 import { getThemeMode, setThemeModeWithTransition, prefersReducedMotion } from '@/utils/theme'
 import { sheetPeek } from '@/utils/scroll'
+import { readingMode, toggleReadingMode } from '@/utils/reading-mode'
 
 // 顶栏高度。这个数在仓库里有多份副本：本组件样式里的 $header-height、
 // src/styles/global.scss:17 的 #app padding-top、home/index.vue 的 $header-offset，
@@ -307,7 +323,9 @@ export default {
       set(val) {
         this.$store.dispatch('toggleMusicEnabled', val)
       }
-    }
+    },
+    // 共享 ref 读成 computed，模板里就能直接绑
+    readingMode: () => readingMode.value
   },
   watch: {
     // 路由切换后 DOM 还没更新，等一拍再量大图；否则从文章页滚着回首页时量到的是
@@ -318,6 +336,10 @@ export default {
     // 面板开合会改变「是否强制按非图上态渲染」
     '$store.state.searchVisible': 'updateOverHero',
     '$store.state.mobileMenuVisible': 'updateOverHero',
+    // 阅读模式里没有大图，顶栏一律按实心态渲染
+    readingMode() {
+      this.updateOverHero()
+    },
     // 后台换了站标要重新开始：失败标记不清掉，新图就永远不显示
     logoSrc() {
       this.logoPainted = false
@@ -464,8 +486,13 @@ export default {
       const panelOpen = this.$store.state.searchVisible || this.$store.state.mobileMenuVisible
       // 大图是 sticky 钉住的、比视口矮 --sheet-peek 那一条，所以「它离开顶栏」
       // 发生在「面板顶边滑到顶栏下缘」那一刻：scrollY >= 大图高度 - HEADER_HEIGHT
-      const heroGone = window.pageYOffset >= window.innerHeight - peek - HEADER_HEIGHT
+      // 阅读模式下首页根本没有大图，不存在「图上态」
+      const heroGone =
+        this.readingMode || window.pageYOffset >= window.innerHeight - peek - HEADER_HEIGHT
       this.overHero = !panelOpen && this.$route.path === '/' && !heroGone
+    },
+    handleToggleReading() {
+      toggleReadingMode()
     },
     // 视口尺寸变了：重读窗帘边长（它可能跟着断点变），再重算图上态。
     // 顺序不能反 —— updateOverHero 用的是重读后的值
@@ -805,6 +832,50 @@ $header-pill-gap: 8px;
       height: 7px;
       border-radius: 50%;
       padding: 0;
+    }
+  }
+
+  // ── 阅读模式开关：报纸 ⇄ 打开的书 ──
+  // 和主题按钮同一套几何（32px 圆钮 + 一圈内描边），但只做颜色反馈 ——
+  // 它不改变「当前页面正在显示什么颜色」，转起来反而会跟旁边的主题按钮抢视线
+  .reading-toggle-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+
+    i {
+      font-size: 0.95rem;
+    }
+
+    &:hover {
+      background: var(--row-hover);
+      border-color: var(--rule-strong);
+      color: var(--accent);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    // 开启态：和主题按钮的 is-dark 同一个提示语言（琥珀底 + 强调色图标）
+    &.is-on {
+      background: var(--accent-soft);
+      border-color: var(--rule-strong);
+      color: var(--accent);
+
+      &:hover {
+        border-color: var(--accent);
+      }
     }
   }
 
@@ -1242,6 +1313,14 @@ $header-pill-gap: 8px;
     }
   }
 
+  // 阅读模式开关在窄屏同样保留（它比「搜索 / 消息」更常用，且只有一个图标宽），
+  // 尺寸跟主题按钮对齐
+  .nav-right .reading-toggle-btn {
+    display: flex;
+    width: 30px;
+    height: 30px;
+  }
+
   // 移动端站标居中
   .nav-left {
     position: absolute;
@@ -1367,7 +1446,8 @@ $header-pill-gap: 8px;
 
     // .theme-toggle-btn.is-dark 的琥珀底色留着：它是「深色模式生效」的状态提示，
     // 图上也读得出来，不必跟着转白
-    .theme-toggle-btn {
+    .theme-toggle-btn,
+    .reading-toggle-btn {
       color: rgba(255, 255, 255, 0.85);
       border-color: rgba(255, 255, 255, 0.3);
 

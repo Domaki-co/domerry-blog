@@ -36,6 +36,11 @@ const globalIcons = {
 // 全局 HTML 净化：v-html 渲染用户可控内容前必须经过 $sanitize
 import { sanitizeHtml } from '@/utils/sanitize'
 
+// 阅读模式的开关是模块级共享状态，必须在挂载前恢复：晚一步，首页会先按
+// 「有大图」渲染一帧再抽掉，等于闪一下
+import { initReadingMode } from '@/utils/reading-mode'
+initReadingMode()
+
 //表情组件
 import EmojiPicker from '@/components/common/EmojiPicker.vue'
 

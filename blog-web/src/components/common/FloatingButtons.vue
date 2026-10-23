@@ -19,6 +19,7 @@
 
 <script>
 import { sheetPeek } from '@/utils/scroll'
+import { readingMode } from '@/utils/reading-mode'
 
 // 首页首屏那条「窗帘」边（大图比视口矮的那一条），JS 侧从 global.scss 的
 // --sheet-peek 读，挂载 / resize 时刷新，滚动回调里不读
@@ -32,6 +33,10 @@ export default {
       // 首页首屏：整屏大图右下角已经有「向下」指示，这里要让位
       overHero: false
     }
+  },
+  computed: {
+    // 共享 ref 读成 computed，watch 才有东西可盯
+    readingMode: () => readingMode.value
   },
   methods: {
     scrollToTop() {
@@ -56,7 +61,9 @@ export default {
       // 大图是 sticky 钉住的、比视口矮 --sheet-peek 那一条，所以按「大图下缘
       // 滑到这条线以下」算。多减的 120 是给首屏「向下」提示留的余量，
       // 它贴在同一个角上；判据和 Header 同源（utils/scroll.js 的 sheetPeek）
-      this.overHero = window.pageYOffset < window.innerHeight - peek - 120
+      // 阅读模式下首页没有大图，右下角也没有「向下」指示，按钮正常显示
+      this.overHero =
+        !this.readingMode && window.pageYOffset < window.innerHeight - peek - 120
     },
     handleResize() {
       peek = sheetPeek()
@@ -65,6 +72,9 @@ export default {
   },
   watch: {
     '$route.path'() {
+      this.updateOverHero()
+    },
+    readingMode() {
       this.updateOverHero()
     }
   },
